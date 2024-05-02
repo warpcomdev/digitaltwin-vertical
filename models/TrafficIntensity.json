@@ -177,6 +177,26 @@
                     ]
                 }
             },
+            "custom_sql": {
+                "class": "CLASS_FLOW_RAW",
+                "sql": {
+                    "sources": {
+                        "custom_sql": {
+                            "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
+                            "path": "./sql",
+                            "files": [
+                                "custom_trafficintensity.sql"
+                            ],
+                            "weight": 10,
+                            "relations": [
+                                "dtwin_trafficintensity_daily",
+                                "dtwin_trafficintensity_yesterday",
+                                "dtwin_trafficintensity_yesterday"
+                            ]
+                        }
+                    }
+                }
+            },
             "join": {
                 "class": "FLOW_JOIN_VIEW",
                 "leftModel": {

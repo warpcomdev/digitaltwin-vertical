@@ -25,4 +25,50 @@ TrafficIntensity: templates.#Twin & {
 			flows: ["historic", "lastdata"]
 		}
 	}
+
+	#sql: daily: {
+		hourFrom: 7
+		hourTo:   22
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+		]
+		aggregations: {
+			intensity: "SUM(intensity)"
+		}
+	}
+
+	#sql: yesterday: {
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+			"intensity",
+		]
+	}
+
+	#sql: peak: {
+		hourFrom:   7
+		hourTo:     22
+		morningEnd: 14
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+		]
+		metric: "intensity"
+	}
 }

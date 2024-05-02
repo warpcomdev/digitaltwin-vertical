@@ -26,4 +26,67 @@ TrafficCongestion: templates.#Twin & {
 			flows: ["historic", "lastdata"]
 		}
 	}
+
+	#sql: daily: {
+		hourFrom: 7
+		hourTo:   22
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+		]
+		aggregations: {
+			congestion: "AVG(congestion)"
+		}
+	}
+
+	#sql: hourly: {
+		hourFrom: 7
+		hourTo:   22
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+		]
+		aggregations: {
+			congestion: "AVG(congestion)"
+		}
+	}
+
+	#sql: yesterday: {
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+			"congestion",
+		]
+	}
+
+	#sql: peak: {
+		hourFrom:   7
+		hourTo:     22
+		morningEnd: 14
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+		]
+		metric: "congestion"
+	}
 }

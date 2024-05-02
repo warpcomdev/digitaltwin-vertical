@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/telefonicasc/digitaltwin-vertical/schema/types"
+	"github.com/telefonicasc/digitaltwin-vertical/schema/templates/sql"
 )
 
 #Twin: self={
@@ -14,9 +15,10 @@ import (
 	#hasMinute:    bool | *false
 	#multiZone:    bool | *false
 	#geometryType: *"Point" | "Line" | "MultiLine" | "Polygon" | "MultiPolygon"
+	#namespace:    "dtwin"
 
 	description: string
-	namespace:   "dtwin"
+	namespace:   #namespace
 	exampleId:   string
 
 	model: [string]: {types.#ModelAttribute}
@@ -145,7 +147,7 @@ import (
 			class:    "FLOW_LASTDATA"
 			endpoint: "LASTDATA"
 			condition: {
-				attrs: ["TimeInstant"] + self.#aspects.singleton.attrs
+				attrs: ["TimeInstant"] + #aspects.singleton.attrs
 				// No quiero que me borre las filas de la tabla,
 				// cuando se borren las entidades. Me aseguro de
 				// excluir el alterationType onDelete.
@@ -157,10 +159,10 @@ import (
 		}
 		join: {
 			class:      "FLOW_JOIN_VIEW"
-			#tableName: strings.ToLower(self.#entityType)
+			#tableName: strings.ToLower(#entityType)
 			leftModel: {
 				name:            #tableName
-				entityNamespace: self.namespace
+				entityNamespace: #namespace
 				attrs: [
 					"entityid", "entityType", "fiwareservicepath", "recvtime",
 				] + [for label, m in self.model if list.Contains(m.flows, "historic") {
@@ -170,7 +172,7 @@ import (
 			}
 			rightModel: [{
 				name:            "\(#tableName)_lastdata"
-				entityNamespace: self.namespace
+				entityNamespace: #namespace
 				attrs: [for label, m in self.model if !list.Contains(m.flows, "historic") {
 					strings.ToLower(label)
 				}]
@@ -178,6 +180,41 @@ import (
 					"entityid",
 				]
 			}]
+		}
+	}
+
+	// En el atributo "#sql", se enumera la lista de objetos
+	// twmplates/sql que se deben crear, y los atributos de input
+	// que se les deben proporcionar.
+	#sql: [label = string]: _
+	#sql_template: {for label, data in #sql {
+		(label): {
+			sql[label]
+			input: {
+				namespace:  #namespace
+				entityType: #entityType
+				hasHour:    #hasHour
+				hasMinute:  #hasMinute
+			}
+			input: data
+		}
+	}}
+
+	flows: custom_sql: {
+		class: "CLASS_FLOW_RAW"
+		sql: sources: custom_sql: {
+			documentation: """
+				Conjunto de vistas utilitarias para la presentación de
+				datos de escenarios identidad y simulaciones.
+				"""
+			path: "./sql"
+			files: [
+				"custom_\(strings.ToLower(#entityType)).sql",
+			]
+			weight: 10
+			relations: list.FlattenN([for _, data in #sql_template {
+				data.relations
+			}], -1)
 		}
 	}
 }
