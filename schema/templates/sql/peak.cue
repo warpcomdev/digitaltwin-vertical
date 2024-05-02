@@ -19,7 +19,7 @@ peak: {
 		hasHour:    bool
 		hasMinute:  bool
 		tableName:  string | *"\(namespace)_\(strings.ToLower(entityType))_lastdata"
-		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_yesterday"
+		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_peak"
 	}
 
 	_formula: string | *"numeradas.hour"

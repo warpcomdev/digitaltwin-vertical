@@ -58,7 +58,7 @@ SELECT
   date_trunc('day'::text, now()) - '1 day'::interval  + make_interval(hours => t.hour, minutes => t.minute) AS generatedinstant
 FROM %target_schema%.dtwin_trafficcongestion_lastdata AS t;
 
--- CREATE VIEW dtwin_trafficcongestion_yesterday
+-- CREATE VIEW dtwin_trafficcongestion_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 -- una métrica dada.
 -- -------------------------------------------------------------

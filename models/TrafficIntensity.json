@@ -191,7 +191,7 @@
                             "relations": [
                                 "dtwin_trafficintensity_daily",
                                 "dtwin_trafficintensity_yesterday",
-                                "dtwin_trafficintensity_yesterday"
+                                "dtwin_trafficintensity_peak"
                             ]
                         }
                     }

@@ -217,7 +217,7 @@
                             "relations": [
                                 "dtwin_offstreetparking_daily",
                                 "dtwin_offstreetparking_yesterday",
-                                "dtwin_offstreetparking_yesterday",
+                                "dtwin_offstreetparking_peak",
                                 "dtwin_offstreetparking_freq"
                             ]
                         }

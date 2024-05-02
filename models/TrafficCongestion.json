@@ -207,7 +207,7 @@
                                 "dtwin_trafficcongestion_daily",
                                 "dtwin_trafficcongestion_hourly",
                                 "dtwin_trafficcongestion_yesterday",
-                                "dtwin_trafficcongestion_yesterday"
+                                "dtwin_trafficcongestion_peak"
                             ]
                         }
                     }
