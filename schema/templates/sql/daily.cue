@@ -24,7 +24,7 @@ daily: {
 		-- Vista que agrega todos los resultados de una tabla de gemelo,
 		-- por día. Ignora la hora y minuto.
 		-- -------------------------------------------------------------
-		CREATE OR REPLACE VIEW %target_schema%.{{ .viewName }} AS
+		CREATE OR REPLACE VIEW :target_schema.{{ .viewName }} AS
 		SELECT
 		{{- range .columns }}
 		  t.{{.}},
@@ -33,7 +33,7 @@ daily: {
 		  {{ $agg }} AS {{ $colname }},
 		{{- end }}
 		  t.entityid
-		FROM %target_schema%.{{ .tableName }} AS t
+		FROM :target_schema.{{ .tableName }} AS t
 		WHERE t.hour >= {{ .hourFrom }} AND t.hour <= {{ .hourTo }}
 		GROUP BY {{ range .columns }} t.{{.}},{{end}} t.entityid;
 		"""

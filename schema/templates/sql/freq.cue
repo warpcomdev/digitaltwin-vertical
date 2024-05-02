@@ -27,7 +27,7 @@ freq: {
 		-- Vista que calcula la frecuencia con la que una métrica
 		-- está dentro de un umbral.
 		-- -------------------------------------------------------------
-		CREATE OR REPLACE VIEW %target_schema%.{{ .viewName }} AS
+		CREATE OR REPLACE VIEW :target_schema.{{ .viewName }} AS
 		SELECT
 		  {{- range .columns }}
 		  t.{{.}},
@@ -40,7 +40,7 @@ freq: {
 		    ELSE '{{ .other }}'
 		  END AS range,
 		  COUNT(t.hour) AS hours
-		FROM %target_schema%.{{ .tableName }} AS t
+		FROM :target_schema.{{ .tableName }} AS t
 		GROUP BY {{ range .columns }} t.{{.}},{{ end }} \(_rangeColumn)
 		"""
 

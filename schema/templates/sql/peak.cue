@@ -86,7 +86,7 @@ peak: {
 		  t.minute,
 		  {{- end }}
 		  t.{{ .metric }}
-		FROM %target_schema%.{{ .tableName }} AS t
+		FROM :target_schema.{{ .tableName }} AS t
 		WHERE t.hour >= {{ .hourFrom }} AND t.hour <= {{ .hourTo }}
 		ORDER BY {{ range.columns }} t.{{.}},{{ end }} \(_morningColumn), t.{{ .metric }} DESC
 		"""

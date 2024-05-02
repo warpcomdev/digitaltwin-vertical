@@ -2,7 +2,7 @@
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por día. Ignora la hora y minuto.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW %target_schema%.dtwin_offstreetparking_daily AS
+CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_daily AS
 SELECT
   t.timeinstant,
   t.sourceref,
@@ -15,7 +15,7 @@ SELECT
   AVG(occupation) AS occupation,
   SUM(occupation) / SUM(capacity)::double precision AS occupationPercent,
   t.entityid
-FROM %target_schema%.dtwin_offstreetparking_lastdata AS t
+FROM :target_schema.dtwin_offstreetparking_lastdata AS t
 WHERE t.hour >= 8 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
 
@@ -26,7 +26,7 @@ GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.
 -- widget timeseries de urbo, sin necesidad de tener muestras
 -- diarias para todos los días.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW %target_schema%.dtwin_offstreetparking_yesterday AS
+CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_yesterday AS
 SELECT
   timeinstant,
   sourceref,
@@ -40,7 +40,7 @@ SELECT
   occupationPercent,
   entityid,
   date_trunc('day'::text, now()) - '1 day'::interval + make_interval(hours => t.hour) AS generatedinstant
-FROM %target_schema%.dtwin_offstreetparking_lastdata AS t;
+FROM :target_schema.dtwin_offstreetparking_lastdata AS t;
 
 -- CREATE VIEW dtwin_offstreetparking_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
@@ -91,7 +91,7 @@ FROM (SELECT
   END AS morning,
   t.hour,
   t.occupationPercent
-FROM %target_schema%.dtwin_offstreetparking_lastdata AS t
+FROM :target_schema.dtwin_offstreetparking_lastdata AS t
 WHERE t.hour >= 8 AND t.hour <= 22
 ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.occupationPercent DESC) AS ordenadas) AS extremas
 WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL
@@ -100,7 +100,7 @@ WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL
 -- Vista que calcula la frecuencia con la que una métrica
 -- está dentro de un umbral.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW %target_schema%.dtwin_offstreetparking_freq AS
+CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_freq AS
 SELECT
   t.timeinstant,
   t.sourceref,
@@ -117,5 +117,5 @@ SELECT
     ELSE 'tramo_4'
   END AS range,
   COUNT(t.hour) AS hours
-FROM %target_schema%.dtwin_offstreetparking_lastdata AS t
+FROM :target_schema.dtwin_offstreetparking_lastdata AS t
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8

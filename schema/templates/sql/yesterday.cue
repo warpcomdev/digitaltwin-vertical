@@ -33,7 +33,7 @@ yesterday: {
 		-- widget timeseries de urbo, sin necesidad de tener muestras
 		-- diarias para todos los días.
 		-- -------------------------------------------------------------
-		CREATE OR REPLACE VIEW %target_schema%.{{ .viewName }} AS
+		CREATE OR REPLACE VIEW :target_schema.{{ .viewName }} AS
 		SELECT
 		{{- range .columns }}
 		  {{.}},
@@ -43,7 +43,7 @@ yesterday: {
 		{{- end }}
 		  entityid,
 		  date_trunc('day'::text, now()) - '1 day'::interval {{ .interval }} AS generatedinstant
-		FROM %target_schema%.{{ .tableName }} AS t;
+		FROM :target_schema.{{ .tableName }} AS t;
 		"""
 
 	// Nombres de las relaciones creadas
