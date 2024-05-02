@@ -1,0 +1,92 @@
+{
+    "Zone": {
+        "description": "Zona. Este tipo de entidad solo se utiliza para rellenar\nlos selectores en urbo.",
+        "namespace": "dtwin",
+        "exampleId": "Distrito-1",
+        "model": {
+            "TimeInstant": {
+                "description": "Fecha / Hora del cálculo de vista identidad o simulación",
+                "ngsiType": "DateTime",
+                "dbType": "timestamp with time zone NOT NULL",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": "2018-12-10T20:40:23",
+                "range": "-"
+            },
+            "zoneId": {
+                "description": "ID de zona",
+                "ngsiType": "Number",
+                "dbType": "int",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": 5,
+                "range": "-"
+            },
+            "name": {
+                "description": "Nombre de zona",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": "example text",
+                "range": "-"
+            },
+            "label": {
+                "description": "Etiqueta para selectores",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": "example text",
+                "range": "-"
+            },
+            "location": {
+                "description": "Polígono que delimita la zona",
+                "ngsiType": "geo:json",
+                "dbType": "geometry(Polygon)",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": {
+                    "type": "geo:json",
+                    "value": {
+                        "type": "Polygon",
+                        "coordinates": [
+                            [
+                                [
+                                    3.5,
+                                    24.6
+                                ],
+                                [
+                                    33,
+                                    44
+                                ]
+                            ]
+                        ]
+                    }
+                },
+                "range": "-"
+            }
+        },
+        "flows": {
+            "lastdata": {
+                "class": "FLOW_LASTDATA",
+                "endpoint": "LASTDATA"
+            }
+        }
+    }
+}

@@ -1,0 +1,2 @@
+entityID,entityType,TimeInstant<DateTime>,zoneId<Number>,name<TextUnrestricted>,label<TextUnrestricted>,location<geo:json>
+Distrito-1,Zone,2018-12-10T20:40:23,5,example text,example text,"{""type"": ""geo:json"", ""value"": {""type"": ""Polygon"", ""coordinates"": [[[3.5, 24.6], [33, 44]]]}}"

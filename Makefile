@@ -1,6 +1,8 @@
 CUE_PKG := "github.com/telefonicasc/digitaltwin-vertical/schema"
 
 all: \
+	models/DayType.json \
+	models/Zone.json \
 	models/OffStreetParking.json \
 	models/TrafficCongestion.json \
 	models/TrafficIntensity.json \

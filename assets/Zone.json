@@ -1,0 +1,63 @@
+{
+  "Zone": {
+    "lastdata": {
+      "sql": {
+        "sources": {
+          "zone_lastdata.sql": {
+            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo Zone",
+            "path": "./sql",
+            "files": [
+              "zone_lastdata.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_zone_lastdata",
+              "dtwin_zone_lastdata_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "Zone_lastdata": {
+          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo Zone",
+          "description": "Zone:LASTDATA:dtwin:lastdata",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "Zone"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant"
+              ],
+              "alterationTypes": [
+                "entityUpdate",
+                "entityCreate",
+                "entityDelete"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "zoneId",
+              "name",
+              "label",
+              "location",
+              "alterationType"
+            ],
+            "httpCustom": {
+              "url": "LASTDATA",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

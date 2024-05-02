@@ -15,6 +15,7 @@ export TARGET_SCHEMA="schema bbdd"
 export TARGET_USER="usuario bbdd"
 
 # Carga de ficheros SQL
+psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/daytype_lastdata.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/offstreetparking_historic.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/offstreetparking_lastdata.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/routeintensity_historic.sql"
@@ -25,6 +26,7 @@ psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trafficcongestion_lastdata.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trafficintensity_historic.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trafficintensity_lastdata.sql"
+psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/zone_lastdata.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/offstreetparking_join.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/routeintensity_join.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/routeschedule_join.sql"
@@ -38,6 +40,10 @@ psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET
 ```
 
 ## Ficheros SQL por tipo entidad
+
+### Ficheros SQL asociados al modelo DayType
+
+- **daytype_lastdata.sql**: Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo DayType
 
 ### Ficheros SQL asociados al modelo OffStreetParking
 
@@ -88,3 +94,7 @@ psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET
 - **custom_TrafficIntensity.sql**: Conjunto de vistas utilitarias para la presentación de datos de escenarios identidad y simulaciones.
 
 - **trafficintensity_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+
+### Ficheros SQL asociados al modelo Zone
+
+- **zone_lastdata.sql**: Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo Zone

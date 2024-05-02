@@ -1,12 +1,35 @@
 El vertical utiliza los siguientes modelos:
 
-1. [OffStreetParking](#OffStreetParking)
-2. [RouteIntensity](#RouteIntensity)
-3. [RouteSchedule](#RouteSchedule)
-4. [TrafficCongestion](#TrafficCongestion)
-5. [TrafficIntensity](#TrafficIntensity)
+1. [DayType](#DayType)
+2. [OffStreetParking](#OffStreetParking)
+3. [RouteIntensity](#RouteIntensity)
+4. [RouteSchedule](#RouteSchedule)
+5. [TrafficCongestion](#TrafficCongestion)
+6. [TrafficIntensity](#TrafficIntensity)
+7. [Zone](#Zone)
 
 # Entidades Principales
+
+## DayType
+
+Tipo de dia. Este tipo de entidad solo se utiliza para rellenar los selectores en urbo. Tendrá un número fijo de valores: L-J Viernes Sabado Domingo
+
+| Atributo    | ngsiType | dbType                            | description                                              | example                 | extra | unit | range |
+| ----------- | -------- | --------------------------------- | -------------------------------------------------------- | ----------------------- | ----- | ---- | ----- |
+| TimeInstant | DateTime | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación | `"2018-12-10T20:40:23"` | -     | -    | -     |
+
+Ejemplo de `DayType` (en NGSIv2):
+
+```json
+{
+    "id": "Sabado",
+    "type": "DayType",
+    "TimeInstant": {
+        "type": "DateTime",
+        "value": "2018-12-10T20:40:23"
+    }
+}
+```
 
 ## OffStreetParking
 
@@ -429,6 +452,61 @@ Ejemplo de `TrafficIntensity` (en NGSIv2):
             "coordinates": [
                 3.5,
                 24.6
+            ]
+        }
+    }
+}
+```
+
+## Zone
+
+Zona. Este tipo de entidad solo se utiliza para rellenar los selectores en urbo.
+
+| Atributo    | ngsiType         | dbType                            | description                                              | example                                                                                        | extra | unit | range |
+| ----------- | ---------------- | --------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----- | ---- | ----- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación | `"2018-12-10T20:40:23"`                                                                        | -     | -    | -     |
+| zoneId      | Number           | int                               | ID de zona                                               | `5`                                                                                            | -     | -    | -     |
+| name        | TextUnrestricted | text                              | Nombre de zona                                           | `"example text"`                                                                               | -     | -    | -     |
+| label       | TextUnrestricted | text                              | Etiqueta para selectores                                 | `"example text"`                                                                               | -     | -    | -     |
+| location    | geo:json         | geometry(Polygon)                 | Polígono que delimita la zona                            | `{"type": "geo:json", "value": {"type": "Polygon", "coordinates": [[[3.5, 24.6], [33, 44]]]}}` | -     | -    | -     |
+
+Ejemplo de `Zone` (en NGSIv2):
+
+```json
+{
+    "id": "Distrito-1",
+    "type": "Zone",
+    "TimeInstant": {
+        "type": "DateTime",
+        "value": "2018-12-10T20:40:23"
+    },
+    "zoneId": {
+        "type": "Number",
+        "value": 5
+    },
+    "name": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "label": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "location": {
+        "type": "geo:json",
+        "value": {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [
+                        3.5,
+                        24.6
+                    ],
+                    [
+                        33,
+                        44
+                    ]
+                ]
             ]
         }
     }

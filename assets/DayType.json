@@ -1,0 +1,59 @@
+{
+  "DayType": {
+    "lastdata": {
+      "sql": {
+        "sources": {
+          "daytype_lastdata.sql": {
+            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo DayType",
+            "path": "./sql",
+            "files": [
+              "daytype_lastdata.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_daytype_lastdata",
+              "dtwin_daytype_lastdata_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "DayType_lastdata": {
+          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo DayType",
+          "description": "DayType:LASTDATA:dtwin:lastdata",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "DayType"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant"
+              ],
+              "alterationTypes": [
+                "entityUpdate",
+                "entityCreate",
+                "entityDelete"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "alterationType"
+            ],
+            "httpCustom": {
+              "url": "LASTDATA",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

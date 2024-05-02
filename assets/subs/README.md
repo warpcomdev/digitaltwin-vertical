@@ -1,5 +1,23 @@
 Los parámetros con formato `${...}` no han de ser interpretados literalmente, sino que indican un parámetro variable que ha de ser sustituido con aquel que aplique al despliegue concreto cuando se creen las subscripciones indicadas en esta documentación.
 
+# Suscripción a DayType LASTDATA
+
+Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo DayType
+
+- **Estado** : Activa
+- **Descripción**: DayType:LASTDATA:dtwin:lastdata
+- **Fecha y hora de expiración**: en blanco
+- **Segundos entre notificaciones**: en blanco
+- **Protocolo**: HTTP
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}}`
+- **Formato de atributos**: normalized
+- **Atributos a notificar**: TimeInstant, alterationType
+- **Condición**: TimeInstant
+  - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate, entityDelete
+- **Entidades**:
+  - ID: `.*` (con checkbox de patrón de búsqueda marcado)
+  - Type: DayType
+
 # Suscripción a OffStreetParking HISTORIC
 
 Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo OffStreetParking
@@ -174,3 +192,21 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficIntensity
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: TrafficIntensity
+
+# Suscripción a Zone LASTDATA
+
+Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo Zone
+
+- **Estado** : Activa
+- **Descripción**: Zone:LASTDATA:dtwin:lastdata
+- **Fecha y hora de expiración**: en blanco
+- **Segundos entre notificaciones**: en blanco
+- **Protocolo**: HTTP
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}}`
+- **Formato de atributos**: normalized
+- **Atributos a notificar**: TimeInstant, zoneId, name, label, location, alterationType
+- **Condición**: TimeInstant
+  - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate, entityDelete
+- **Entidades**:
+  - ID: `.*` (con checkbox de patrón de búsqueda marcado)
+  - Type: Zone

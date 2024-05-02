@@ -1,0 +1,27 @@
+{
+    "DayType": {
+        "description": "Tipo de dia. Este tipo de entidad solo se utiliza para rellenar\nlos selectores en urbo. Tendrá un número fijo de valores:\n\nL-J\nViernes\nSabado\nDomingo",
+        "namespace": "dtwin",
+        "exampleId": "Sabado",
+        "model": {
+            "TimeInstant": {
+                "description": "Fecha / Hora del cálculo de vista identidad o simulación",
+                "ngsiType": "DateTime",
+                "dbType": "timestamp with time zone NOT NULL",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": "2018-12-10T20:40:23",
+                "range": "-"
+            }
+        },
+        "flows": {
+            "lastdata": {
+                "class": "FLOW_LASTDATA",
+                "endpoint": "LASTDATA"
+            }
+        }
+    }
+}
