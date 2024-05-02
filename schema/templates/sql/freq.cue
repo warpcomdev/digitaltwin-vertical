@@ -8,10 +8,10 @@ freq: {
 
 	// Parámetros de entrada de la vista:
 	input: {
+		metric: string // columna con la métrica a calcular
+		other:  string // etiqueta para el último rango
 		columns: [...string] // Lista de columnas a agrupar
-		metric:              string // columna con la métrica a calcular
 		ranges: [string]: number // Etiquetas y umbrales de los rangos
-		other: string // etiqueta para el último rango
 
 		namespace:  string // Prefijo de las tablas
 		entityType: string // Tipo de entidad
