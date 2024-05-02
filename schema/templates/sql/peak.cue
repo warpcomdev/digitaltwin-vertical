@@ -35,6 +35,7 @@ peak: {
 		  {{- range .columns }}
 		  numeradas.{{.}},
 		  {{- end }}
+		  entityid,
 		  MAX(CASE
 		    WHEN numeradas.morning = TRUE AND numeradas.is_max IS NULL THEN \(_formula)
 		    ELSE NULL
@@ -50,9 +51,10 @@ peak: {
 		  MAX(CASE
 		    WHEN numeradas.morning = FALSE AND numeradas.is_min IS NULL THEN \(_formula)
 		    ELSE NULL
-		  END) AS "evening_min",
-		FROM (\(_franjas_numeradas)) AS extremas
+		  END) AS "evening_min"
+		FROM (\(_franjas_numeradas)) AS numeradas
 		WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL
+		GROUP BY {{ range .columns }} numeradas.{{.}},{{ end }} entityid;
 		"""
 
 	// Esta query numera las filas de la query anterior,
@@ -81,6 +83,7 @@ peak: {
 		    WHEN t.hour <= {{ .morningEnd }} THEN TRUE
 		    ELSE FALSE
 		  END AS morning,
+		  entityid,
 		  t.hour,
 		  {{- if .hasMinute }}
 		  t.minute,

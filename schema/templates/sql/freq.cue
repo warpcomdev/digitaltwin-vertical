@@ -41,7 +41,7 @@ freq: {
 		  END AS range,
 		  COUNT(t.hour) AS hours
 		FROM :target_schema.{{ .tableName }} AS t
-		GROUP BY {{ range .columns }} t.{{.}},{{ end }} \(_rangeColumn)
+		GROUP BY {{ range .columns }} t.{{.}},{{ end }} \(_rangeColumn);
 		"""
 
 	// Nombres de las relaciones creadas

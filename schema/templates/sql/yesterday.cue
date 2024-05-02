@@ -18,7 +18,7 @@ yesterday: {
 		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_yesterday"
 		interval:   string | *""
 		if hasMinute {
-			interval: " + make_interval(hours => t.hour, minutes => t.minute)"
+			interval: " + make_interval(hours => t.hour, mins => t.minute)"
 		}
 		if !hasMinute && hasHour {
 			interval: "+ make_interval(hours => t.hour)"

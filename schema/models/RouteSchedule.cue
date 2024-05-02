@@ -8,7 +8,7 @@ import (
 RouteSchedule: templates.#Twin & {
 
 	#entityType:   "RouteSchedule"
-	#geometryType: "MultiLine"
+	#geometryType: "MultiLineString"
 	#hasHour:      true
 	#hasMinute:    false
 	#multiZone:    true

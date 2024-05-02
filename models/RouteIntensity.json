@@ -152,7 +152,7 @@
             "location": {
                 "description": "Ubicación de la entidad",
                 "ngsiType": "geo:json",
-                "dbType": "geometry(MultiLine)",
+                "dbType": "geometry(MultiLineString)",
                 "extra": "-",
                 "unit": "-",
                 "flows": [

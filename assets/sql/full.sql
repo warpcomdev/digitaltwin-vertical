@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_offstreetparking (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_offstreetparking (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
   sceneref text,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_offstreetparking (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_offstreetparking_pkey PRIMARY KEY (timeinstant, entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeintensity (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_routeintensity (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
   sceneref text,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeintensity (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_routeintensity_pkey PRIMARY KEY (timeinstant, entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeschedule (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_routeschedule (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
   sceneref text,
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeschedule (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_routeschedule_pkey PRIMARY KEY (timeinstant, entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficcongestion (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_trafficcongestion (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
   sceneref text,
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficcongestion (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_trafficcongestion_pkey PRIMARY KEY (timeinstant, entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficintensity (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_trafficintensity (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
   sceneref text,
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficintensity (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_trafficintensity_pkey PRIMARY KEY (timeinstant, entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_daytype_lastdata (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_daytype_lastdata (
   timeinstant timestamp with time zone NOT NULL,
   -- Common model attributes
   entityid text,
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_daytype_lastdata (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_daytype_lastdata_pkey PRIMARY KEY (entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_offstreetparking_lastdata (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_offstreetparking_lastdata (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
   sceneref text,
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_offstreetparking_lastdata (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_offstreetparking_lastdata_pkey PRIMARY KEY (entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeintensity_lastdata (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_routeintensity_lastdata (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
   sceneref text,
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeintensity_lastdata (
   returntrips double precision,
   forwardstops int,
   returnstops int,
-  location geometry(MultiLine),
+  location geometry(MultiLineString),
   intensity double precision,
   -- Common model attributes
   entityid text,
@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeintensity_lastdata (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_routeintensity_lastdata_pkey PRIMARY KEY (entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeschedule_lastdata (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_routeschedule_lastdata (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
   sceneref text,
@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeschedule_lastdata (
   forwardtrips double precision,
   returntrips double precision,
   forwardstops int,
-  location geometry(MultiLine),
+  location geometry(MultiLineString),
   returnstops int,
   -- Common model attributes
   entityid text,
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeschedule_lastdata (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_routeschedule_lastdata_pkey PRIMARY KEY (entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficcongestion_lastdata (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_trafficcongestion_lastdata (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
   sceneref text,
@@ -187,7 +187,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficcongestion_lastdata (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_trafficcongestion_lastdata_pkey PRIMARY KEY (entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficintensity_lastdata (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_trafficintensity_lastdata (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
   sceneref text,
@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficintensity_lastdata (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_trafficintensity_lastdata_pkey PRIMARY KEY (entityid)
 );
-CREATE TABLE IF NOT EXISTS :target_schema.dtwin_zone_lastdata (
+CREATE TABLE IF NOT EXISTS digitaltwin.dtwin_zone_lastdata (
   timeinstant timestamp with time zone NOT NULL,
   zoneid int,
   name text,
@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_zone_lastdata (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_zone_lastdata_pkey PRIMARY KEY (entityid)
 );
-CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_join AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_offstreetparking_join AS
   SELECT
     left_table.entityid,
     left_table.entityType,
@@ -239,12 +239,12 @@ CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_join AS
     right_table.name,
     right_table.location
   FROM
-    :target_schema.dtwin_offstreetparking left_table
+    digitaltwin.dtwin_offstreetparking left_table
   INNER JOIN
-    :target_schema.dtwin_offstreetparking_lastdata right_table
+    digitaltwin.dtwin_offstreetparking_lastdata right_table
   ON left_table.entityid = right_table.entityid
 ;
-CREATE OR REPLACE VIEW :target_schema.dtwin_routeintensity_join AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_routeintensity_join AS
   SELECT
     left_table.entityid,
     left_table.entityType,
@@ -264,12 +264,12 @@ CREATE OR REPLACE VIEW :target_schema.dtwin_routeintensity_join AS
     right_table.name,
     right_table.location
   FROM
-    :target_schema.dtwin_routeintensity left_table
+    digitaltwin.dtwin_routeintensity left_table
   INNER JOIN
-    :target_schema.dtwin_routeintensity_lastdata right_table
+    digitaltwin.dtwin_routeintensity_lastdata right_table
   ON left_table.entityid = right_table.entityid
 ;
-CREATE OR REPLACE VIEW :target_schema.dtwin_routeschedule_join AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_routeschedule_join AS
   SELECT
     left_table.entityid,
     left_table.entityType,
@@ -289,12 +289,12 @@ CREATE OR REPLACE VIEW :target_schema.dtwin_routeschedule_join AS
     right_table.name,
     right_table.location
   FROM
-    :target_schema.dtwin_routeschedule left_table
+    digitaltwin.dtwin_routeschedule left_table
   INNER JOIN
-    :target_schema.dtwin_routeschedule_lastdata right_table
+    digitaltwin.dtwin_routeschedule_lastdata right_table
   ON left_table.entityid = right_table.entityid
 ;
-CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_join AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_trafficcongestion_join AS
   SELECT
     left_table.entityid,
     left_table.entityType,
@@ -312,12 +312,12 @@ CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_join AS
     right_table.name,
     right_table.location
   FROM
-    :target_schema.dtwin_trafficcongestion left_table
+    digitaltwin.dtwin_trafficcongestion left_table
   INNER JOIN
-    :target_schema.dtwin_trafficcongestion_lastdata right_table
+    digitaltwin.dtwin_trafficcongestion_lastdata right_table
   ON left_table.entityid = right_table.entityid
 ;
-CREATE OR REPLACE VIEW :target_schema.dtwin_trafficintensity_join AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_trafficintensity_join AS
   SELECT
     left_table.entityid,
     left_table.entityType,
@@ -334,16 +334,16 @@ CREATE OR REPLACE VIEW :target_schema.dtwin_trafficintensity_join AS
     right_table.name,
     right_table.location
   FROM
-    :target_schema.dtwin_trafficintensity left_table
+    digitaltwin.dtwin_trafficintensity left_table
   INNER JOIN
-    :target_schema.dtwin_trafficintensity_lastdata right_table
+    digitaltwin.dtwin_trafficintensity_lastdata right_table
   ON left_table.entityid = right_table.entityid
 ;
 -- CREATE VIEW dtwin_offstreetparking_daily
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por día. Ignora la hora y minuto.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_daily AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_offstreetparking_daily AS
 SELECT
   t.timeinstant,
   t.sourceref,
@@ -356,7 +356,7 @@ SELECT
   AVG(occupation) AS occupation,
   SUM(occupation) / SUM(capacity)::double precision AS occupationPercent,
   t.entityid
-FROM :target_schema.dtwin_offstreetparking_lastdata AS t
+FROM digitaltwin.dtwin_offstreetparking_lastdata AS t
 WHERE t.hour >= 8 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
 
@@ -367,7 +367,7 @@ GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.
 -- widget timeseries de urbo, sin necesidad de tener muestras
 -- diarias para todos los días.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_yesterday AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_offstreetparking_yesterday AS
 SELECT
   timeinstant,
   sourceref,
@@ -381,7 +381,7 @@ SELECT
   occupationPercent,
   entityid,
   date_trunc('day'::text, now()) - '1 day'::interval + make_interval(hours => t.hour) AS generatedinstant
-FROM :target_schema.dtwin_offstreetparking_lastdata AS t;
+FROM digitaltwin.dtwin_offstreetparking_lastdata AS t;
 
 -- CREATE VIEW dtwin_offstreetparking_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
@@ -395,6 +395,7 @@ SELECT
   numeradas.daytype,
   numeradas.name,
   numeradas.zone,
+  entityid,
   MAX(CASE
     WHEN numeradas.morning = TRUE AND numeradas.is_max IS NULL THEN numeradas.hour
     ELSE NULL
@@ -410,7 +411,7 @@ SELECT
   MAX(CASE
     WHEN numeradas.morning = FALSE AND numeradas.is_min IS NULL THEN numeradas.hour
     ELSE NULL
-  END) AS "evening_min",
+  END) AS "evening_min"
 FROM (SELECT *,
   lead(ordenadas.hour) OVER (
     PARTITION BY  ordenadas.timeinstant, ordenadas.sourceref, ordenadas.sceneref, ordenadas.trend, ordenadas.daytype, ordenadas.name, ordenadas.zone, ordenadas.morning
@@ -430,18 +431,20 @@ FROM (SELECT
     WHEN t.hour <= 14 THEN TRUE
     ELSE FALSE
   END AS morning,
+  entityid,
   t.hour,
   t.occupationPercent
-FROM :target_schema.dtwin_offstreetparking_lastdata AS t
+FROM digitaltwin.dtwin_offstreetparking_lastdata AS t
 WHERE t.hour >= 8 AND t.hour <= 22
-ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.occupationPercent DESC) AS ordenadas) AS extremas
+ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.occupationPercent DESC) AS ordenadas) AS numeradas
 WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL
+GROUP BY  numeradas.timeinstant, numeradas.sourceref, numeradas.sceneref, numeradas.trend, numeradas.daytype, numeradas.name, numeradas.zone, entityid;
 
 -- CREATE VIEW dtwin_offstreetparking_freq
 -- Vista que calcula la frecuencia con la que una métrica
 -- está dentro de un umbral.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_freq AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_offstreetparking_freq AS
 SELECT
   t.timeinstant,
   t.sourceref,
@@ -458,12 +461,12 @@ SELECT
     ELSE 'tramo_4'
   END AS range,
   COUNT(t.hour) AS hours
-FROM :target_schema.dtwin_offstreetparking_lastdata AS t
-GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8-- CREATE VIEW dtwin_trafficcongestion_daily
+FROM digitaltwin.dtwin_offstreetparking_lastdata AS t
+GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8;-- CREATE VIEW dtwin_trafficcongestion_daily
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por día. Ignora la hora y minuto.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_daily AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_trafficcongestion_daily AS
 SELECT
   t.timeinstant,
   t.sourceref,
@@ -474,7 +477,7 @@ SELECT
   t.zone,
   AVG(congestion) AS congestion,
   t.entityid
-FROM :target_schema.dtwin_trafficcongestion_lastdata AS t
+FROM digitaltwin.dtwin_trafficcongestion_lastdata AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
 
@@ -482,7 +485,7 @@ GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por hora. Ignora el minuto.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_hourly AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_trafficcongestion_hourly AS
 SELECT
   t.timeinstant,
   t.sourceref,
@@ -494,7 +497,7 @@ SELECT
 t.hour,
   AVG(congestion) AS congestion,
   t.entityid
-FROM :target_schema.dtwin_trafficcongestion_lastdata AS t
+FROM digitaltwin.dtwin_trafficcongestion_lastdata AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.hour, t.entityid;
 
@@ -505,7 +508,7 @@ GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.
 -- widget timeseries de urbo, sin necesidad de tener muestras
 -- diarias para todos los días.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_yesterday AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_trafficcongestion_yesterday AS
 SELECT
   timeinstant,
   sourceref,
@@ -516,8 +519,8 @@ SELECT
   zone,
   congestion,
   entityid,
-  date_trunc('day'::text, now()) - '1 day'::interval  + make_interval(hours => t.hour, minutes => t.minute) AS generatedinstant
-FROM :target_schema.dtwin_trafficcongestion_lastdata AS t;
+  date_trunc('day'::text, now()) - '1 day'::interval  + make_interval(hours => t.hour, mins => t.minute) AS generatedinstant
+FROM digitaltwin.dtwin_trafficcongestion_lastdata AS t;
 
 -- CREATE VIEW dtwin_trafficcongestion_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
@@ -531,6 +534,7 @@ SELECT
   numeradas.daytype,
   numeradas.name,
   numeradas.zone,
+  entityid,
   MAX(CASE
     WHEN numeradas.morning = TRUE AND numeradas.is_max IS NULL THEN numeradas.hour || ':' || numeradas.minute
     ELSE NULL
@@ -546,7 +550,7 @@ SELECT
   MAX(CASE
     WHEN numeradas.morning = FALSE AND numeradas.is_min IS NULL THEN numeradas.hour || ':' || numeradas.minute
     ELSE NULL
-  END) AS "evening_min",
+  END) AS "evening_min"
 FROM (SELECT *,
   lead(ordenadas.hour) OVER (
     PARTITION BY  ordenadas.timeinstant, ordenadas.sourceref, ordenadas.sceneref, ordenadas.trend, ordenadas.daytype, ordenadas.name, ordenadas.zone, ordenadas.morning
@@ -566,17 +570,19 @@ FROM (SELECT
     WHEN t.hour <= 14 THEN TRUE
     ELSE FALSE
   END AS morning,
+  entityid,
   t.hour,
   t.minute,
   t.congestion
-FROM :target_schema.dtwin_trafficcongestion_lastdata AS t
+FROM digitaltwin.dtwin_trafficcongestion_lastdata AS t
 WHERE t.hour >= 7 AND t.hour <= 22
-ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.congestion DESC) AS ordenadas) AS extremas
-WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL-- CREATE VIEW dtwin_trafficintensity_daily
+ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.congestion DESC) AS ordenadas) AS numeradas
+WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL
+GROUP BY  numeradas.timeinstant, numeradas.sourceref, numeradas.sceneref, numeradas.trend, numeradas.daytype, numeradas.name, numeradas.zone, entityid;-- CREATE VIEW dtwin_trafficintensity_daily
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por día. Ignora la hora y minuto.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW :target_schema.dtwin_trafficintensity_daily AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_trafficintensity_daily AS
 SELECT
   t.timeinstant,
   t.sourceref,
@@ -587,7 +593,7 @@ SELECT
   t.zone,
   SUM(intensity) AS intensity,
   t.entityid
-FROM :target_schema.dtwin_trafficintensity_lastdata AS t
+FROM digitaltwin.dtwin_trafficintensity_lastdata AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
 
@@ -598,7 +604,7 @@ GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.
 -- widget timeseries de urbo, sin necesidad de tener muestras
 -- diarias para todos los días.
 -- -------------------------------------------------------------
-CREATE OR REPLACE VIEW :target_schema.dtwin_trafficintensity_yesterday AS
+CREATE OR REPLACE VIEW digitaltwin.dtwin_trafficintensity_yesterday AS
 SELECT
   timeinstant,
   sourceref,
@@ -610,7 +616,7 @@ SELECT
   intensity,
   entityid,
   date_trunc('day'::text, now()) - '1 day'::interval + make_interval(hours => t.hour) AS generatedinstant
-FROM :target_schema.dtwin_trafficintensity_lastdata AS t;
+FROM digitaltwin.dtwin_trafficintensity_lastdata AS t;
 
 -- CREATE VIEW dtwin_trafficintensity_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
@@ -624,6 +630,7 @@ SELECT
   numeradas.daytype,
   numeradas.name,
   numeradas.zone,
+  entityid,
   MAX(CASE
     WHEN numeradas.morning = TRUE AND numeradas.is_max IS NULL THEN numeradas.hour
     ELSE NULL
@@ -639,7 +646,7 @@ SELECT
   MAX(CASE
     WHEN numeradas.morning = FALSE AND numeradas.is_min IS NULL THEN numeradas.hour
     ELSE NULL
-  END) AS "evening_min",
+  END) AS "evening_min"
 FROM (SELECT *,
   lead(ordenadas.hour) OVER (
     PARTITION BY  ordenadas.timeinstant, ordenadas.sourceref, ordenadas.sceneref, ordenadas.trend, ordenadas.daytype, ordenadas.name, ordenadas.zone, ordenadas.morning
@@ -659,9 +666,11 @@ FROM (SELECT
     WHEN t.hour <= 14 THEN TRUE
     ELSE FALSE
   END AS morning,
+  entityid,
   t.hour,
   t.intensity
-FROM :target_schema.dtwin_trafficintensity_lastdata AS t
+FROM digitaltwin.dtwin_trafficintensity_lastdata AS t
 WHERE t.hour >= 7 AND t.hour <= 22
-ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.intensity DESC) AS ordenadas) AS extremas
+ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.intensity DESC) AS ordenadas) AS numeradas
 WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL
+GROUP BY  numeradas.timeinstant, numeradas.sourceref, numeradas.sceneref, numeradas.trend, numeradas.daytype, numeradas.name, numeradas.zone, entityid;

@@ -101,9 +101,9 @@ import (
 	}
 }
 
-#Geometry: MultiLine: #ModelAttribute & {
+#Geometry: MultiLineString: #ModelAttribute & {
 	ngsiType: "geo:json"
-	dbType:   "geometry(MultiLine)"
+	dbType:   "geometry(MultiLineString)"
 	example: {
 		type: "geo:json"
 		value: {

@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeintensity_lastdata (
   returntrips double precision,
   forwardstops int,
   returnstops int,
-  location geometry(MultiLine),
+  location geometry(MultiLineString),
   intensity double precision,
   -- Common model attributes
   entityid text,

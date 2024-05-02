@@ -8,7 +8,7 @@ import (
 RouteIntensity: templates.#Twin & {
 
 	#entityType:   "RouteIntensity"
-	#geometryType: "MultiLine"
+	#geometryType: "MultiLineString"
 	#hasHour:      false
 	#hasMinute:    false
 	#multiZone:    true

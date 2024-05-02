@@ -50,6 +50,7 @@ SELECT
   numeradas.daytype,
   numeradas.name,
   numeradas.zone,
+  entityid,
   MAX(CASE
     WHEN numeradas.morning = TRUE AND numeradas.is_max IS NULL THEN numeradas.hour
     ELSE NULL
@@ -65,7 +66,7 @@ SELECT
   MAX(CASE
     WHEN numeradas.morning = FALSE AND numeradas.is_min IS NULL THEN numeradas.hour
     ELSE NULL
-  END) AS "evening_min",
+  END) AS "evening_min"
 FROM (SELECT *,
   lead(ordenadas.hour) OVER (
     PARTITION BY  ordenadas.timeinstant, ordenadas.sourceref, ordenadas.sceneref, ordenadas.trend, ordenadas.daytype, ordenadas.name, ordenadas.zone, ordenadas.morning
@@ -85,9 +86,11 @@ FROM (SELECT
     WHEN t.hour <= 14 THEN TRUE
     ELSE FALSE
   END AS morning,
+  entityid,
   t.hour,
   t.intensity
 FROM :target_schema.dtwin_trafficintensity_lastdata AS t
 WHERE t.hour >= 7 AND t.hour <= 22
-ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.intensity DESC) AS ordenadas) AS extremas
+ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.intensity DESC) AS ordenadas) AS numeradas
 WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL
+GROUP BY  numeradas.timeinstant, numeradas.sourceref, numeradas.sceneref, numeradas.trend, numeradas.daytype, numeradas.name, numeradas.zone, entityid;
