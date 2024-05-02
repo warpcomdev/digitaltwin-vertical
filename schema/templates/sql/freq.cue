@@ -2,11 +2,8 @@ package sql
 
 import (
 	"strings"
-	"text/template"
 )
 
-// Vista que calcula la frecuencia con la que una métrica
-// está dentro de un umbral.
 freq: {
 
 	// Parámetros de entrada de la vista:
@@ -25,7 +22,11 @@ freq: {
 	}
 
 	_rangeColumn: len(input.columns) + 1
-	_sql:         """
+	sql:          """
+		-- CREATE VIEW {{ .viewName }}
+		-- Vista que calcula la frecuencia con la que una métrica
+		-- está dentro de un umbral.
+		-- -------------------------------------------------------------
 		CREATE OR REPLACE VIEW %target_schema%.{{ .viewName }} AS
 		SELECT
 		  {{- range .columns }}
@@ -42,9 +43,6 @@ freq: {
 		FROM %target_schema%.{{ .tableName }} AS t
 		GROUP BY {{ range .columns }} t.{{.}},{{ end }} \(_rangeColumn)
 		"""
-
-	// Texto del SQL, una vez reemplazados los valores
-	output: template.Execute(_sql, input)
 
 	// Nombres de las relaciones creadas
 	relations: [input.viewName]

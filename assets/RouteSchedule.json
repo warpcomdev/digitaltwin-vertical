@@ -1,0 +1,177 @@
+{
+  "RouteSchedule": {
+    "historic": {
+      "sql": {
+        "sources": {
+          "routeschedule_historic.sql": {
+            "documentation": "Fichero SQL del flujo historic (tipo FLOW_HISTORIC) en modelo RouteSchedule",
+            "path": "./sql",
+            "files": [
+              "routeschedule_historic.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_routeschedule",
+              "dtwin_routeschedule_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "RouteSchedule_historic": {
+          "documentation": "Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo RouteSchedule",
+          "description": "RouteSchedule:HISTORIC:dtwin:historic",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "RouteSchedule"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant",
+                "sourceRef",
+                "sceneRef",
+                "trend",
+                "dayType",
+                "hour"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "sourceRef",
+              "sceneRef",
+              "trend",
+              "dayType",
+              "hour",
+              "zoneList",
+              "forwardTrips",
+              "returnTrips",
+              "forwardStops",
+              "returnStops"
+            ],
+            "httpCustom": {
+              "url": "HISTORIC",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              },
+              "ngsi": {
+                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "lastdata": {
+      "sql": {
+        "sources": {
+          "routeschedule_lastdata.sql": {
+            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteSchedule",
+            "path": "./sql",
+            "files": [
+              "routeschedule_lastdata.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_routeschedule_lastdata",
+              "dtwin_routeschedule_lastdata_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "RouteSchedule_lastdata": {
+          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteSchedule",
+          "description": "RouteSchedule:LASTDATA:dtwin:lastdata",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "RouteSchedule"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant",
+                "sourceRef",
+                "sceneRef",
+                "trend",
+                "dayType",
+                "hour"
+              ],
+              "alterationTypes": [
+                "entityUpdate",
+                "entityCreate"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "sourceRef",
+              "sceneRef",
+              "trend",
+              "dayType",
+              "name",
+              "hour",
+              "zoneList",
+              "forwardTrips",
+              "returnTrips",
+              "forwardStops",
+              "location",
+              "returnStops",
+              "alterationType"
+            ],
+            "httpCustom": {
+              "url": "LASTDATA",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              },
+              "ngsi": {
+                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "custom_sql": {
+      "sql": {
+        "sources": {
+          "custom_sql": {
+            "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
+            "path": "./sql",
+            "files": [
+              "custom_RouteSchedule.sql"
+            ],
+            "weight": 10,
+            "relations": []
+          }
+        }
+      }
+    },
+    "join": {
+      "sql": {
+        "sources": {
+          "routeschedule_join.sql": {
+            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+            "path": "./sql",
+            "files": [
+              "routeschedule_join.sql"
+            ],
+            "weight": 1,
+            "relations": [
+              "dtwin_routeschedule_join"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

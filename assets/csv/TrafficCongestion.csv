@@ -1,0 +1,2 @@
+entityID,entityType,TimeInstant<DateTime>,sourceRef<TextUnrestricted>,sceneRef<TextUnrestricted>,trend<TextUnrestricted>,dayType<TextUnrestricted>,name<TextUnrestricted>,hour<Number>,minute<Number>,zone<TextUnrestricted>,congestion<Number>,location<geo:json>
+tramo-100,TrafficCongestion,2018-12-10T20:40:23,example text,example text,Verano,L-J,example text,15,20,Distrito 1,0.33,"{""type"": ""geo:json"", ""value"": {""type"": ""Point"", ""coordinates"": [3.5, 24.6]}}"

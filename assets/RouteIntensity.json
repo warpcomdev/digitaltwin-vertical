@@ -1,0 +1,175 @@
+{
+  "RouteIntensity": {
+    "historic": {
+      "sql": {
+        "sources": {
+          "routeintensity_historic.sql": {
+            "documentation": "Fichero SQL del flujo historic (tipo FLOW_HISTORIC) en modelo RouteIntensity",
+            "path": "./sql",
+            "files": [
+              "routeintensity_historic.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_routeintensity",
+              "dtwin_routeintensity_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "RouteIntensity_historic": {
+          "documentation": "Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo RouteIntensity",
+          "description": "RouteIntensity:HISTORIC:dtwin:historic",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "RouteIntensity"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant",
+                "sourceRef",
+                "sceneRef",
+                "trend",
+                "dayType"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "sourceRef",
+              "sceneRef",
+              "trend",
+              "dayType",
+              "zoneList",
+              "forwardTrips",
+              "returnTrips",
+              "forwardStops",
+              "returnStops",
+              "intensity"
+            ],
+            "httpCustom": {
+              "url": "HISTORIC",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              },
+              "ngsi": {
+                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "lastdata": {
+      "sql": {
+        "sources": {
+          "routeintensity_lastdata.sql": {
+            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteIntensity",
+            "path": "./sql",
+            "files": [
+              "routeintensity_lastdata.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_routeintensity_lastdata",
+              "dtwin_routeintensity_lastdata_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "RouteIntensity_lastdata": {
+          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteIntensity",
+          "description": "RouteIntensity:LASTDATA:dtwin:lastdata",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "RouteIntensity"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant",
+                "sourceRef",
+                "sceneRef",
+                "trend",
+                "dayType"
+              ],
+              "alterationTypes": [
+                "entityUpdate",
+                "entityCreate"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "sourceRef",
+              "sceneRef",
+              "trend",
+              "dayType",
+              "name",
+              "zoneList",
+              "forwardTrips",
+              "returnTrips",
+              "forwardStops",
+              "returnStops",
+              "location",
+              "intensity",
+              "alterationType"
+            ],
+            "httpCustom": {
+              "url": "LASTDATA",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              },
+              "ngsi": {
+                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "custom_sql": {
+      "sql": {
+        "sources": {
+          "custom_sql": {
+            "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
+            "path": "./sql",
+            "files": [
+              "custom_RouteIntensity.sql"
+            ],
+            "weight": 10,
+            "relations": []
+          }
+        }
+      }
+    },
+    "join": {
+      "sql": {
+        "sources": {
+          "routeintensity_join.sql": {
+            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+            "path": "./sql",
+            "files": [
+              "routeintensity_join.sql"
+            ],
+            "weight": 1,
+            "relations": [
+              "dtwin_routeintensity_join"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

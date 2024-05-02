@@ -1,0 +1,180 @@
+{
+  "TrafficCongestion": {
+    "historic": {
+      "sql": {
+        "sources": {
+          "trafficcongestion_historic.sql": {
+            "documentation": "Fichero SQL del flujo historic (tipo FLOW_HISTORIC) en modelo TrafficCongestion",
+            "path": "./sql",
+            "files": [
+              "trafficcongestion_historic.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_trafficcongestion",
+              "dtwin_trafficcongestion_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "TrafficCongestion_historic": {
+          "documentation": "Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo TrafficCongestion",
+          "description": "TrafficCongestion:HISTORIC:dtwin:historic",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "TrafficCongestion"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant",
+                "sourceRef",
+                "sceneRef",
+                "trend",
+                "dayType",
+                "hour",
+                "minute"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "sourceRef",
+              "sceneRef",
+              "trend",
+              "dayType",
+              "hour",
+              "minute",
+              "zone",
+              "congestion"
+            ],
+            "httpCustom": {
+              "url": "HISTORIC",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              },
+              "ngsi": {
+                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}_${minute}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "lastdata": {
+      "sql": {
+        "sources": {
+          "trafficcongestion_lastdata.sql": {
+            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficCongestion",
+            "path": "./sql",
+            "files": [
+              "trafficcongestion_lastdata.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_trafficcongestion_lastdata",
+              "dtwin_trafficcongestion_lastdata_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "TrafficCongestion_lastdata": {
+          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficCongestion",
+          "description": "TrafficCongestion:LASTDATA:dtwin:lastdata",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "TrafficCongestion"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant",
+                "sourceRef",
+                "sceneRef",
+                "trend",
+                "dayType",
+                "hour",
+                "minute"
+              ],
+              "alterationTypes": [
+                "entityUpdate",
+                "entityCreate"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "sourceRef",
+              "sceneRef",
+              "trend",
+              "dayType",
+              "name",
+              "hour",
+              "minute",
+              "zone",
+              "congestion",
+              "location",
+              "alterationType"
+            ],
+            "httpCustom": {
+              "url": "LASTDATA",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              },
+              "ngsi": {
+                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}_${minute}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "custom_sql": {
+      "sql": {
+        "sources": {
+          "custom_sql": {
+            "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
+            "path": "./sql",
+            "files": [
+              "custom_TrafficCongestion.sql"
+            ],
+            "weight": 10,
+            "relations": [
+              "dtwin_trafficcongestion_daily",
+              "dtwin_trafficcongestion_hourly",
+              "dtwin_trafficcongestion_yesterday",
+              "dtwin_trafficcongestion_yesterday"
+            ]
+          }
+        }
+      }
+    },
+    "join": {
+      "sql": {
+        "sources": {
+          "trafficcongestion_join.sql": {
+            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+            "path": "./sql",
+            "files": [
+              "trafficcongestion_join.sql"
+            ],
+            "weight": 1,
+            "relations": [
+              "dtwin_trafficcongestion_join"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -2,11 +2,8 @@ package sql
 
 import (
 	"strings"
-	"text/template"
 )
 
-// Vista que agrega todos los resultados de una tabla de gemelo,
-// por día. Ignora la hora y minuto.
 daily: {
 
 	// Parámetros de entrada de la vista:
@@ -22,7 +19,11 @@ daily: {
 		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_daily"
 	}
 
-	_sql: """
+	sql: """
+		-- CREATE VIEW {{ .viewName }}
+		-- Vista que agrega todos los resultados de una tabla de gemelo,
+		-- por día. Ignora la hora y minuto.
+		-- -------------------------------------------------------------
 		CREATE OR REPLACE VIEW %target_schema%.{{ .viewName }} AS
 		SELECT
 		{{- range .columns }}
@@ -36,9 +37,6 @@ daily: {
 		WHERE t.hour >= {{ .hourFrom }} AND t.hour <= {{ .hourTo }}
 		GROUP BY {{ range .columns }} t.{{.}},{{end}} t.entityid;
 		"""
-
-	// Texto del SQL, una vez reemplazados los valores
-	output: template.Execute(_sql, input)
 
 	// Nombres de las relaciones creadas
 	relations: [input.viewName]

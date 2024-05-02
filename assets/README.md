@@ -1,0 +1,5 @@
+  - [Modelo del vertical](model/README.md)
+  - [Entidades de referencia](entities/README.md)
+  - Artefactos de despliegue:
+    - [Subscripciones](subs/README.md)
+    - [Ficheros SQL](sql/README.md)

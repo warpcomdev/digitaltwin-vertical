@@ -201,7 +201,7 @@ import (
 	}}
 
 	flows: custom_sql: {
-		class: "CLASS_FLOW_RAW"
+		class: "FLOW_RAW"
 		sql: sources: custom_sql: {
 			documentation: """
 				Conjunto de vistas utilitarias para la presentación de
@@ -209,7 +209,7 @@ import (
 				"""
 			path: "./sql"
 			files: [
-				"custom_\(strings.ToLower(#entityType)).sql",
+				"custom_\(#entityType).sql",
 			]
 			weight: 10
 			relations: list.FlattenN([for _, data in #sql_template {

@@ -1,0 +1,180 @@
+{
+  "OffStreetParking": {
+    "historic": {
+      "sql": {
+        "sources": {
+          "offstreetparking_historic.sql": {
+            "documentation": "Fichero SQL del flujo historic (tipo FLOW_HISTORIC) en modelo OffStreetParking",
+            "path": "./sql",
+            "files": [
+              "offstreetparking_historic.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_offstreetparking",
+              "dtwin_offstreetparking_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "OffStreetParking_historic": {
+          "documentation": "Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo OffStreetParking",
+          "description": "OffStreetParking:HISTORIC:dtwin:historic",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "OffStreetParking"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant",
+                "sourceRef",
+                "sceneRef",
+                "trend",
+                "dayType",
+                "hour"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "sourceRef",
+              "sceneRef",
+              "trend",
+              "dayType",
+              "hour",
+              "zone",
+              "capacity",
+              "occupationPercent",
+              "occupation"
+            ],
+            "httpCustom": {
+              "url": "HISTORIC",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              },
+              "ngsi": {
+                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "lastdata": {
+      "sql": {
+        "sources": {
+          "offstreetparking_lastdata.sql": {
+            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo OffStreetParking",
+            "path": "./sql",
+            "files": [
+              "offstreetparking_lastdata.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_offstreetparking_lastdata",
+              "dtwin_offstreetparking_lastdata_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "OffStreetParking_lastdata": {
+          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo OffStreetParking",
+          "description": "OffStreetParking:LASTDATA:dtwin:lastdata",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "OffStreetParking"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant",
+                "sourceRef",
+                "sceneRef",
+                "trend",
+                "dayType",
+                "hour"
+              ],
+              "alterationTypes": [
+                "entityUpdate",
+                "entityCreate"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "sourceRef",
+              "sceneRef",
+              "trend",
+              "dayType",
+              "name",
+              "hour",
+              "zone",
+              "capacity",
+              "occupationPercent",
+              "location",
+              "occupation",
+              "alterationType"
+            ],
+            "httpCustom": {
+              "url": "LASTDATA",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              },
+              "ngsi": {
+                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "custom_sql": {
+      "sql": {
+        "sources": {
+          "custom_sql": {
+            "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
+            "path": "./sql",
+            "files": [
+              "custom_OffStreetParking.sql"
+            ],
+            "weight": 10,
+            "relations": [
+              "dtwin_offstreetparking_daily",
+              "dtwin_offstreetparking_yesterday",
+              "dtwin_offstreetparking_yesterday",
+              "dtwin_offstreetparking_freq"
+            ]
+          }
+        }
+      }
+    },
+    "join": {
+      "sql": {
+        "sources": {
+          "offstreetparking_join.sql": {
+            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+            "path": "./sql",
+            "files": [
+              "offstreetparking_join.sql"
+            ],
+            "weight": 1,
+            "relations": [
+              "dtwin_offstreetparking_join"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

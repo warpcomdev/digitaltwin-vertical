@@ -1,0 +1,175 @@
+{
+  "TrafficIntensity": {
+    "historic": {
+      "sql": {
+        "sources": {
+          "trafficintensity_historic.sql": {
+            "documentation": "Fichero SQL del flujo historic (tipo FLOW_HISTORIC) en modelo TrafficIntensity",
+            "path": "./sql",
+            "files": [
+              "trafficintensity_historic.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_trafficintensity",
+              "dtwin_trafficintensity_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "TrafficIntensity_historic": {
+          "documentation": "Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo TrafficIntensity",
+          "description": "TrafficIntensity:HISTORIC:dtwin:historic",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "TrafficIntensity"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant",
+                "sourceRef",
+                "sceneRef",
+                "trend",
+                "dayType",
+                "hour"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "sourceRef",
+              "sceneRef",
+              "trend",
+              "dayType",
+              "hour",
+              "zone",
+              "intensity"
+            ],
+            "httpCustom": {
+              "url": "HISTORIC",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              },
+              "ngsi": {
+                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "lastdata": {
+      "sql": {
+        "sources": {
+          "trafficintensity_lastdata.sql": {
+            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficIntensity",
+            "path": "./sql",
+            "files": [
+              "trafficintensity_lastdata.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_trafficintensity_lastdata",
+              "dtwin_trafficintensity_lastdata_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "TrafficIntensity_lastdata": {
+          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficIntensity",
+          "description": "TrafficIntensity:LASTDATA:dtwin:lastdata",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "TrafficIntensity"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant",
+                "sourceRef",
+                "sceneRef",
+                "trend",
+                "dayType",
+                "hour"
+              ],
+              "alterationTypes": [
+                "entityUpdate",
+                "entityCreate"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "sourceRef",
+              "sceneRef",
+              "trend",
+              "dayType",
+              "name",
+              "hour",
+              "zone",
+              "intensity",
+              "location",
+              "alterationType"
+            ],
+            "httpCustom": {
+              "url": "LASTDATA",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              },
+              "ngsi": {
+                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"
+              }
+            }
+          }
+        }
+      }
+    },
+    "custom_sql": {
+      "sql": {
+        "sources": {
+          "custom_sql": {
+            "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
+            "path": "./sql",
+            "files": [
+              "custom_TrafficIntensity.sql"
+            ],
+            "weight": 10,
+            "relations": [
+              "dtwin_trafficintensity_daily",
+              "dtwin_trafficintensity_yesterday",
+              "dtwin_trafficintensity_yesterday"
+            ]
+          }
+        }
+      }
+    },
+    "join": {
+      "sql": {
+        "sources": {
+          "trafficintensity_join.sql": {
+            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+            "path": "./sql",
+            "files": [
+              "trafficintensity_join.sql"
+            ],
+            "weight": 1,
+            "relations": [
+              "dtwin_trafficintensity_join"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
