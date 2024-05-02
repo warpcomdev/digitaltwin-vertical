@@ -1,0 +1,219 @@
+{
+    "TrafficIntensity": {
+        "description": "Medidor de intensidad de tráfico",
+        "namespace": "dtwin",
+        "exampleId": "puntoMedida-100",
+        "model": {
+            "TimeInstant": {
+                "description": "Fecha / Hora del cálculo de vista identidad o simulación",
+                "ngsiType": "DateTime",
+                "dbType": "timestamp with time zone NOT NULL",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "historic",
+                    "lastdata"
+                ],
+                "example": "2018-12-10T20:40:23",
+                "range": "-"
+            },
+            "sourceRef": {
+                "description": "ID de entidad original.\nReemplaza al entityId, ya que esta entidad es *singleton*\ny su ID en base de datos se ve sobrescrito por una\ncomposición de los campos únicos.",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "historic",
+                    "lastdata"
+                ],
+                "example": "example text",
+                "range": "-"
+            },
+            "sceneRef": {
+                "description": "ID del escenario de simulación.\nIdentifica la simulación realizada. El valor \"NA\"\nindica que se trata de una vista identidad.",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "historic",
+                    "lastdata"
+                ],
+                "example": "example text",
+                "range": "-"
+            },
+            "trend": {
+                "description": "Estacionalidad o tendencia para la que se ha calculado el escenario",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "historic",
+                    "lastdata"
+                ],
+                "example": "Verano",
+                "range": "Verano, Fallas, Otros"
+            },
+            "dayType": {
+                "description": "Tipo de día al que corresponde la medida",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "historic",
+                    "lastdata"
+                ],
+                "example": "L-J",
+                "range": "L-J, Viernes, Sábado, Domingo"
+            },
+            "name": {
+                "description": "Nombre descriptivo de la entidad",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": "example text",
+                "range": "-"
+            },
+            "hour": {
+                "description": "Hora del día a la que corresponde la medida",
+                "ngsiType": "Number",
+                "dbType": "int",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "historic",
+                    "lastdata"
+                ],
+                "range": "0-23",
+                "example": 15
+            },
+            "zone": {
+                "description": "Identificador de la zona o distrito a la que pertenece la entidad",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "example": "Distrito 1",
+                "flows": [
+                    "historic",
+                    "lastdata"
+                ],
+                "range": "-"
+            },
+            "intensity": {
+                "description": "Intensidad de tráfico estimada en el intervalo",
+                "ngsiType": "Number",
+                "dbType": "double precision",
+                "extra": "-",
+                "unit": "-",
+                "example": 245,
+                "flows": [
+                    "historic",
+                    "lastdata"
+                ],
+                "range": "-"
+            },
+            "location": {
+                "description": "Ubicación de la entidad",
+                "ngsiType": "geo:json",
+                "dbType": "geometry(Point)",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": {
+                    "type": "geo:json",
+                    "value": {
+                        "type": "Point",
+                        "coordinates": [
+                            3.5,
+                            24.6
+                        ]
+                    }
+                },
+                "range": "-"
+            }
+        },
+        "aspects": [
+            {
+                "class": "ASPECT_SINGLETON",
+                "attrs": [
+                    "sourceRef",
+                    "sceneRef",
+                    "trend",
+                    "dayType",
+                    "hour"
+                ]
+            }
+        ],
+        "flows": {
+            "historic": {
+                "class": "FLOW_HISTORIC",
+                "endpoint": "HISTORIC"
+            },
+            "lastdata": {
+                "class": "FLOW_LASTDATA",
+                "endpoint": "LASTDATA",
+                "condition": {
+                    "attrs": [
+                        "TimeInstant",
+                        "sourceRef",
+                        "sceneRef",
+                        "trend",
+                        "dayType",
+                        "hour"
+                    ],
+                    "alterationTypes": [
+                        "entityUpdate",
+                        "entityCreate"
+                    ]
+                }
+            },
+            "join": {
+                "class": "FLOW_JOIN_VIEW",
+                "leftModel": {
+                    "name": "trafficintensity",
+                    "entityNamespace": "dtwin",
+                    "attrs": [
+                        "entityid",
+                        "entityType",
+                        "fiwareservicepath",
+                        "recvtime",
+                        "timeinstant",
+                        "sourceref",
+                        "sceneref",
+                        "trend",
+                        "daytype",
+                        "hour",
+                        "zone",
+                        "intensity"
+                    ],
+                    "attrJoinOn": [
+                        "entityid"
+                    ]
+                },
+                "rightModel": [
+                    {
+                        "name": "trafficintensity_lastdata",
+                        "entityNamespace": "dtwin",
+                        "attrs": [
+                            "name",
+                            "location"
+                        ],
+                        "attrJoinOn": [
+                            "entityid"
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}
