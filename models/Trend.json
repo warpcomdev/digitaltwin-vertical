@@ -1,0 +1,27 @@
+{
+    "Trend": {
+        "description": "Estacionalidad. PErmite separar diferentes tendencias a lo largo del año.\nTendrá un número fijo de valores, por ejemplo:\n\nVerano\nResto",
+        "namespace": "dtwin",
+        "exampleId": "Verano",
+        "model": {
+            "TimeInstant": {
+                "description": "Fecha / Hora del cálculo de vista identidad o simulación",
+                "ngsiType": "DateTime",
+                "dbType": "timestamp with time zone NOT NULL",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": "2018-12-10T20:40:23",
+                "range": "-"
+            }
+        },
+        "flows": {
+            "lastdata": {
+                "class": "FLOW_LASTDATA",
+                "endpoint": "LASTDATA"
+            }
+        }
+    }
+}

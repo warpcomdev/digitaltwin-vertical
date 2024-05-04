@@ -89,9 +89,9 @@ import (
 	}
 }
 
-#Geometry: Line: #ModelAttribute & {
+#Geometry: LineString: #ModelAttribute & {
 	ngsiType: "geo:json"
-	dbType:   "geometry(Line)"
+	dbType:   "geometry(LineString)"
 	example: {
 		type: "geo:json"
 		value: {

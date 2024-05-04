@@ -14,7 +14,7 @@ import (
 	#hasHour:      bool | *true
 	#hasMinute:    bool | *false
 	#multiZone:    bool | *false
-	#geometryType: *"Point" | "Line" | "MultiLineString" | "Polygon" | "MultiPolygon"
+	#geometryType: *"Point" | "LineString" | "MultiLineString" | "Polygon" | "MultiPolygon"
 	#namespace:    "dtwin"
 
 	description: string

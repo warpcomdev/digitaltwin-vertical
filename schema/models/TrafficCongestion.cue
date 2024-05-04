@@ -8,7 +8,7 @@ import (
 TrafficCongestion: templates.#Twin & {
 
 	#entityType:   "TrafficCongestion"
-	#geometryType: "Point"
+	#geometryType: "LineString"
 	#hasMinute:    true
 	#multiZone:    false
 
