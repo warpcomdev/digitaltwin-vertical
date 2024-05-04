@@ -12,7 +12,7 @@ El concepto de "gemelo digital" se utiliza en múltiples contextos (industria, I
 
 ## Datasets
 
-Tanto el análisis estadístico como el aprendizaje predictivo que se realizan en este proyecto se basan en el procesamiento de un conjunto de **datasets**. Cada dataset consiste en un **conjunto de series temporales históricas, monovariables y georeferenciadas**, asociadas cada una a un punto de medida. Cada elelemto de cada dataset proporciona:
+Tanto el análisis estadístico como el aprendizaje predictivo que se realizan en este proyecto se basan en el procesamiento de **datasets** con información histórica de las métricas o servicios soportados. Cada dataset consiste en un **conjunto de series temporales históricas, monovariables y georeferenciadas**, asociadas cada una a un punto de medida. Cada elemento de cada dataset proporciona:
 
 - Un identificador del elemento de medida.
 - Una fecha de la medida.
@@ -25,7 +25,7 @@ Todos los datasets que se han usado en este proyecto se basan en el análisis de
 
 Los detalles de los datasets soportados se proporcionan en los siguientes documentos:
 
-- [Dataset de aparcameintos](datasets/OffStreetParking.md)
+- [Dataset de aparcamientos](datasets/OffStreetParking.md)
 - [Dataset de intensidad de tráfico](datasets/TrafficIntensity.md)
 - [Dataset de congestión de tráfico](datasets/TrafficCongestion.md)
 - [Dataset de frecuencia de paso de rutas](datasets/RouteSchedule.md)
@@ -39,21 +39,24 @@ Por ejemplo, si exceptuamos circunstancias especiales como festivos, se asume qu
 
 También es posible esperar cierta estacionalidad anual en las métricas. Por ejemplo, el tráfico de un lunes típico de invierno puede ser más denso que el de uno de verano, si los ciudadanos tienden a usar más el transporte privado con el mal tiempo.
 
-El objetivo de la primera parte del gemelo, la **caracterización estadística**, es determinar estos patrones: Identificar qué circunstancias se reflejan en el comportamiento observable de la ciudad, y representar de manera visual cuál es el comportamiento de la ciudad en esa circunstancia.
+El objetivo de la primera parte del gemelo, la **caracterización estadística**, es determinar estos patrones:
+
+- Identificar los distintos patrones en régimen permanente que se deducen de las medidas obtenidas de la ciudad.
+- Representar de manera visual cuál es el comportamiento de la ciudad en esas situaciones.
 
 ### Regularización de datasets
 
-Las medidas obtenidas de los datasets originales tienen fechas que en general no coinciden para los diferentes puntos de medida, ni para los diferentes días, ni están espaciadas regularmente.
+Las medidas obtenidas de los datasets originales tienen fechas que no son consistentes para distintos puntos de medida, o días. Es decir, las fechas en las que se producen las medidas no coinciden para puntos de medida distintos, ni están espaciadas entre sí de manera perfecta, ni las horas coinciden necesariamente de un día al siguiente.
 
-Esto hace imposible una clasificación directa de las series temporales de cada dataset. Para poder comparar unos días con otros, es necesario regularizar los datasets previamente.
+Para poder comparar los datasets entre sí, a lo largo de diferentes días y entre diferentes puntos de medida, es necesario **regularizarlos** previamente.
 
-La regularización consiste en garantizar que cada dataset tiene el mismo número de muestras por cada punto de medida y día. Esto se hace mediante un resampling de las series temporales a intervalos fijos, que por convención se fijan en **10 minutos**.
+La regularización consiste en garantizar que cada dataset tiene el mismo número de muestras por cada punto de medida y día, y que las fechas de esas muestras están espaciadas de manera regular y coinciden de un día para otro.
 
-Se utilizan diferentes métodos de resampling para cada dataset, en función de sus características.
+Esta regularización se hace mediante un resampling de las series temporales a intervalos fijos, típicamente de **10 minutos**. Aunque los métodos de resampling de cada dataset pueden tener variaciones en función de las características del mismo. Para más detalles, consultar la documentación de cada dataset.
 
 ### Tipos de día
 
-El primer criterio de clasificación es el **tipo de día**. Cada uno de los datasets que se utiliza en el proyecto es una serie temporal univariable. Si se representan para cada dataset varios días consecutivos en un mismo punto de medida, se observarán varios grupos de días que se parecen entre sí.
+El primer criterio de clasificación es el **tipo de día**. Cada uno de los datasets que se utiliza en el proyecto es una serie temporal univariable. Si se representan para cada dataset regularizado varios días consecutivos en un mismo punto de medida, se observarán grupos de días que se parecen entre sí.
 
 ![tipos de día](doc/notebook/daytype.png)
 
@@ -61,7 +64,7 @@ El objetivo de la clasificación es identificar estos patrones. Formalmente,
 
 - Se normalizan las series temporales regularizadas, restando y escalando cada serie por el valor medio de los últimos 30 días, para minimizar los efectos de la estacionalidad al compararlas entre sí a lo largo del año.
 
-- Se aplica el algoritmo [Time Series Clustering mediante K-means](https://www.kaggle.com/code/izzettunc/introduction-to-time-series-clustering) sobre las series temporales regularizadas, para dividirlas en un número fijo de clusters `N_CLUSTERS`, dado como parámetro.
+- Se aplica el algoritmo [Time Series Clustering mediante K-means](https://www.kaggle.com/code/izzettunc/introduction-to-time-series-clustering) sobre las series temporales regularizadas de cada punto de medida, para dividirlas en un número fijo de clusters `N_CLUSTERS`, dado como parámetro.
 
 - Se descartan en cada cluster las series temporales que sean "outliers", considerando como outlier toda serie cuya distancia a la línea de centro de su cluster sea superior al percentil 90% de las distancias.
 
@@ -78,16 +81,16 @@ Durante el análisis del caso práctico concluimos que esta clasificación es lo
 
 ### Estacionalidad
 
-El segundo criterio de clasificación es la estacionalidad. Si se cacula para cada dataset el valor medio mensual y su varianza por cada punto de medida, los valores medios se pueden alinear en una matriz que indique cuánto se diferencia porcentualmente de un mes de otro.
+El segundo criterio de clasificación es la estacionalidad. Si se cacula para cada dataset regularizado el valor medio mensual y su varianza. Los valores medios se pueden alinear en una matriz que indique cuánto se diferencia porcentualmente un mes de otro.
 
-Estableciendo un umbral límite para la variación porcentual, se pueden distinguir grupos de meses que se mantienen dentro de los umbrales cuando e comparan entre sí, pero los exceden al compararse con otros.
+Estableciendo un umbral límite para la variación porcentual, se pueden distinguir grupos de meses que se mantienen dentro de los umbrales cuando se comparan entre sí, pero los exceden al compararse con otros.
 
 Estos grupos se usan como criterio para discriminar por estacionalidad. Típicamente se esperan al menos dos estacionalidades distintas:
 
 - Julio y Agosto
 - Resto del año
 
-Aunque en cada ciudad puede variar, por ejemplo: en una ciudad con estaciones de esquí importantes, diciembre, enero y febrero pueden formar otro grupo de estacionalidad.
+Aunque en cada ciudad puede variar, por ejemplo: en una ciudad con estaciones de esquí importantes, Diciembre, Enero y Febrero pueden formar otro grupo de estacionalidad.
 
 ## Identidad
 
