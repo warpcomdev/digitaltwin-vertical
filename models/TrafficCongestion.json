@@ -165,8 +165,8 @@
             {
                 "class": "ASPECT_SINGLETON",
                 "attrs": [
-                    "sourceRef",
                     "sceneRef",
+                    "sourceRef",
                     "trend",
                     "dayType",
                     "hour",
@@ -185,8 +185,8 @@
                 "condition": {
                     "attrs": [
                         "TimeInstant",
-                        "sourceRef",
                         "sceneRef",
+                        "sourceRef",
                         "trend",
                         "dayType",
                         "hour",
@@ -210,6 +210,7 @@
                             ],
                             "weight": 10,
                             "relations": [
+                                "dtwin_trafficcongestion_vector",
                                 "dtwin_trafficcongestion_daily",
                                 "dtwin_trafficcongestion_hourly",
                                 "dtwin_trafficcongestion_yesterday",

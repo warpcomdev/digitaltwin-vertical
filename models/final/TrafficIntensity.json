@@ -147,8 +147,8 @@
         "class": "FLOW_HISTORIC",
         "endpoint": "HISTORIC",
         "replaceId": [
-          "sourceRef",
           "sceneRef",
+          "sourceRef",
           "trend",
           "dayType",
           "hour"
@@ -156,8 +156,8 @@
         "condition": {
           "attrs": [
             "TimeInstant",
-            "sourceRef",
             "sceneRef",
+            "sourceRef",
             "trend",
             "dayType",
             "hour"
@@ -170,8 +170,8 @@
         "condition": {
           "attrs": [
             "TimeInstant",
-            "sourceRef",
             "sceneRef",
+            "sourceRef",
             "trend",
             "dayType",
             "hour"
@@ -182,8 +182,8 @@
           ]
         },
         "replaceId": [
-          "sourceRef",
           "sceneRef",
+          "sourceRef",
           "trend",
           "dayType",
           "hour"
@@ -201,6 +201,7 @@
               ],
               "weight": 10,
               "relations": [
+                "dtwin_trafficintensity_vector",
                 "dtwin_trafficintensity_daily",
                 "dtwin_trafficintensity_yesterday",
                 "dtwin_trafficintensity_peak"

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficcongestion_lastdata (
   minute int,
   zone text,
   congestion double precision,
-  location geometry(Point),
+  location geometry(LineString),
   -- Common model attributes
   entityid text,
   entitytype text,

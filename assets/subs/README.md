@@ -27,10 +27,10 @@ Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo OffStreetParking
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"}}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}"}}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour, zone, capacity, occupationPercent, occupation
-- **Condición**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour
+- **Condición**: TimeInstant, sceneRef, sourceRef, trend, dayType, hour
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: OffStreetParking
@@ -44,10 +44,10 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo OffStreetParking
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"}}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}"}}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, name, hour, zone, capacity, occupationPercent, location, occupation, alterationType
-- **Condición**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour
+- **Condición**: TimeInstant, sceneRef, sourceRef, trend, dayType, hour
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
@@ -62,10 +62,10 @@ Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo RouteIntensity
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}_${sceneRef}_${trend}_${dayType}"}}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sceneRef}_${sourceRef}_${trend}_${dayType}"}}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, zoneList, forwardTrips, returnTrips, forwardStops, returnStops, intensity
-- **Condición**: TimeInstant, sourceRef, sceneRef, trend, dayType
+- **Condición**: TimeInstant, sceneRef, sourceRef, trend, dayType
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: RouteIntensity
@@ -79,10 +79,10 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteIntensity
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}_${sceneRef}_${trend}_${dayType}"}}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sceneRef}_${sourceRef}_${trend}_${dayType}"}}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, name, zoneList, forwardTrips, returnTrips, forwardStops, returnStops, location, intensity, alterationType
-- **Condición**: TimeInstant, sourceRef, sceneRef, trend, dayType
+- **Condición**: TimeInstant, sceneRef, sourceRef, trend, dayType
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
@@ -97,10 +97,10 @@ Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo RouteSchedule
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"}}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}"}}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour, zoneList, forwardTrips, returnTrips, forwardStops, returnStops
-- **Condición**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour
+- **Condición**: TimeInstant, sceneRef, sourceRef, trend, dayType, hour
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: RouteSchedule
@@ -114,10 +114,10 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteSchedule
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"}}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}"}}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, name, hour, zoneList, forwardTrips, returnTrips, forwardStops, location, returnStops, alterationType
-- **Condición**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour
+- **Condición**: TimeInstant, sceneRef, sourceRef, trend, dayType, hour
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
@@ -132,10 +132,10 @@ Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo TrafficCongestio
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}_${minute}"}}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}_${minute}"}}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour, minute, zone, congestion
-- **Condición**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour, minute
+- **Condición**: TimeInstant, sceneRef, sourceRef, trend, dayType, hour, minute
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: TrafficCongestion
@@ -149,10 +149,10 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficCongestio
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}_${minute}"}}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}_${minute}"}}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, name, hour, minute, zone, congestion, location, alterationType
-- **Condición**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour, minute
+- **Condición**: TimeInstant, sceneRef, sourceRef, trend, dayType, hour, minute
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
@@ -167,10 +167,10 @@ Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo TrafficIntensity
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"}}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}"}}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour, zone, intensity
-- **Condición**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour
+- **Condición**: TimeInstant, sceneRef, sourceRef, trend, dayType, hour
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: TrafficIntensity
@@ -184,14 +184,32 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficIntensity
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}"}}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}"}}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, name, hour, zone, intensity, location, alterationType
-- **Condición**: TimeInstant, sourceRef, sceneRef, trend, dayType, hour
+- **Condición**: TimeInstant, sceneRef, sourceRef, trend, dayType, hour
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: TrafficIntensity
+
+# Suscripción a Trend LASTDATA
+
+Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo Trend
+
+- **Estado** : Activa
+- **Descripción**: Trend:LASTDATA:dtwin:lastdata
+- **Fecha y hora de expiración**: en blanco
+- **Segundos entre notificaciones**: en blanco
+- **Protocolo**: HTTP
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}}`
+- **Formato de atributos**: normalized
+- **Atributos a notificar**: TimeInstant, alterationType
+- **Condición**: TimeInstant
+  - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate, entityDelete
+- **Entidades**:
+  - ID: `.*` (con checkbox de patrón de búsqueda marcado)
+  - Type: Trend
 
 # Suscripción a Zone LASTDATA
 

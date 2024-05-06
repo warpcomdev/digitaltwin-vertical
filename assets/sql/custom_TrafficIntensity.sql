@@ -1,3 +1,20 @@
+-- CREATE VIEW dtwin_trafficintensity_vector
+-- Vista que extrae las métricas necesarias para calcular
+-- el vector de estados que representa a la ciudad.
+-- -------------------------------------------------------------
+CREATE OR REPLACE VIEW :target_schema.dtwin_trafficintensity_vector AS
+SELECT
+  intensity,
+  sourceref AS entityid,
+  trend,
+  daytype,
+  zone,
+  ST_Centroid(location) AS location,
+  hour,
+  0 as minute
+FROM :target_schema.dtwin_trafficintensity_lastdata AS t
+WHERE sceneref IS NULL OR sceneref = 'NA';
+
 -- CREATE VIEW dtwin_trafficintensity_daily
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por día. Ignora la hora y minuto.

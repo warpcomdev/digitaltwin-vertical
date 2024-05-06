@@ -49,6 +49,7 @@ RouteIntensity: templates.#Twin & {
 			types.#Double
 			description: "Número de viajeros"
 			flows: ["historic", "lastdata"]
+			#metric: true
 		}
 	}
 }

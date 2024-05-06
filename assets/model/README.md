@@ -6,7 +6,8 @@ El vertical utiliza los siguientes modelos:
 4. [RouteSchedule](#RouteSchedule)
 5. [TrafficCongestion](#TrafficCongestion)
 6. [TrafficIntensity](#TrafficIntensity)
-7. [Zone](#Zone)
+7. [Trend](#Trend)
+8. [Zone](#Zone)
 
 # Entidades Principales
 
@@ -313,19 +314,19 @@ Ejemplo de `RouteSchedule` (en NGSIv2):
 
 Medidor de congestión de tráfico
 
-| Atributo    | ngsiType         | dbType                            | description                                                                                                                                                            | example                                                                        | extra | unit | range                         |
-| ----------- | ---------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----- | ---- | ----------------------------- |
-| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación                                                                                                               | `"2018-12-10T20:40:23"`                                                        | -     | -    | -                             |
-| sourceRef   | TextUnrestricted | text                              | ID de entidad original. Reemplaza al entityId, ya que esta entidad es *singleton* y su ID en base de datos se ve sobrescrito por una composición de los campos únicos. | `"example text"`                                                               | -     | -    | -                             |
-| sceneRef    | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "NA" indica que se trata de una vista identidad.                                          | `"example text"`                                                               | -     | -    | -                             |
-| trend       | TextUnrestricted | text                              | Estacionalidad o tendencia para la que se ha calculado el escenario                                                                                                    | `"Verano"`                                                                     | -     | -    | Verano, Fallas, Otros         |
-| dayType     | TextUnrestricted | text                              | Tipo de día al que corresponde la medida                                                                                                                               | `"L-J"`                                                                        | -     | -    | L-J, Viernes, Sábado, Domingo |
-| name        | TextUnrestricted | text                              | Nombre descriptivo de la entidad                                                                                                                                       | `"example text"`                                                               | -     | -    | -                             |
-| hour        | Number           | int                               | Hora del día a la que corresponde la medida                                                                                                                            | `15`                                                                           | -     | -    | 0-23                          |
-| minute      | Number           | int                               | Intervalo de 10 minutos al que corresponde la medida                                                                                                                   | `20`                                                                           | -     | -    | 0-50                          |
-| zone        | TextUnrestricted | text                              | Identificador de la zona o distrito a la que pertenece la entidad                                                                                                      | `"Distrito 1"`                                                                 | -     | -    | -                             |
-| congestion  | Number           | double precision                  | Probabilidad de congestión, en tanto por uno                                                                                                                           | `0.33`                                                                         | -     | -    | 0-1                           |
-| location    | geo:json         | geometry(Point)                   | Ubicación de la entidad                                                                                                                                                | `{"type": "geo:json", "value": {"type": "Point", "coordinates": [3.5, 24.6]}}` | -     | -    | -                             |
+| Atributo    | ngsiType         | dbType                            | description                                                                                                                                                            | example                                                                                   | extra | unit | range                         |
+| ----------- | ---------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----- | ---- | ----------------------------- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación                                                                                                               | `"2018-12-10T20:40:23"`                                                                   | -     | -    | -                             |
+| sourceRef   | TextUnrestricted | text                              | ID de entidad original. Reemplaza al entityId, ya que esta entidad es *singleton* y su ID en base de datos se ve sobrescrito por una composición de los campos únicos. | `"example text"`                                                                          | -     | -    | -                             |
+| sceneRef    | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "NA" indica que se trata de una vista identidad.                                          | `"example text"`                                                                          | -     | -    | -                             |
+| trend       | TextUnrestricted | text                              | Estacionalidad o tendencia para la que se ha calculado el escenario                                                                                                    | `"Verano"`                                                                                | -     | -    | Verano, Fallas, Otros         |
+| dayType     | TextUnrestricted | text                              | Tipo de día al que corresponde la medida                                                                                                                               | `"L-J"`                                                                                   | -     | -    | L-J, Viernes, Sábado, Domingo |
+| name        | TextUnrestricted | text                              | Nombre descriptivo de la entidad                                                                                                                                       | `"example text"`                                                                          | -     | -    | -                             |
+| hour        | Number           | int                               | Hora del día a la que corresponde la medida                                                                                                                            | `15`                                                                                      | -     | -    | 0-23                          |
+| minute      | Number           | int                               | Intervalo de 10 minutos al que corresponde la medida                                                                                                                   | `20`                                                                                      | -     | -    | 0-50                          |
+| zone        | TextUnrestricted | text                              | Identificador de la zona o distrito a la que pertenece la entidad                                                                                                      | `"Distrito 1"`                                                                            | -     | -    | -                             |
+| congestion  | Number           | double precision                  | Probabilidad de congestión, en tanto por uno                                                                                                                           | `0.33`                                                                                    | -     | -    | 0-1                           |
+| location    | geo:json         | geometry(LineString)              | Ubicación de la entidad                                                                                                                                                | `{"type": "geo:json", "value": {"type": "Line", "coordinates": [[3.5, 24.6], [33, 44]]}}` | -     | -    | -                             |
 
 Ejemplo de `TrafficCongestion` (en NGSIv2):
 
@@ -376,10 +377,16 @@ Ejemplo de `TrafficCongestion` (en NGSIv2):
     "location": {
         "type": "geo:json",
         "value": {
-            "type": "Point",
+            "type": "Line",
             "coordinates": [
-                3.5,
-                24.6
+                [
+                    3.5,
+                    24.6
+                ],
+                [
+                    33,
+                    44
+                ]
             ]
         }
     }
@@ -454,6 +461,27 @@ Ejemplo de `TrafficIntensity` (en NGSIv2):
                 24.6
             ]
         }
+    }
+}
+```
+
+## Trend
+
+Estacionalidad. PErmite separar diferentes tendencias a lo largo del año. Tendrá un número fijo de valores, por ejemplo: Verano Resto
+
+| Atributo    | ngsiType | dbType                            | description                                              | example                 | extra | unit | range |
+| ----------- | -------- | --------------------------------- | -------------------------------------------------------- | ----------------------- | ----- | ---- | ----- |
+| TimeInstant | DateTime | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación | `"2018-12-10T20:40:23"` | -     | -    | -     |
+
+Ejemplo de `Trend` (en NGSIv2):
+
+```json
+{
+    "id": "Verano",
+    "type": "Trend",
+    "TimeInstant": {
+        "type": "DateTime",
+        "value": "2018-12-10T20:40:23"
     }
 }
 ```

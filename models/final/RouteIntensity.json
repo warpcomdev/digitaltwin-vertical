@@ -197,16 +197,16 @@
         "class": "FLOW_HISTORIC",
         "endpoint": "HISTORIC",
         "replaceId": [
-          "sourceRef",
           "sceneRef",
+          "sourceRef",
           "trend",
           "dayType"
         ],
         "condition": {
           "attrs": [
             "TimeInstant",
-            "sourceRef",
             "sceneRef",
+            "sourceRef",
             "trend",
             "dayType"
           ]
@@ -218,8 +218,8 @@
         "condition": {
           "attrs": [
             "TimeInstant",
-            "sourceRef",
             "sceneRef",
+            "sourceRef",
             "trend",
             "dayType"
           ],
@@ -229,8 +229,8 @@
           ]
         },
         "replaceId": [
-          "sourceRef",
           "sceneRef",
+          "sourceRef",
           "trend",
           "dayType"
         ]
@@ -246,7 +246,9 @@
                 "custom_RouteIntensity.sql"
               ],
               "weight": 10,
-              "relations": []
+              "relations": [
+                "dtwin_routeintensity_vector"
+              ]
             }
           }
         }

@@ -23,6 +23,7 @@ TrafficIntensity: templates.#Twin & {
 			description: "Intensidad de tráfico estimada en el intervalo"
 			example:     245
 			flows: ["historic", "lastdata"]
+			#metric: true
 		}
 	}
 

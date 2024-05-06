@@ -1,0 +1,59 @@
+{
+  "Trend": {
+    "lastdata": {
+      "sql": {
+        "sources": {
+          "trend_lastdata.sql": {
+            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo Trend",
+            "path": "./sql",
+            "files": [
+              "trend_lastdata.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_trend_lastdata",
+              "dtwin_trend_lastdata_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "Trend_lastdata": {
+          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo Trend",
+          "description": "Trend:LASTDATA:dtwin:lastdata",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "Trend"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant"
+              ],
+              "alterationTypes": [
+                "entityUpdate",
+                "entityCreate",
+                "entityDelete"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "alterationType"
+            ],
+            "httpCustom": {
+              "url": "LASTDATA",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

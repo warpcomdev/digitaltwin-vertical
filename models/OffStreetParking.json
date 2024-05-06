@@ -172,8 +172,8 @@
             {
                 "class": "ASPECT_SINGLETON",
                 "attrs": [
-                    "sourceRef",
                     "sceneRef",
+                    "sourceRef",
                     "trend",
                     "dayType",
                     "hour"
@@ -191,8 +191,8 @@
                 "condition": {
                     "attrs": [
                         "TimeInstant",
-                        "sourceRef",
                         "sceneRef",
+                        "sourceRef",
                         "trend",
                         "dayType",
                         "hour"
@@ -215,6 +215,7 @@
                             ],
                             "weight": 10,
                             "relations": [
+                                "dtwin_offstreetparking_vector",
                                 "dtwin_offstreetparking_daily",
                                 "dtwin_offstreetparking_yesterday",
                                 "dtwin_offstreetparking_peak",

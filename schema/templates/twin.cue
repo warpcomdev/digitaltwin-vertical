@@ -21,7 +21,11 @@ import (
 	namespace:   #namespace
 	exampleId:   string
 
-	model: [string]: {types.#ModelAttribute}
+	model: [string]: {
+		types.#ModelAttribute
+		#metric: bool | *false
+	}
+
 	model: {
 
 		TimeInstant: {
@@ -120,8 +124,8 @@ import (
 		{
 			class: "ASPECT_SINGLETON"
 			#keys: {
-				sourceRef: true
 				sceneRef:  true
+				sourceRef: true
 				trend:     true
 				dayType:   true
 				...
@@ -184,19 +188,25 @@ import (
 	}
 
 	// En el atributo "#sql", se enumera la lista de objetos
-	// twmplates/sql que se deben crear, y los atributos de input
+	// templates/sql que se deben crear, y los atributos de input
 	// que se les deben proporcionar.
 	#sql: [label = string]: _
+	// Todos los objetos de tipo twin tienen una vista
+	// "vector" que extrae las métricas en un formato "homogéneo"
+	#sql: vector: {
+		metrics: [for _k, _v in self.model if _v.#metric { _k }]
+	}
+
 	#sql_template: {for label, data in #sql {
 		(label): {
 			sql[label]
 			input: {
+				data
 				namespace:  #namespace
 				entityType: #entityType
 				hasHour:    #hasHour
 				hasMinute:  #hasMinute
 			}
-			input: data
 		}
 	}}
 

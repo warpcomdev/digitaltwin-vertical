@@ -136,7 +136,7 @@
       "location": {
         "description": "Ubicación de la entidad",
         "ngsiType": "geo:json",
-        "dbType": "geometry(Point)",
+        "dbType": "geometry(LineString)",
         "extra": "-",
         "unit": "-",
         "flows": [
@@ -145,10 +145,16 @@
         "example": {
           "type": "geo:json",
           "value": {
-            "type": "Point",
+            "type": "Line",
             "coordinates": [
-              3.5,
-              24.6
+              [
+                3.5,
+                24.6
+              ],
+              [
+                33,
+                44
+              ]
             ]
           }
         },
@@ -160,8 +166,8 @@
         "class": "FLOW_HISTORIC",
         "endpoint": "HISTORIC",
         "replaceId": [
-          "sourceRef",
           "sceneRef",
+          "sourceRef",
           "trend",
           "dayType",
           "hour",
@@ -170,8 +176,8 @@
         "condition": {
           "attrs": [
             "TimeInstant",
-            "sourceRef",
             "sceneRef",
+            "sourceRef",
             "trend",
             "dayType",
             "hour",
@@ -185,8 +191,8 @@
         "condition": {
           "attrs": [
             "TimeInstant",
-            "sourceRef",
             "sceneRef",
+            "sourceRef",
             "trend",
             "dayType",
             "hour",
@@ -198,8 +204,8 @@
           ]
         },
         "replaceId": [
-          "sourceRef",
           "sceneRef",
+          "sourceRef",
           "trend",
           "dayType",
           "hour",
@@ -218,6 +224,7 @@
               ],
               "weight": 10,
               "relations": [
+                "dtwin_trafficcongestion_vector",
                 "dtwin_trafficcongestion_daily",
                 "dtwin_trafficcongestion_hourly",
                 "dtwin_trafficcongestion_yesterday",

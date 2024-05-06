@@ -32,8 +32,8 @@
             "condition": {
               "attrs": [
                 "TimeInstant",
-                "sourceRef",
                 "sceneRef",
+                "sourceRef",
                 "trend",
                 "dayType",
                 "hour",
@@ -59,7 +59,7 @@
                 "fiware-servicepath": "/dtwin"
               },
               "ngsi": {
-                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}_${minute}"
+                "id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}_${minute}"
               }
             }
           }
@@ -98,8 +98,8 @@
             "condition": {
               "attrs": [
                 "TimeInstant",
-                "sourceRef",
                 "sceneRef",
+                "sourceRef",
                 "trend",
                 "dayType",
                 "hour",
@@ -132,7 +132,7 @@
                 "fiware-servicepath": "/dtwin"
               },
               "ngsi": {
-                "id": "${sourceRef}_${sceneRef}_${trend}_${dayType}_${hour}_${minute}"
+                "id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}_${minute}"
               }
             }
           }
@@ -150,6 +150,7 @@
             ],
             "weight": 10,
             "relations": [
+              "dtwin_trafficcongestion_vector",
               "dtwin_trafficcongestion_daily",
               "dtwin_trafficcongestion_hourly",
               "dtwin_trafficcongestion_yesterday",

@@ -24,6 +24,7 @@ TrafficCongestion: templates.#Twin & {
 			range:       "0-1"
 			example:     0.33
 			flows: ["historic", "lastdata"]
+			#metric: true
 		}
 	}
 
