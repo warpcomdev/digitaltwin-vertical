@@ -41,6 +41,12 @@ import (
 				Reemplaza al entityId, ya que esta entidad es *singleton*
 				y su ID en base de datos se ve sobrescrito por una
 				composición de los campos únicos.
+
+				En el caso de las entidades tipo `\(#entityType)`, la columna entityid
+				de la base de datos contendrá una concatenación de los siguientes
+				atributos, separados por `_`:
+				
+				`\(strings.Join(#aspects.singleton.attrs, "`, `"))`
 				"""
 			flows: ["historic", "lastdata"]
 		}
@@ -123,20 +129,17 @@ import (
 	#aspects: singleton: {
 		{
 			class: "ASPECT_SINGLETON"
-			#keys: {
-				sceneRef:  true
-				sourceRef: true
-				trend:     true
-				dayType:   true
-				...
+			// El orden de los atributos es importante
+			attrs: [...string]
+			if !#hasHour && !#hasMinute {
+				attrs: ["sceneRef", "sourceRef", "trend", "dayType"]
 			}
-			if #hasHour {
-				#keys: hour: true
+			if #hasHour && !#hasMinute {
+				attrs: ["sceneRef", "sourceRef", "trend", "dayType", "hour"]
 			}
 			if #hasMinute {
-				#keys: minute: true
+				attrs: ["sceneRef", "sourceRef", "trend", "dayType", "hour", "minute"]
 			}
-			attrs: [for label, _ in #keys {label}]
 		}
 	}
 

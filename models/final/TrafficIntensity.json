@@ -18,7 +18,7 @@
         "range": "-"
       },
       "sourceRef": {
-        "description": "ID de entidad original.\nReemplaza al entityId, ya que esta entidad es *singleton*\ny su ID en base de datos se ve sobrescrito por una\ncomposición de los campos únicos.",
+        "description": "ID de entidad original.\nReemplaza al entityId, ya que esta entidad es *singleton*\ny su ID en base de datos se ve sobrescrito por una\ncomposición de los campos únicos.\n\nEn el caso de las entidades tipo `TrafficIntensity`, la columna entityid\nde la base de datos contendrá una concatenación de los siguientes\natributos, separados por `_`:\n\n`sceneRef`, `sourceRef`, `trend`, `dayType`, `hour`",
         "ngsiType": "TextUnrestricted",
         "dbType": "text",
         "extra": "-",
