@@ -49,6 +49,15 @@ import (
 				`\(strings.Join(#aspects.singleton.attrs, "`, `"))`
 				"""
 			flows: ["historic", "lastdata"]
+			if !#hasMinute && !#hasHour {
+				example: "NA_NA_Verano_Sabado"
+			}
+			if !#hasMinute && #hasHour {
+				example: "NA_NA_Verano_Sabado_21"
+			}
+			if #hasMinute {
+				example: "NA_NA_Verano_Sabado_21_30"
+			}
 		}
 
 		sceneRef: {
