@@ -50,13 +50,13 @@ import (
 				"""
 			flows: ["historic", "lastdata"]
 			if !#hasMinute && !#hasHour {
-				example: "NA_NA_Verano_Sabado"
+				example: "NA_Entity1_Verano_Sabado"
 			}
 			if !#hasMinute && #hasHour {
-				example: "NA_NA_Verano_Sabado_21"
+				example: "NA_Entity1_Verano_Sabado_21"
 			}
 			if #hasMinute {
-				example: "NA_NA_Verano_Sabado_21_30"
+				example: "NA_Entity1_Verano_Sabado_21_30"
 			}
 		}
 
