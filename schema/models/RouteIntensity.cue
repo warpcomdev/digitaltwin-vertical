@@ -14,8 +14,8 @@ RouteIntensity: templates.#Twin & {
 	#multiZone:    true
 
 	description: """
-		Programación de ruta. Describe el número de paradas de una ruta
-		dada una estacionalidad, tipo de día y hora.
+		Intensidad de uso ruta. Describe el número de viajeros 
+		de una ruta dada una estacionalidad, tipo de día y hora.
 		"""
 	exampleId: "C1"
 

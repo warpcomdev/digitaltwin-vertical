@@ -2,7 +2,7 @@
   "RouteIntensity": {
     "namespace": "dtwin",
     "exampleId": "C1",
-    "description": "Programación de ruta. Describe el número de paradas de una ruta\ndada una estacionalidad, tipo de día y hora.",
+    "description": "Intensidad de uso ruta. Describe el número de viajeros \nde una ruta dada una estacionalidad, tipo de día y hora.",
     "model": {
       "TimeInstant": {
         "description": "Fecha / Hora del cálculo de vista identidad o simulación",
