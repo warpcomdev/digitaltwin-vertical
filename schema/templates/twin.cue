@@ -162,6 +162,9 @@ import (
 		lastdata: {
 			class:    "FLOW_LASTDATA"
 			endpoint: "LASTDATA"
+			dbIndexes: {
+				sceneref: "(sceneref, timeinstant)"
+			}
 			condition: {
 				attrs: ["TimeInstant"] + #aspects.singleton.attrs
 				// No quiero que me borre las filas de la tabla,
@@ -197,16 +200,37 @@ import (
 				]
 			}]
 		}
+		sim: {
+			class:      "FLOW_JOIN_VIEW"
+			#tableName: strings.ToLower(#entityType)
+			leftModel: {
+				name:            "simulation_lastdata"
+				entityNamespace: #namespace
+				attrs: [
+					"TimeInstant",
+				]
+				attrJoinOn: ["entityId", "TimeInstant"]
+			}
+			rightModel: [{
+				name:            "\(#tableName)_lastdata"
+				entityNamespace: #namespace
+				attrs: [for label, m in self.model if label != "TimeInstant" && list.Contains(m.flows, "lastdata") {
+					strings.ToLower(label)
+				}]
+				attrJoinOn: ["sceneRef", "TimeInstant"]
+			}]
+		}
 	}
 
 	// En el atributo "#sql", se enumera la lista de objetos
 	// templates/sql que se deben crear, y los atributos de input
 	// que se les deben proporcionar.
 	#sql: [label = string]: _
+
 	// Todos los objetos de tipo twin tienen una vista
 	// "vector" que extrae las métricas en un formato "homogéneo"
 	#sql: vector: {
-		metrics: [for _k, _v in self.model if _v.#metric { _k }]
+		metrics: [for _k, _v in self.model if _v.#metric {_k}]
 	}
 
 	#sql_template: {for label, data in #sql {

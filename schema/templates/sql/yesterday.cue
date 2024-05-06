@@ -14,7 +14,7 @@ yesterday: {
 		entityType: string // Tipo de entidad
 		hasHour:    bool
 		hasMinute:  bool
-		tableName:  string | *"\(namespace)_\(strings.ToLower(entityType))_lastdata"
+		tableName:  string | *"\(namespace)_\(strings.ToLower(entityType))_sim"
 		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_yesterday"
 		interval:   string | *""
 		if hasMinute {

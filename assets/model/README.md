@@ -4,10 +4,11 @@ El vertical utiliza los siguientes modelos:
 2. [OffStreetParking](#OffStreetParking)
 3. [RouteIntensity](#RouteIntensity)
 4. [RouteSchedule](#RouteSchedule)
-5. [TrafficCongestion](#TrafficCongestion)
-6. [TrafficIntensity](#TrafficIntensity)
-7. [Trend](#Trend)
-8. [Zone](#Zone)
+5. [Simulation](#Simulation)
+6. [TrafficCongestion](#TrafficCongestion)
+7. [TrafficIntensity](#TrafficIntensity)
+8. [Trend](#Trend)
+9. [Zone](#Zone)
 
 # Entidades Principales
 
@@ -306,6 +307,32 @@ Ejemplo de `RouteSchedule` (en NGSIv2):
     "returnStops": {
         "type": "Number",
         "value": 5
+    }
+}
+```
+
+## Simulation
+
+Instancia de simulación. Recopila la última fecha en la que se ha ejecutado una simulación, o cálculo de vista identidad.
+
+| Atributo    | ngsiType         | dbType                            | description                                              | example                 | extra | unit | range |
+| ----------- | ---------------- | --------------------------------- | -------------------------------------------------------- | ----------------------- | ----- | ---- | ----- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación | `"2018-12-10T20:40:23"` | -     | -    | -     |
+| description | TextUnrestricted | text                              | Texto descriptivo de la simulación                       | `"example text"`        | -     | -    | -     |
+
+Ejemplo de `Simulation` (en NGSIv2):
+
+```json
+{
+    "id": "NA",
+    "type": "Simulation",
+    "TimeInstant": {
+        "type": "DateTime",
+        "value": "2018-12-10T20:40:23"
+    },
+    "description": {
+        "type": "TextUnrestricted",
+        "value": "example text"
     }
 }
 ```

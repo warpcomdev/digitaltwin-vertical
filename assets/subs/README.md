@@ -123,6 +123,24 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteSchedule
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: RouteSchedule
 
+# Suscripción a Simulation LASTDATA
+
+Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo Simulation
+
+- **Estado** : Activa
+- **Descripción**: Simulation:LASTDATA:dtwin:lastdata
+- **Fecha y hora de expiración**: en blanco
+- **Segundos entre notificaciones**: en blanco
+- **Protocolo**: HTTP
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}}`
+- **Formato de atributos**: normalized
+- **Atributos a notificar**: TimeInstant, description, alterationType
+- **Condición**: TimeInstant
+  - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate, entityDelete
+- **Entidades**:
+  - ID: `.*` (con checkbox de patrón de búsqueda marcado)
+  - Type: Simulation
+
 # Suscripción a TrafficCongestion HISTORIC
 
 Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo TrafficCongestion

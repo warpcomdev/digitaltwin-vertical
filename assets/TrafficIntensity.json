@@ -76,6 +76,7 @@
             "weight": 0,
             "relations": [
               "dtwin_trafficintensity_lastdata",
+              "dtwin_trafficintensity_lastdata_idx_sceneref",
               "dtwin_trafficintensity_lastdata_pkey"
             ]
           }
@@ -135,6 +136,23 @@
         }
       }
     },
+    "join": {
+      "sql": {
+        "sources": {
+          "trafficintensity_join.sql": {
+            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+            "path": "./sql",
+            "files": [
+              "trafficintensity_join.sql"
+            ],
+            "weight": 1,
+            "relations": [
+              "dtwin_trafficintensity_join"
+            ]
+          }
+        }
+      }
+    },
     "custom_sql": {
       "sql": {
         "sources": {
@@ -155,18 +173,18 @@
         }
       }
     },
-    "join": {
+    "sim": {
       "sql": {
         "sources": {
-          "trafficintensity_join.sql": {
-            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+          "trafficintensity_sim.sql": {
+            "documentation": "Fichero SQL del flujo sim (tipo FLOW_JOIN_VIEW)",
             "path": "./sql",
             "files": [
-              "trafficintensity_join.sql"
+              "trafficintensity_sim.sql"
             ],
             "weight": 1,
             "relations": [
-              "dtwin_trafficintensity_join"
+              "dtwin_trafficintensity_sim"
             ]
           }
         }

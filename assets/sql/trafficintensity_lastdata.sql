@@ -17,3 +17,6 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficintensity_lastdata (
   -- PRIMARY KEYS
   CONSTRAINT dtwin_trafficintensity_lastdata_pkey PRIMARY KEY (entityid)
 );
+
+-- Indexes coming from dbIndexes in model spec
+CREATE INDEX dtwin_trafficintensity_lastdata_idx_sceneref ON :target_schema.dtwin_trafficintensity_lastdata (sceneref, timeinstant);

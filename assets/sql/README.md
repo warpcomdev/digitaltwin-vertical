@@ -22,6 +22,7 @@ psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/routeintensity_lastdata.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/routeschedule_historic.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/routeschedule_lastdata.sql"
+psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/simulation_lastdata.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trafficcongestion_historic.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trafficcongestion_lastdata.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trafficintensity_historic.sql"
@@ -29,10 +30,15 @@ psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trend_lastdata.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/zone_lastdata.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/offstreetparking_join.sql"
+psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/offstreetparking_sim.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/routeintensity_join.sql"
+psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/routeintensity_sim.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/routeschedule_join.sql"
+psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/routeschedule_sim.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trafficcongestion_join.sql"
+psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trafficcongestion_sim.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trafficintensity_join.sql"
+psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/trafficintensity_sim.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/custom_OffStreetParking.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/custom_RouteIntensity.sql"
 psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET_DATABASE}" -v "target_database=${TARGET_DATABASE}" -v "target_schema=${TARGET_SCHEMA}" -v "target_user=${TARGET_USER}" -f "sql/custom_RouteSchedule.sql"
@@ -52,9 +58,11 @@ psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET
 
 - **offstreetparking_lastdata.sql**: Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo OffStreetParking
 
+- **offstreetparking_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+
 - **custom_OffStreetParking.sql**: Conjunto de vistas utilitarias para la presentación de datos de escenarios identidad y simulaciones.
 
-- **offstreetparking_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+- **offstreetparking_sim.sql**: Fichero SQL del flujo sim (tipo FLOW_JOIN_VIEW)
 
 ### Ficheros SQL asociados al modelo RouteIntensity
 
@@ -62,9 +70,11 @@ psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET
 
 - **routeintensity_lastdata.sql**: Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteIntensity
 
+- **routeintensity_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+
 - **custom_RouteIntensity.sql**: Conjunto de vistas utilitarias para la presentación de datos de escenarios identidad y simulaciones.
 
-- **routeintensity_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+- **routeintensity_sim.sql**: Fichero SQL del flujo sim (tipo FLOW_JOIN_VIEW)
 
 ### Ficheros SQL asociados al modelo RouteSchedule
 
@@ -72,9 +82,15 @@ psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET
 
 - **routeschedule_lastdata.sql**: Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteSchedule
 
+- **routeschedule_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+
 - **custom_RouteSchedule.sql**: Conjunto de vistas utilitarias para la presentación de datos de escenarios identidad y simulaciones.
 
-- **routeschedule_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+- **routeschedule_sim.sql**: Fichero SQL del flujo sim (tipo FLOW_JOIN_VIEW)
+
+### Ficheros SQL asociados al modelo Simulation
+
+- **simulation_lastdata.sql**: Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo Simulation
 
 ### Ficheros SQL asociados al modelo TrafficCongestion
 
@@ -82,9 +98,11 @@ psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET
 
 - **trafficcongestion_lastdata.sql**: Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficCongestion
 
+- **trafficcongestion_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+
 - **custom_TrafficCongestion.sql**: Conjunto de vistas utilitarias para la presentación de datos de escenarios identidad y simulaciones.
 
-- **trafficcongestion_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+- **trafficcongestion_sim.sql**: Fichero SQL del flujo sim (tipo FLOW_JOIN_VIEW)
 
 ### Ficheros SQL asociados al modelo TrafficIntensity
 
@@ -92,9 +110,11 @@ psql -1 -h "${TARGET_HOST}" -p "${TARGET_PORT}" -U "${TARGET_USER}" -d "${TARGET
 
 - **trafficintensity_lastdata.sql**: Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficIntensity
 
+- **trafficintensity_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+
 - **custom_TrafficIntensity.sql**: Conjunto de vistas utilitarias para la presentación de datos de escenarios identidad y simulaciones.
 
-- **trafficintensity_join.sql**: Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)
+- **trafficintensity_sim.sql**: Fichero SQL del flujo sim (tipo FLOW_JOIN_VIEW)
 
 ### Ficheros SQL asociados al modelo Trend
 

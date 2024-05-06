@@ -12,7 +12,7 @@ SELECT
   ST_Centroid(location) AS location,
   hour,
   0 as minute
-FROM :target_schema.dtwin_trafficintensity_lastdata AS t
+FROM :target_schema.dtwin_trafficintensity_sim AS t
 WHERE sceneref IS NULL OR sceneref = 'NA';
 
 -- CREATE VIEW dtwin_trafficintensity_daily
@@ -30,7 +30,7 @@ SELECT
   t.zone,
   SUM(intensity) AS intensity,
   t.entityid
-FROM :target_schema.dtwin_trafficintensity_lastdata AS t
+FROM :target_schema.dtwin_trafficintensity_sim AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
 
@@ -53,7 +53,7 @@ SELECT
   intensity,
   entityid,
   date_trunc('day'::text, now()) - '1 day'::interval + make_interval(hours => t.hour) AS generatedinstant
-FROM :target_schema.dtwin_trafficintensity_lastdata AS t;
+FROM :target_schema.dtwin_trafficintensity_sim AS t;
 
 -- CREATE VIEW dtwin_trafficintensity_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
@@ -106,7 +106,7 @@ FROM (SELECT
   entityid,
   t.hour,
   t.intensity
-FROM :target_schema.dtwin_trafficintensity_lastdata AS t
+FROM :target_schema.dtwin_trafficintensity_sim AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.intensity DESC) AS ordenadas) AS numeradas
 WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL

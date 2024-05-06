@@ -1,0 +1,60 @@
+{
+  "Simulation": {
+    "lastdata": {
+      "sql": {
+        "sources": {
+          "simulation_lastdata.sql": {
+            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo Simulation",
+            "path": "./sql",
+            "files": [
+              "simulation_lastdata.sql"
+            ],
+            "weight": 0,
+            "relations": [
+              "dtwin_simulation_lastdata",
+              "dtwin_simulation_lastdata_pkey"
+            ]
+          }
+        }
+      },
+      "subscriptions": {
+        "Simulation_lastdata": {
+          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo Simulation",
+          "description": "Simulation:LASTDATA:dtwin:lastdata",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "Simulation"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant"
+              ],
+              "alterationTypes": [
+                "entityUpdate",
+                "entityCreate",
+                "entityDelete"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant",
+              "description",
+              "alterationType"
+            ],
+            "httpCustom": {
+              "url": "LASTDATA",
+              "headers": {
+                "fiware-servicepath": "/dtwin"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

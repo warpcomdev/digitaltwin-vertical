@@ -41,7 +41,8 @@ TrafficCongestion: templates.#Twin & {
 			"zone",
 		]
 		aggregations: {
-			congestion: "AVG(congestion)"
+			avg_congestion: "AVG(congestion)"
+			max_congestion: "MAX(congestion)"
 		}
 	}
 

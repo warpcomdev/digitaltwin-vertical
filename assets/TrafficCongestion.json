@@ -78,6 +78,7 @@
             "weight": 0,
             "relations": [
               "dtwin_trafficcongestion_lastdata",
+              "dtwin_trafficcongestion_lastdata_idx_sceneref",
               "dtwin_trafficcongestion_lastdata_pkey"
             ]
           }
@@ -139,6 +140,23 @@
         }
       }
     },
+    "join": {
+      "sql": {
+        "sources": {
+          "trafficcongestion_join.sql": {
+            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+            "path": "./sql",
+            "files": [
+              "trafficcongestion_join.sql"
+            ],
+            "weight": 1,
+            "relations": [
+              "dtwin_trafficcongestion_join"
+            ]
+          }
+        }
+      }
+    },
     "custom_sql": {
       "sql": {
         "sources": {
@@ -160,18 +178,18 @@
         }
       }
     },
-    "join": {
+    "sim": {
       "sql": {
         "sources": {
-          "trafficcongestion_join.sql": {
-            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+          "trafficcongestion_sim.sql": {
+            "documentation": "Fichero SQL del flujo sim (tipo FLOW_JOIN_VIEW)",
             "path": "./sql",
             "files": [
-              "trafficcongestion_join.sql"
+              "trafficcongestion_sim.sql"
             ],
             "weight": 1,
             "relations": [
-              "dtwin_trafficcongestion_join"
+              "dtwin_trafficcongestion_sim"
             ]
           }
         }

@@ -15,7 +15,7 @@ daily: {
 
 		namespace:  string // Prefijo de las tablas
 		entityType: string // Tipo de entidad
-		tableName:  string | *"\(namespace)_\(strings.ToLower(entityType))_lastdata"
+		tableName:  string | *"\(namespace)_\(strings.ToLower(entityType))_sim"
 		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_daily"
 	}
 

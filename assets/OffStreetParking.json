@@ -78,6 +78,7 @@
             "weight": 0,
             "relations": [
               "dtwin_offstreetparking_lastdata",
+              "dtwin_offstreetparking_lastdata_idx_sceneref",
               "dtwin_offstreetparking_lastdata_pkey"
             ]
           }
@@ -139,6 +140,23 @@
         }
       }
     },
+    "join": {
+      "sql": {
+        "sources": {
+          "offstreetparking_join.sql": {
+            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+            "path": "./sql",
+            "files": [
+              "offstreetparking_join.sql"
+            ],
+            "weight": 1,
+            "relations": [
+              "dtwin_offstreetparking_join"
+            ]
+          }
+        }
+      }
+    },
     "custom_sql": {
       "sql": {
         "sources": {
@@ -160,18 +178,18 @@
         }
       }
     },
-    "join": {
+    "sim": {
       "sql": {
         "sources": {
-          "offstreetparking_join.sql": {
-            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+          "offstreetparking_sim.sql": {
+            "documentation": "Fichero SQL del flujo sim (tipo FLOW_JOIN_VIEW)",
             "path": "./sql",
             "files": [
-              "offstreetparking_join.sql"
+              "offstreetparking_sim.sql"
             ],
             "weight": 1,
             "relations": [
-              "dtwin_offstreetparking_join"
+              "dtwin_offstreetparking_sim"
             ]
           }
         }

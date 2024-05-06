@@ -7,11 +7,11 @@ import (
 Zone: {
 
 	description: """
-        Zona. Este tipo de entidad solo se utiliza para rellenar
-        los selectores en urbo.
-        """
-	namespace:   "dtwin"
-	exampleId:   "Distrito-1"
+		Zona. Este tipo de entidad solo se utiliza para rellenar
+		los selectores en urbo.
+		"""
+	namespace: "dtwin"
+	exampleId: "Distrito-1"
 
 	model: [string]: {types.#ModelAttribute}
 	model: {
@@ -45,12 +45,12 @@ Zone: {
 			description: "Polígono que delimita la zona"
 			flows: ["lastdata"]
 		}
-    }
+	}
 
 	flows: {
 		lastdata: {
 			class:    "FLOW_LASTDATA"
 			endpoint: "LASTDATA"
 		}
-    }
+	}
 }

@@ -7,16 +7,16 @@ import (
 DayType: {
 
 	description: """
-        Tipo de dia. Este tipo de entidad solo se utiliza para rellenar
-        los selectores en urbo. Tendrá un número fijo de valores:
+		Tipo de dia. Este tipo de entidad solo se utiliza para rellenar
+		los selectores en urbo. Tendrá un número fijo de valores:
 
-        L-J
-        Viernes
-        Sabado
-        Domingo
-        """
-	namespace:   "dtwin"
-	exampleId:   "Sabado"
+		L-J
+		Viernes
+		Sabado
+		Domingo
+		"""
+	namespace: "dtwin"
+	exampleId: "Sabado"
 
 	model: [string]: {types.#ModelAttribute}
 	model: {
@@ -26,12 +26,12 @@ DayType: {
 			description: "Fecha / Hora del cálculo de vista identidad o simulación"
 			flows: ["lastdata"]
 		}
-    }
+	}
 
 	flows: {
 		lastdata: {
 			class:    "FLOW_LASTDATA"
 			endpoint: "LASTDATA"
 		}
-    }
+	}
 }

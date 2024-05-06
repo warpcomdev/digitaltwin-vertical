@@ -79,6 +79,7 @@
             "weight": 0,
             "relations": [
               "dtwin_routeschedule_lastdata",
+              "dtwin_routeschedule_lastdata_idx_sceneref",
               "dtwin_routeschedule_lastdata_pkey"
             ]
           }
@@ -141,6 +142,23 @@
         }
       }
     },
+    "join": {
+      "sql": {
+        "sources": {
+          "routeschedule_join.sql": {
+            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+            "path": "./sql",
+            "files": [
+              "routeschedule_join.sql"
+            ],
+            "weight": 1,
+            "relations": [
+              "dtwin_routeschedule_join"
+            ]
+          }
+        }
+      }
+    },
     "custom_sql": {
       "sql": {
         "sources": {
@@ -158,18 +176,18 @@
         }
       }
     },
-    "join": {
+    "sim": {
       "sql": {
         "sources": {
-          "routeschedule_join.sql": {
-            "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
+          "routeschedule_sim.sql": {
+            "documentation": "Fichero SQL del flujo sim (tipo FLOW_JOIN_VIEW)",
             "path": "./sql",
             "files": [
-              "routeschedule_join.sql"
+              "routeschedule_sim.sql"
             ],
             "weight": 1,
             "relations": [
-              "dtwin_routeschedule_join"
+              "dtwin_routeschedule_sim"
             ]
           }
         }

@@ -188,6 +188,9 @@
             "lastdata": {
                 "class": "FLOW_LASTDATA",
                 "endpoint": "LASTDATA",
+                "dbIndexes": {
+                    "sceneref": "(sceneref, timeinstant)"
+                },
                 "condition": {
                     "attrs": [
                         "TimeInstant",
@@ -201,28 +204,6 @@
                         "entityUpdate",
                         "entityCreate"
                     ]
-                }
-            },
-            "custom_sql": {
-                "class": "FLOW_RAW",
-                "sql": {
-                    "sources": {
-                        "custom_sql": {
-                            "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
-                            "path": "./sql",
-                            "files": [
-                                "custom_OffStreetParking.sql"
-                            ],
-                            "weight": 10,
-                            "relations": [
-                                "dtwin_offstreetparking_vector",
-                                "dtwin_offstreetparking_daily",
-                                "dtwin_offstreetparking_yesterday",
-                                "dtwin_offstreetparking_peak",
-                                "dtwin_offstreetparking_freq"
-                            ]
-                        }
-                    }
                 }
             },
             "join": {
@@ -260,6 +241,65 @@
                         ],
                         "attrJoinOn": [
                             "entityid"
+                        ]
+                    }
+                ]
+            },
+            "custom_sql": {
+                "class": "FLOW_RAW",
+                "sql": {
+                    "sources": {
+                        "custom_sql": {
+                            "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
+                            "path": "./sql",
+                            "files": [
+                                "custom_OffStreetParking.sql"
+                            ],
+                            "weight": 10,
+                            "relations": [
+                                "dtwin_offstreetparking_vector",
+                                "dtwin_offstreetparking_daily",
+                                "dtwin_offstreetparking_yesterday",
+                                "dtwin_offstreetparking_peak",
+                                "dtwin_offstreetparking_freq"
+                            ]
+                        }
+                    }
+                }
+            },
+            "sim": {
+                "class": "FLOW_JOIN_VIEW",
+                "leftModel": {
+                    "name": "simulation_lastdata",
+                    "entityNamespace": "dtwin",
+                    "attrs": [
+                        "TimeInstant"
+                    ],
+                    "attrJoinOn": [
+                        "entityId",
+                        "TimeInstant"
+                    ]
+                },
+                "rightModel": [
+                    {
+                        "name": "offstreetparking_lastdata",
+                        "entityNamespace": "dtwin",
+                        "attrs": [
+                            "sourceref",
+                            "sceneref",
+                            "trend",
+                            "daytype",
+                            "hour",
+                            "name",
+                            "location",
+                            "zone",
+                            "capacity",
+                            "occupationpercent",
+                            "occupation"
+                        ],
+                        "attrJoinOn": [
+                            "sceneRef",
+                            "TimeInstant"
                         ]
                     }
                 ]

@@ -12,7 +12,7 @@ SELECT
   ST_Centroid(location) AS location,
   hour,
   minute
-FROM :target_schema.dtwin_trafficcongestion_lastdata AS t
+FROM :target_schema.dtwin_trafficcongestion_sim AS t
 WHERE sceneref IS NULL OR sceneref = 'NA';
 
 -- CREATE VIEW dtwin_trafficcongestion_daily
@@ -28,9 +28,10 @@ SELECT
   t.daytype,
   t.name,
   t.zone,
-  AVG(congestion) AS congestion,
+  AVG(congestion) AS avg_congestion,
+  MAX(congestion) AS max_congestion,
   t.entityid
-FROM :target_schema.dtwin_trafficcongestion_lastdata AS t
+FROM :target_schema.dtwin_trafficcongestion_sim AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
 
@@ -50,7 +51,7 @@ SELECT
 t.hour,
   AVG(congestion) AS congestion,
   t.entityid
-FROM :target_schema.dtwin_trafficcongestion_lastdata AS t
+FROM :target_schema.dtwin_trafficcongestion_sim AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.hour, t.entityid;
 
@@ -73,7 +74,7 @@ SELECT
   congestion,
   entityid,
   date_trunc('day'::text, now()) - '1 day'::interval  + make_interval(hours => t.hour, mins => t.minute) AS generatedinstant
-FROM :target_schema.dtwin_trafficcongestion_lastdata AS t;
+FROM :target_schema.dtwin_trafficcongestion_sim AS t;
 
 -- CREATE VIEW dtwin_trafficcongestion_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
@@ -127,7 +128,7 @@ FROM (SELECT
   t.hour,
   t.minute,
   t.congestion
-FROM :target_schema.dtwin_trafficcongestion_lastdata AS t
+FROM :target_schema.dtwin_trafficcongestion_sim AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.congestion DESC) AS ordenadas) AS numeradas
 WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL

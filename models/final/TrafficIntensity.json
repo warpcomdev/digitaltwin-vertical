@@ -167,6 +167,9 @@
       "lastdata": {
         "class": "FLOW_LASTDATA",
         "endpoint": "LASTDATA",
+        "dbIndexes": {
+          "sceneref": "(sceneref, timeinstant)"
+        },
         "condition": {
           "attrs": [
             "TimeInstant",
@@ -188,27 +191,6 @@
           "dayType",
           "hour"
         ]
-      },
-      "custom_sql": {
-        "class": "FLOW_RAW",
-        "sql": {
-          "sources": {
-            "custom_sql": {
-              "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
-              "path": "./sql",
-              "files": [
-                "custom_TrafficIntensity.sql"
-              ],
-              "weight": 10,
-              "relations": [
-                "dtwin_trafficintensity_vector",
-                "dtwin_trafficintensity_daily",
-                "dtwin_trafficintensity_yesterday",
-                "dtwin_trafficintensity_peak"
-              ]
-            }
-          }
-        }
       },
       "join": {
         "class": "FLOW_JOIN_VIEW",
@@ -243,6 +225,62 @@
             ],
             "attrJoinOn": [
               "entityid"
+            ]
+          }
+        ]
+      },
+      "custom_sql": {
+        "class": "FLOW_RAW",
+        "sql": {
+          "sources": {
+            "custom_sql": {
+              "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
+              "path": "./sql",
+              "files": [
+                "custom_TrafficIntensity.sql"
+              ],
+              "weight": 10,
+              "relations": [
+                "dtwin_trafficintensity_vector",
+                "dtwin_trafficintensity_daily",
+                "dtwin_trafficintensity_yesterday",
+                "dtwin_trafficintensity_peak"
+              ]
+            }
+          }
+        }
+      },
+      "sim": {
+        "class": "FLOW_JOIN_VIEW",
+        "leftModel": {
+          "name": "simulation_lastdata",
+          "entityNamespace": "dtwin",
+          "attrs": [
+            "TimeInstant"
+          ],
+          "attrJoinOn": [
+            "entityId",
+            "TimeInstant"
+          ]
+        },
+        "rightModel": [
+          {
+            "name": "trafficintensity_lastdata",
+            "entityNamespace": "dtwin",
+            "attrs": [
+              "sourceref",
+              "sceneref",
+              "trend",
+              "daytype",
+              "hour",
+              "name",
+              "location",
+              "zone",
+              "intensity"
+            ],
+            "attrJoinOn": [
+              "sceneRef",
+              "TimeInstant"
             ]
           }
         ]

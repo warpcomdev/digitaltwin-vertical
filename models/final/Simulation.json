@@ -1,0 +1,39 @@
+{
+  "Simulation": {
+    "namespace": "dtwin",
+    "exampleId": "NA",
+    "description": "Instancia de simulación. Recopila la última fecha en la que se ha ejecutado\nuna simulación, o cálculo de vista identidad.",
+    "model": {
+      "TimeInstant": {
+        "description": "Fecha / Hora del cálculo de vista identidad o simulación",
+        "ngsiType": "DateTime",
+        "dbType": "timestamp with time zone NOT NULL",
+        "extra": "-",
+        "unit": "-",
+        "flows": [
+          "lastdata"
+        ],
+        "example": "2018-12-10T20:40:23",
+        "range": "-"
+      },
+      "description": {
+        "description": "Texto descriptivo de la simulación",
+        "ngsiType": "TextUnrestricted",
+        "dbType": "text",
+        "extra": "-",
+        "unit": "-",
+        "flows": [
+          "lastdata"
+        ],
+        "example": "example text",
+        "range": "-"
+      }
+    },
+    "flows": {
+      "lastdata": {
+        "class": "FLOW_LASTDATA",
+        "endpoint": "LASTDATA"
+      }
+    }
+  }
+}

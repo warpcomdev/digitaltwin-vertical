@@ -217,6 +217,9 @@
       "lastdata": {
         "class": "FLOW_LASTDATA",
         "endpoint": "LASTDATA",
+        "dbIndexes": {
+          "sceneref": "(sceneref, timeinstant)"
+        },
         "condition": {
           "attrs": [
             "TimeInstant",
@@ -238,24 +241,6 @@
           "dayType",
           "hour"
         ]
-      },
-      "custom_sql": {
-        "class": "FLOW_RAW",
-        "sql": {
-          "sources": {
-            "custom_sql": {
-              "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
-              "path": "./sql",
-              "files": [
-                "custom_RouteSchedule.sql"
-              ],
-              "weight": 10,
-              "relations": [
-                "dtwin_routeschedule_vector"
-              ]
-            }
-          }
-        }
       },
       "join": {
         "class": "FLOW_JOIN_VIEW",
@@ -293,6 +278,62 @@
             ],
             "attrJoinOn": [
               "entityid"
+            ]
+          }
+        ]
+      },
+      "custom_sql": {
+        "class": "FLOW_RAW",
+        "sql": {
+          "sources": {
+            "custom_sql": {
+              "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
+              "path": "./sql",
+              "files": [
+                "custom_RouteSchedule.sql"
+              ],
+              "weight": 10,
+              "relations": [
+                "dtwin_routeschedule_vector"
+              ]
+            }
+          }
+        }
+      },
+      "sim": {
+        "class": "FLOW_JOIN_VIEW",
+        "leftModel": {
+          "name": "simulation_lastdata",
+          "entityNamespace": "dtwin",
+          "attrs": [
+            "TimeInstant"
+          ],
+          "attrJoinOn": [
+            "entityId",
+            "TimeInstant"
+          ]
+        },
+        "rightModel": [
+          {
+            "name": "routeschedule_lastdata",
+            "entityNamespace": "dtwin",
+            "attrs": [
+              "sourceref",
+              "sceneref",
+              "trend",
+              "daytype",
+              "hour",
+              "name",
+              "location",
+              "zonelist",
+              "forwardtrips",
+              "returntrips",
+              "forwardstops",
+              "returnstops"
+            ],
+            "attrJoinOn": [
+              "sceneRef",
+              "TimeInstant"
             ]
           }
         ]

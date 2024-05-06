@@ -188,6 +188,9 @@
       "lastdata": {
         "class": "FLOW_LASTDATA",
         "endpoint": "LASTDATA",
+        "dbIndexes": {
+          "sceneref": "(sceneref, timeinstant)"
+        },
         "condition": {
           "attrs": [
             "TimeInstant",
@@ -211,28 +214,6 @@
           "hour",
           "minute"
         ]
-      },
-      "custom_sql": {
-        "class": "FLOW_RAW",
-        "sql": {
-          "sources": {
-            "custom_sql": {
-              "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
-              "path": "./sql",
-              "files": [
-                "custom_TrafficCongestion.sql"
-              ],
-              "weight": 10,
-              "relations": [
-                "dtwin_trafficcongestion_vector",
-                "dtwin_trafficcongestion_daily",
-                "dtwin_trafficcongestion_hourly",
-                "dtwin_trafficcongestion_yesterday",
-                "dtwin_trafficcongestion_peak"
-              ]
-            }
-          }
-        }
       },
       "join": {
         "class": "FLOW_JOIN_VIEW",
@@ -268,6 +249,64 @@
             ],
             "attrJoinOn": [
               "entityid"
+            ]
+          }
+        ]
+      },
+      "custom_sql": {
+        "class": "FLOW_RAW",
+        "sql": {
+          "sources": {
+            "custom_sql": {
+              "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
+              "path": "./sql",
+              "files": [
+                "custom_TrafficCongestion.sql"
+              ],
+              "weight": 10,
+              "relations": [
+                "dtwin_trafficcongestion_vector",
+                "dtwin_trafficcongestion_daily",
+                "dtwin_trafficcongestion_hourly",
+                "dtwin_trafficcongestion_yesterday",
+                "dtwin_trafficcongestion_peak"
+              ]
+            }
+          }
+        }
+      },
+      "sim": {
+        "class": "FLOW_JOIN_VIEW",
+        "leftModel": {
+          "name": "simulation_lastdata",
+          "entityNamespace": "dtwin",
+          "attrs": [
+            "TimeInstant"
+          ],
+          "attrJoinOn": [
+            "entityId",
+            "TimeInstant"
+          ]
+        },
+        "rightModel": [
+          {
+            "name": "trafficcongestion_lastdata",
+            "entityNamespace": "dtwin",
+            "attrs": [
+              "sourceref",
+              "sceneref",
+              "trend",
+              "daytype",
+              "hour",
+              "minute",
+              "name",
+              "location",
+              "zone",
+              "congestion"
+            ],
+            "attrJoinOn": [
+              "sceneRef",
+              "TimeInstant"
             ]
           }
         ]

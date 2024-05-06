@@ -12,5 +12,5 @@ SELECT
   ST_Centroid(location) AS location,
   0 as hour,
   0 as minute
-FROM :target_schema.dtwin_routeintensity_lastdata AS t
+FROM :target_schema.dtwin_routeintensity_sim AS t
 WHERE sceneref IS NULL OR sceneref = 'NA';
