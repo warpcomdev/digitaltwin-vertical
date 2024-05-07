@@ -1,2 +1,2 @@
 entityID,entityType,TimeInstant<DateTime>,sourceRef<TextUnrestricted>,sceneRef<TextUnrestricted>,trend<TextUnrestricted>,dayType<TextUnrestricted>,name<TextUnrestricted>,hour<Number>,zone<TextUnrestricted>,intensity<Number>,location<geo:json>
-puntoMedida-100,TrafficIntensity,2018-12-10T20:40:23,NA_Entity1_Verano_Sabado_21,example text,Verano,L-J,example text,15,Distrito 1,245,"{""type"": ""geo:json"", ""value"": {""type"": ""Point"", ""coordinates"": [3.5, 24.6]}}"
+puntoMedida-100,TrafficIntensity,2018-12-10T20:40:23,Parking-01,example text,Verano,L-J,example text,15,Distrito 1,245,"{""type"": ""geo:json"", ""value"": {""type"": ""Point"", ""coordinates"": [3.5, 24.6]}}"

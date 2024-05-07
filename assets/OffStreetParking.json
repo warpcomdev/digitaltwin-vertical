@@ -12,6 +12,7 @@
             "weight": 0,
             "relations": [
               "dtwin_offstreetparking",
+              "dtwin_offstreetparking_idx_scene",
               "dtwin_offstreetparking_pkey"
             ]
           }
@@ -31,13 +32,16 @@
             ],
             "condition": {
               "attrs": [
+                "sourceRef",
                 "TimeInstant",
                 "sceneRef",
-                "sourceRef",
                 "trend",
                 "dayType",
                 "hour"
-              ]
+              ],
+              "expression": {
+                "q": "sceneRef"
+              }
             }
           },
           "notification": {
@@ -48,7 +52,6 @@
               "trend",
               "dayType",
               "hour",
-              "zone",
               "capacity",
               "occupationPercent",
               "occupation"
@@ -59,7 +62,7 @@
                 "fiware-servicepath": "/dtwin"
               },
               "ngsi": {
-                "id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}"
+                "id": "${sourceRef}"
               }
             }
           }
@@ -78,7 +81,6 @@
             "weight": 0,
             "relations": [
               "dtwin_offstreetparking_lastdata",
-              "dtwin_offstreetparking_lastdata_idx_sceneref",
               "dtwin_offstreetparking_lastdata_pkey"
             ]
           }
@@ -99,11 +101,7 @@
             "condition": {
               "attrs": [
                 "TimeInstant",
-                "sceneRef",
-                "sourceRef",
-                "trend",
-                "dayType",
-                "hour"
+                "sourceRef"
               ],
               "alterationTypes": [
                 "entityUpdate",
@@ -133,7 +131,7 @@
                 "fiware-servicepath": "/dtwin"
               },
               "ngsi": {
-                "id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}"
+                "id": "${sourceRef}"
               }
             }
           }

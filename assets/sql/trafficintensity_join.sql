@@ -10,10 +10,10 @@ CREATE OR REPLACE VIEW :target_schema.dtwin_trafficintensity_join AS
     left_table.trend,
     left_table.daytype,
     left_table.hour,
-    left_table.zone,
     left_table.intensity,
     right_table.name,
-    right_table.location
+    right_table.location,
+    right_table.zone
   FROM
     :target_schema.dtwin_trafficintensity left_table
   INNER JOIN

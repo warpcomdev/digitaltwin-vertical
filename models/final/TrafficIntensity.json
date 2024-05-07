@@ -18,7 +18,7 @@
         "range": "-"
       },
       "sourceRef": {
-        "description": "ID de entidad original.\nReemplaza al entityId, ya que esta entidad es *singleton*\ny su ID en base de datos se ve sobrescrito por una\ncomposición de los campos únicos.\n\nEn el caso de las entidades tipo `TrafficIntensity`, la columna entityid\nde la base de datos contendrá una concatenación de los siguientes\natributos, separados por `_`:\n\n`sceneRef`, `sourceRef`, `trend`, `dayType`, `hour`",
+        "description": "ID de entidad original.\nReemplaza al entityId en a base de datos, ya que esta entidad\nes *singleton* y su ID en base de datos se ve sobrescrito\npor una composición de los campos únicos.",
         "ngsiType": "TextUnrestricted",
         "dbType": "text",
         "extra": "-",
@@ -27,7 +27,7 @@
           "historic",
           "lastdata"
         ],
-        "example": "NA_Entity1_Verano_Sabado_21",
+        "example": "Parking-01",
         "range": "-"
       },
       "sceneRef": {
@@ -102,7 +102,6 @@
         "unit": "-",
         "example": "Distrito 1",
         "flows": [
-          "historic",
           "lastdata"
         ],
         "range": "-"
@@ -146,38 +145,41 @@
       "historic": {
         "class": "FLOW_HISTORIC",
         "endpoint": "HISTORIC",
-        "replaceId": [
+        "pk": [
+          "entityid",
+          "timeinstant",
           "sceneRef",
-          "sourceRef",
           "trend",
           "dayType",
           "hour"
         ],
+        "dbIndexes": {
+          "scene": "(timeinstant, sceneRef)"
+        },
         "condition": {
           "attrs": [
+            "sourceRef",
             "TimeInstant",
             "sceneRef",
-            "sourceRef",
             "trend",
             "dayType",
             "hour"
-          ]
-        }
+          ],
+          "expression": {
+            "q": "sceneRef"
+          }
+        },
+        "replaceId": [
+          "sourceRef"
+        ]
       },
       "lastdata": {
         "class": "FLOW_LASTDATA",
         "endpoint": "LASTDATA",
-        "dbIndexes": {
-          "sceneref": "(sceneref, timeinstant)"
-        },
         "condition": {
           "attrs": [
             "TimeInstant",
-            "sceneRef",
-            "sourceRef",
-            "trend",
-            "dayType",
-            "hour"
+            "sourceRef"
           ],
           "alterationTypes": [
             "entityUpdate",
@@ -185,11 +187,7 @@
           ]
         },
         "replaceId": [
-          "sceneRef",
-          "sourceRef",
-          "trend",
-          "dayType",
-          "hour"
+          "sourceRef"
         ]
       },
       "join": {
@@ -208,7 +206,6 @@
             "trend",
             "daytype",
             "hour",
-            "zone",
             "intensity"
           ],
           "attrJoinOn": [
@@ -221,7 +218,8 @@
             "entityNamespace": "dtwin",
             "attrs": [
               "name",
-              "location"
+              "location",
+              "zone"
             ],
             "attrJoinOn": [
               "entityid"
@@ -256,18 +254,22 @@
           "name": "simulation_lastdata",
           "entityNamespace": "dtwin",
           "attrs": [
-            "TimeInstant"
+            "timeinstant"
           ],
           "attrJoinOn": [
             "entityId",
-            "TimeInstant"
+            "timeinstant"
           ]
         },
         "rightModel": [
           {
-            "name": "trafficintensity_lastdata",
+            "name": "trafficintensity_join",
             "entityNamespace": "dtwin",
             "attrs": [
+              "entityid",
+              "entitytype",
+              "recvtime",
+              "fiwareservicepath",
               "sourceref",
               "sceneref",
               "trend",
@@ -280,7 +282,7 @@
             ],
             "attrJoinOn": [
               "sceneRef",
-              "TimeInstant"
+              "timeinstant"
             ]
           }
         ]

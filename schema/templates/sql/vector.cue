@@ -9,12 +9,13 @@ vector: {
 	// Parámetros de entrada de la vista:
 	input: {
 		metrics: [...string] // Diccionario alias => expresión SQL
-		hasHour: bool
-		hasMinute: bool
+		hasHour:             bool
+		hasMinute:           bool
+		multiZone:           bool
 
 		namespace:  string // Prefijo de las tablas
 		entityType: string // Tipo de entidad
-		tableName:  string | *"\(namespace)_\(strings.ToLower(entityType))_lastdata"
+		tableName:  string | *"\(namespace)_\(strings.ToLower(entityType))_sim"
 		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_vector"
 	}
 
@@ -31,7 +32,12 @@ vector: {
 		  sourceref AS entityid,
 		  trend,
 		  daytype,
+		  {{- if !.multiZone }}
 		  zone,
+		  {{- end }}
+		  {{- if .multiZone }}
+		  zoneList,
+		  {{- end }}
 		  ST_Centroid(location) AS location,
 		  {{- if .hasHour }}
 		  hour,

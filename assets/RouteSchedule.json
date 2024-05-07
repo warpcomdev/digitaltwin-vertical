@@ -12,6 +12,7 @@
             "weight": 0,
             "relations": [
               "dtwin_routeschedule",
+              "dtwin_routeschedule_idx_scene",
               "dtwin_routeschedule_pkey"
             ]
           }
@@ -31,13 +32,16 @@
             ],
             "condition": {
               "attrs": [
+                "sourceRef",
                 "TimeInstant",
                 "sceneRef",
-                "sourceRef",
                 "trend",
                 "dayType",
                 "hour"
-              ]
+              ],
+              "expression": {
+                "q": "sceneRef"
+              }
             }
           },
           "notification": {
@@ -60,7 +64,7 @@
                 "fiware-servicepath": "/dtwin"
               },
               "ngsi": {
-                "id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}"
+                "id": "${sourceRef}"
               }
             }
           }
@@ -79,7 +83,6 @@
             "weight": 0,
             "relations": [
               "dtwin_routeschedule_lastdata",
-              "dtwin_routeschedule_lastdata_idx_sceneref",
               "dtwin_routeschedule_lastdata_pkey"
             ]
           }
@@ -100,11 +103,7 @@
             "condition": {
               "attrs": [
                 "TimeInstant",
-                "sceneRef",
-                "sourceRef",
-                "trend",
-                "dayType",
-                "hour"
+                "sourceRef"
               ],
               "alterationTypes": [
                 "entityUpdate",
@@ -135,7 +134,7 @@
                 "fiware-servicepath": "/dtwin"
               },
               "ngsi": {
-                "id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}"
+                "id": "${sourceRef}"
               }
             }
           }

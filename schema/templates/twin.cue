@@ -38,26 +38,12 @@ import (
 			types.#Text
 			description: """
 				ID de entidad original.
-				Reemplaza al entityId, ya que esta entidad es *singleton*
-				y su ID en base de datos se ve sobrescrito por una
-				composición de los campos únicos.
-
-				En el caso de las entidades tipo `\(#entityType)`, la columna entityid
-				de la base de datos contendrá una concatenación de los siguientes
-				atributos, separados por `_`:
-				
-				`\(strings.Join(#aspects.singleton.attrs, "`, `"))`
+				Reemplaza al entityId en a base de datos, ya que esta entidad
+				es *singleton* y su ID en base de datos se ve sobrescrito
+				por una composición de los campos únicos.
 				"""
 			flows: ["historic", "lastdata"]
-			if !#hasMinute && !#hasHour {
-				example: "NA_Entity1_Verano_Sabado"
-			}
-			if !#hasMinute && #hasHour {
-				example: "NA_Entity1_Verano_Sabado_21"
-			}
-			if #hasMinute {
-				example: "NA_Entity1_Verano_Sabado_21_30"
-			}
+			example: "Parking-01"
 		}
 
 		sceneRef: {
@@ -121,7 +107,7 @@ import (
 				types.#Text
 				description: "Identificador de la zona o distrito a la que pertenece la entidad"
 				example:     "Distrito 1"
-				flows: ["historic", "lastdata"]
+				flows: ["lastdata"]
 			}
 		}
 
@@ -135,38 +121,36 @@ import (
 		}
 	}
 
-	#aspects: singleton: {
-		{
-			class: "ASPECT_SINGLETON"
-			// El orden de los atributos es importante
-			attrs: [...string]
-			if !#hasHour && !#hasMinute {
-				attrs: ["sceneRef", "sourceRef", "trend", "dayType"]
-			}
-			if #hasHour && !#hasMinute {
-				attrs: ["sceneRef", "sourceRef", "trend", "dayType", "hour"]
-			}
-			if #hasMinute {
-				attrs: ["sceneRef", "sourceRef", "trend", "dayType", "hour", "minute"]
-			}
-		}
+	#unique: [...string]
+	if !#hasHour && !#hasMinute {
+		#unique: ["sceneRef", "trend", "dayType"]
 	}
-
-	aspects: [for _, aspect in #aspects {aspect}]
+	if #hasHour && !#hasMinute {
+		#unique: ["sceneRef", "trend", "dayType", "hour"]
+	}
+	if #hasMinute {
+		#unique: ["sceneRef", "trend", "dayType", "hour", "minute"]
+	}
 
 	flows: {
 		historic: {
 			class:    "FLOW_HISTORIC"
 			endpoint: "HISTORIC"
+			pk: ["entityid", "timeinstant"] + #unique
+			dbIndexes: {
+				scene: "(timeinstant, sceneRef)"
+			}
+			condition: {
+				attrs: ["sourceRef", "TimeInstant"] + #unique
+				expression: q: "sceneRef"
+			}
+			replaceId: ["sourceRef"]
 		}
 		lastdata: {
 			class:    "FLOW_LASTDATA"
 			endpoint: "LASTDATA"
-			dbIndexes: {
-				sceneref: "(sceneref, timeinstant)"
-			}
 			condition: {
-				attrs: ["TimeInstant"] + #aspects.singleton.attrs
+				attrs: ["TimeInstant", "sourceRef"]
 				// No quiero que me borre las filas de la tabla,
 				// cuando se borren las entidades. Me aseguro de
 				// excluir el alterationType onDelete.
@@ -175,6 +159,7 @@ import (
 					"entityCreate",
 				]
 			}
+			replaceId: ["sourceRef"]
 		}
 		join: {
 			class:      "FLOW_JOIN_VIEW"
@@ -207,17 +192,19 @@ import (
 				name:            "simulation_lastdata"
 				entityNamespace: #namespace
 				attrs: [
-					"TimeInstant",
+					"timeinstant",
 				]
-				attrJoinOn: ["entityId", "TimeInstant"]
+				attrJoinOn: ["entityId", "timeinstant"]
 			}
 			rightModel: [{
-				name:            "\(#tableName)_lastdata"
+				name:            "\(#tableName)_join"
 				entityNamespace: #namespace
-				attrs: [for label, m in self.model if label != "TimeInstant" && list.Contains(m.flows, "lastdata") {
+				attrs: [
+					"entityid", "entitytype", "recvtime", "fiwareservicepath",
+				] + [for label, m in self.model if label != "TimeInstant" {
 					strings.ToLower(label)
 				}]
-				attrJoinOn: ["sceneRef", "TimeInstant"]
+				attrJoinOn: ["sceneRef", "timeinstant"]
 			}]
 		}
 	}
@@ -242,6 +229,7 @@ import (
 				entityType: #entityType
 				hasHour:    #hasHour
 				hasMinute:  #hasMinute
+				multiZone:  #multiZone
 			}
 		}
 	}}

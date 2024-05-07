@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficintensity (
   trend text,
   daytype text,
   hour int,
-  zone text,
   intensity double precision,
   -- Common model attributes
   entityid text,
@@ -13,5 +12,8 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficintensity (
   recvtime timestamp with time zone,
   fiwareservicepath text,
   -- PRIMARY KEYS
-  CONSTRAINT dtwin_trafficintensity_pkey PRIMARY KEY (timeinstant, entityid)
+  CONSTRAINT dtwin_trafficintensity_pkey PRIMARY KEY (entityid, timeinstant, sceneref, trend, daytype, hour)
 );
+
+-- Indexes coming from dbIndexes in model spec
+CREATE INDEX dtwin_trafficintensity_idx_scene ON :target_schema.dtwin_trafficintensity (timeinstant, sceneRef);

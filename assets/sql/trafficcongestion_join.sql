@@ -11,10 +11,10 @@ CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_join AS
     left_table.daytype,
     left_table.hour,
     left_table.minute,
-    left_table.zone,
     left_table.congestion,
     right_table.name,
-    right_table.location
+    right_table.location,
+    right_table.zone
   FROM
     :target_schema.dtwin_trafficcongestion left_table
   INNER JOIN

@@ -12,6 +12,7 @@
             "weight": 0,
             "relations": [
               "dtwin_trafficcongestion",
+              "dtwin_trafficcongestion_idx_scene",
               "dtwin_trafficcongestion_pkey"
             ]
           }
@@ -31,14 +32,17 @@
             ],
             "condition": {
               "attrs": [
+                "sourceRef",
                 "TimeInstant",
                 "sceneRef",
-                "sourceRef",
                 "trend",
                 "dayType",
                 "hour",
                 "minute"
-              ]
+              ],
+              "expression": {
+                "q": "sceneRef"
+              }
             }
           },
           "notification": {
@@ -50,7 +54,6 @@
               "dayType",
               "hour",
               "minute",
-              "zone",
               "congestion"
             ],
             "httpCustom": {
@@ -59,7 +62,7 @@
                 "fiware-servicepath": "/dtwin"
               },
               "ngsi": {
-                "id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}_${minute}"
+                "id": "${sourceRef}"
               }
             }
           }
@@ -78,7 +81,6 @@
             "weight": 0,
             "relations": [
               "dtwin_trafficcongestion_lastdata",
-              "dtwin_trafficcongestion_lastdata_idx_sceneref",
               "dtwin_trafficcongestion_lastdata_pkey"
             ]
           }
@@ -99,12 +101,7 @@
             "condition": {
               "attrs": [
                 "TimeInstant",
-                "sceneRef",
-                "sourceRef",
-                "trend",
-                "dayType",
-                "hour",
-                "minute"
+                "sourceRef"
               ],
               "alterationTypes": [
                 "entityUpdate",
@@ -133,7 +130,7 @@
                 "fiware-servicepath": "/dtwin"
               },
               "ngsi": {
-                "id": "${sceneRef}_${sourceRef}_${trend}_${dayType}_${hour}_${minute}"
+                "id": "${sourceRef}"
               }
             }
           }
