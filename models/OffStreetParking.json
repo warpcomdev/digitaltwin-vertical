@@ -37,8 +37,7 @@
                 "extra": "-",
                 "unit": "-",
                 "flows": [
-                    "historic",
-                    "lastdata"
+                    "historic"
                 ],
                 "example": "example text",
                 "range": "-"
@@ -50,8 +49,7 @@
                 "extra": "-",
                 "unit": "-",
                 "flows": [
-                    "historic",
-                    "lastdata"
+                    "historic"
                 ],
                 "example": "Verano",
                 "range": "Verano, Fallas, Otros"
@@ -63,8 +61,7 @@
                 "extra": "-",
                 "unit": "-",
                 "flows": [
-                    "historic",
-                    "lastdata"
+                    "historic"
                 ],
                 "example": "L-J",
                 "range": "L-J, Viernes, Sábado, Domingo"
@@ -88,8 +85,7 @@
                 "extra": "-",
                 "unit": "-",
                 "flows": [
-                    "historic",
-                    "lastdata"
+                    "historic"
                 ],
                 "range": "0-23",
                 "example": 15
@@ -113,8 +109,7 @@
                 "extra": "-",
                 "unit": "-",
                 "flows": [
-                    "historic",
-                    "lastdata"
+                    "historic"
                 ],
                 "example": 5.0,
                 "range": "-"
@@ -128,8 +123,7 @@
                 "range": "0-100",
                 "example": 23.45,
                 "flows": [
-                    "historic",
-                    "lastdata"
+                    "historic"
                 ]
             },
             "location": {
@@ -160,8 +154,7 @@
                 "extra": "-",
                 "unit": "-",
                 "flows": [
-                    "historic",
-                    "lastdata"
+                    "historic"
                 ],
                 "example": 5.0,
                 "range": "-"
@@ -255,11 +248,11 @@
                     }
                 ]
             },
-            "custom_sql": {
+            "sql_template": {
                 "class": "FLOW_RAW",
                 "sql": {
                     "sources": {
-                        "custom_sql": {
+                        "sql_template": {
                             "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
                             "path": "./sql",
                             "files": [
@@ -267,7 +260,6 @@
                             ],
                             "weight": 10,
                             "relations": [
-                                "dtwin_offstreetparking_vector",
                                 "dtwin_offstreetparking_daily",
                                 "dtwin_offstreetparking_yesterday",
                                 "dtwin_offstreetparking_peak",

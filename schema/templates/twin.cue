@@ -10,10 +10,13 @@ import (
 
 #Twin: self={
 
-	#entityType:   string
-	#hasHour:      bool | *true
-	#hasMinute:    bool | *false
-	#multiZone:    bool | *false
+	#entityType: string // Para reutilizar el tipo de entidad
+
+	#hasHour: bool | *true // True si la vista identidad tiene horas
+
+	#hasMinute: bool | *false // True si la vista identidad tiene minutos
+
+	#multiZone:    bool | *false // True si la entidad ocupa múltiples zonas
 	#geometryType: *"Point" | "LineString" | "MultiLineString" | "Polygon" | "MultiPolygon"
 	#namespace:    "dtwin"
 
@@ -53,20 +56,20 @@ import (
 				Identifica la simulación realizada. El valor "NA"
 				indica que se trata de una vista identidad.
 				"""
-			flows: ["historic", "lastdata"]
+			flows: ["historic"]
 		}
 
 		trend: {
 			types.#Text
 			description: "Estacionalidad o tendencia para la que se ha calculado el escenario"
-			flows: ["historic", "lastdata"]
+			flows: ["historic"]
 			#range: ["Verano", "Fallas", "Otros"]
 		}
 
 		dayType: {
 			types.#Text
 			description: "Tipo de día al que corresponde la medida"
-			flows: ["historic", "lastdata"]
+			flows: ["historic"]
 			#range: ["L-J", "Viernes", "Sábado", "Domingo"]
 		}
 
@@ -74,7 +77,7 @@ import (
 			hour: {
 				types.#Integer
 				description: "Hora del día a la que corresponde la medida"
-				flows: ["historic", "lastdata"]
+				flows: ["historic"]
 				range:   "0-23"
 				example: 15
 			}
@@ -84,7 +87,7 @@ import (
 			minute: {
 				types.#Integer
 				description: "Intervalo de 10 minutos al que corresponde la medida"
-				flows: ["historic", "lastdata"]
+				flows: ["historic"]
 				range:   "0-50"
 				example: 20
 			}
@@ -116,11 +119,12 @@ import (
 				types.#Array
 				description: "Lista de identificadores de la zona o distrito a la que pertenece la entidad"
 				example: ["Distrito 1", "Distrito 4"]
-				flows: ["historic", "lastdata"]
+				flows: ["lastdata"]
 			}
 		}
 	}
 
+	// Columnas que forman parte de la clave única del objeto.
 	#unique: [...string]
 	if !#hasHour && !#hasMinute {
 		#unique: ["sceneRef", "trend", "dayType"]
@@ -133,6 +137,10 @@ import (
 	}
 
 	flows: {
+
+		// Flujo histórico customizado. Tanto la primary key
+		// como la condición de disparo de la notificación están
+		// personalizadas para el caso de uso.
 		historic: {
 			class:    "FLOW_HISTORIC"
 			endpoint: "HISTORIC"
@@ -146,6 +154,9 @@ import (
 			}
 			replaceId: ["sourceRef"]
 		}
+
+		// Flujo lastdata customizado. Básicamente es la dimensión
+		// que contiene las coordenadas y nombres descriptivos.
 		lastdata: {
 			class:    "FLOW_LASTDATA"
 			endpoint: "LASTDATA"
@@ -161,6 +172,8 @@ import (
 			}
 			replaceId: ["sourceRef"]
 		}
+
+		// Flujo join de datos unidos
 		join: {
 			class:      "FLOW_JOIN_VIEW"
 			#tableName: strings.ToLower(#entityType)
@@ -185,6 +198,10 @@ import (
 				]
 			}]
 		}
+
+		// Vista de simulación. Permite quedarse con
+		// las columnas resultado concretas de una simulacion
+		// particular.
 		sim: {
 			class:      "FLOW_JOIN_VIEW"
 			#tableName: strings.ToLower(#entityType)
@@ -214,12 +231,6 @@ import (
 	// que se les deben proporcionar.
 	#sql: [label = string]: _
 
-	// Todos los objetos de tipo twin tienen una vista
-	// "vector" que extrae las métricas en un formato "homogéneo"
-	#sql: vector: {
-		metrics: [for _k, _v in self.model if _v.#metric {_k}]
-	}
-
 	#sql_template: {for label, data in #sql {
 		(label): {
 			sql[label]
@@ -234,9 +245,9 @@ import (
 		}
 	}}
 
-	flows: custom_sql: {
+	flows: sql_template: {
 		class: "FLOW_RAW"
-		sql: sources: custom_sql: {
+		sql: sources: sql_template: {
 			documentation: """
 				Conjunto de vistas utilitarias para la presentación de
 				datos de escenarios identidad y simulaciones.
@@ -250,5 +261,19 @@ import (
 				data.relations
 			}], -1)
 		}
+	}
+
+	// Todos los objetos de tipo twin tienen un atributo #vector
+	// que recoge información necesaria para que luego la ETL
+	// pueda utilizar los datos como vectores.
+	#vector: {
+		metrics: [for _k, _v in self.model if _v.#metric {_k}]
+		hasHour:   #hasHour
+		hasMinute: #hasMinute
+		multiZone: #multiZone
+
+		namespace:  #namespace
+		entityType: #entityType
+		tableName:  "\(namespace)_\(strings.ToLower(entityType))_sim"
 	}
 }

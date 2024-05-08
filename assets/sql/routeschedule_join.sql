@@ -10,13 +10,13 @@ CREATE OR REPLACE VIEW :target_schema.dtwin_routeschedule_join AS
     left_table.trend,
     left_table.daytype,
     left_table.hour,
-    left_table.zonelist,
     left_table.forwardtrips,
     left_table.returntrips,
     left_table.forwardstops,
     left_table.returnstops,
     right_table.name,
-    right_table.location
+    right_table.location,
+    right_table.zonelist
   FROM
     :target_schema.dtwin_routeschedule left_table
   INNER JOIN

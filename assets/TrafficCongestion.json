@@ -113,14 +113,8 @@
             "attrs": [
               "TimeInstant",
               "sourceRef",
-              "sceneRef",
-              "trend",
-              "dayType",
               "name",
-              "hour",
-              "minute",
               "zone",
-              "congestion",
               "location",
               "alterationType"
             ],
@@ -154,10 +148,10 @@
         }
       }
     },
-    "custom_sql": {
+    "sql_template": {
       "sql": {
         "sources": {
-          "custom_sql": {
+          "sql_template": {
             "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
             "path": "./sql",
             "files": [
@@ -165,7 +159,6 @@
             ],
             "weight": 10,
             "relations": [
-              "dtwin_trafficcongestion_vector",
               "dtwin_trafficcongestion_daily",
               "dtwin_trafficcongestion_hourly",
               "dtwin_trafficcongestion_yesterday",

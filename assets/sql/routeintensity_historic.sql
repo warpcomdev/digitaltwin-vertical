@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeintensity (
   sceneref text,
   trend text,
   daytype text,
-  zonelist json,
   forwardtrips double precision,
   returntrips double precision,
   forwardstops int,

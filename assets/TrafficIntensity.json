@@ -111,13 +111,8 @@
             "attrs": [
               "TimeInstant",
               "sourceRef",
-              "sceneRef",
-              "trend",
-              "dayType",
               "name",
-              "hour",
               "zone",
-              "intensity",
               "location",
               "alterationType"
             ],
@@ -151,10 +146,10 @@
         }
       }
     },
-    "custom_sql": {
+    "sql_template": {
       "sql": {
         "sources": {
-          "custom_sql": {
+          "sql_template": {
             "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
             "path": "./sql",
             "files": [
@@ -162,7 +157,6 @@
             ],
             "weight": 10,
             "relations": [
-              "dtwin_trafficintensity_vector",
               "dtwin_trafficintensity_daily",
               "dtwin_trafficintensity_yesterday",
               "dtwin_trafficintensity_peak"

@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeschedule (
   trend text,
   daytype text,
   hour int,
-  zonelist json,
   forwardtrips double precision,
   returntrips double precision,
   forwardstops int,

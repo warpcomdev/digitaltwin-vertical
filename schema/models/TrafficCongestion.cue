@@ -23,7 +23,7 @@ TrafficCongestion: templates.#Twin & {
 			description: "Probabilidad de congestión, en tanto por uno"
 			range:       "0-1"
 			example:     0.33
-			flows: ["historic", "lastdata"]
+			flows: ["historic"]
 			#metric: true
 		}
 	}

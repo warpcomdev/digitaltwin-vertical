@@ -37,8 +37,7 @@
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic",
-          "lastdata"
+          "historic"
         ],
         "example": "example text",
         "range": "-"
@@ -50,8 +49,7 @@
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic",
-          "lastdata"
+          "historic"
         ],
         "example": "Verano",
         "range": "Verano, Fallas, Otros"
@@ -63,8 +61,7 @@
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic",
-          "lastdata"
+          "historic"
         ],
         "example": "L-J",
         "range": "L-J, Viernes, Sábado, Domingo"
@@ -92,7 +89,6 @@
           "Distrito 4"
         ],
         "flows": [
-          "historic",
           "lastdata"
         ],
         "range": "-"
@@ -104,8 +100,7 @@
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic",
-          "lastdata"
+          "historic"
         ],
         "example": 5.0,
         "range": "-"
@@ -117,8 +112,7 @@
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic",
-          "lastdata"
+          "historic"
         ],
         "example": 5.0,
         "range": "-"
@@ -130,8 +124,7 @@
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic",
-          "lastdata"
+          "historic"
         ],
         "example": 5,
         "range": "-"
@@ -143,8 +136,7 @@
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic",
-          "lastdata"
+          "historic"
         ],
         "example": 5,
         "range": "-"
@@ -185,8 +177,7 @@
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic",
-          "lastdata"
+          "historic"
         ],
         "example": 5.0,
         "range": "-"
@@ -254,7 +245,6 @@
             "sceneref",
             "trend",
             "daytype",
-            "zonelist",
             "forwardtrips",
             "returntrips",
             "forwardstops",
@@ -271,7 +261,8 @@
             "entityNamespace": "dtwin",
             "attrs": [
               "name",
-              "location"
+              "location",
+              "zonelist"
             ],
             "attrJoinOn": [
               "entityid"
@@ -279,20 +270,18 @@
           }
         ]
       },
-      "custom_sql": {
+      "sql_template": {
         "class": "FLOW_RAW",
         "sql": {
           "sources": {
-            "custom_sql": {
+            "sql_template": {
               "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
               "path": "./sql",
               "files": [
                 "custom_RouteIntensity.sql"
               ],
               "weight": 10,
-              "relations": [
-                "dtwin_routeintensity_vector"
-              ]
+              "relations": []
             }
           }
         }

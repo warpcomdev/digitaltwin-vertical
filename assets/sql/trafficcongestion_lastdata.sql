@@ -1,14 +1,8 @@
 CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficcongestion_lastdata (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
-  sceneref text,
-  trend text,
-  daytype text,
   name text,
-  hour int,
-  minute int,
   zone text,
-  congestion double precision,
   location geometry(LineString),
   -- Common model attributes
   entityid text,

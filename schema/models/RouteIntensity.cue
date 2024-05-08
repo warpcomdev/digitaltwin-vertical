@@ -24,31 +24,31 @@ RouteIntensity: templates.#Twin & {
 		forwardTrips: {
 			types.#Double
 			description: "Número de trayectos de ida"
-			flows: ["historic", "lastdata"]
+			flows: ["historic"]
 		}
 
 		returnTrips: {
 			types.#Double
 			description: "Número de trayectos de vuelta"
-			flows: ["historic", "lastdata"]
+			flows: ["historic"]
 		}
 
 		forwardStops: {
 			types.#Integer
 			description: "Número de paradas en el trayecto de ida"
-			flows: ["historic", "lastdata"]
+			flows: ["historic"]
 		}
 
 		returnStops: {
 			types.#Integer
 			description: "Número de paradas en el trayecto de vuelta"
-			flows: ["historic", "lastdata"]
+			flows: ["historic"]
 		}
 
 		intensity: {
 			types.#Double
 			description: "Número de viajeros"
-			flows: ["historic", "lastdata"]
+			flows: ["historic"]
 			#metric: true
 		}
 	}

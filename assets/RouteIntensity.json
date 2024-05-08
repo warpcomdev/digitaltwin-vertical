@@ -50,7 +50,6 @@
               "sceneRef",
               "trend",
               "dayType",
-              "zoneList",
               "forwardTrips",
               "returnTrips",
               "forwardStops",
@@ -114,17 +113,9 @@
             "attrs": [
               "TimeInstant",
               "sourceRef",
-              "sceneRef",
-              "trend",
-              "dayType",
               "name",
               "zoneList",
-              "forwardTrips",
-              "returnTrips",
-              "forwardStops",
-              "returnStops",
               "location",
-              "intensity",
               "alterationType"
             ],
             "httpCustom": {
@@ -157,19 +148,17 @@
         }
       }
     },
-    "custom_sql": {
+    "sql_template": {
       "sql": {
         "sources": {
-          "custom_sql": {
+          "sql_template": {
             "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
             "path": "./sql",
             "files": [
               "custom_RouteIntensity.sql"
             ],
             "weight": 10,
-            "relations": [
-              "dtwin_routeintensity_vector"
-            ]
+            "relations": []
           }
         }
       }

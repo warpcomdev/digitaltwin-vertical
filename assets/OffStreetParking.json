@@ -113,16 +113,9 @@
             "attrs": [
               "TimeInstant",
               "sourceRef",
-              "sceneRef",
-              "trend",
-              "dayType",
               "name",
-              "hour",
               "zone",
-              "capacity",
-              "occupationPercent",
               "location",
-              "occupation",
               "alterationType"
             ],
             "httpCustom": {
@@ -155,10 +148,10 @@
         }
       }
     },
-    "custom_sql": {
+    "sql_template": {
       "sql": {
         "sources": {
-          "custom_sql": {
+          "sql_template": {
             "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
             "path": "./sql",
             "files": [
@@ -166,7 +159,6 @@
             ],
             "weight": 10,
             "relations": [
-              "dtwin_offstreetparking_vector",
               "dtwin_offstreetparking_daily",
               "dtwin_offstreetparking_yesterday",
               "dtwin_offstreetparking_peak",
