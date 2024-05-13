@@ -25,7 +25,7 @@ yesterday: {
 		}
 	}
 
-	sql: """
+	template: """
 		-- CREATE VIEW {{ .viewName }}
 		-- Vista que reemplaza el timeinstant de la tabla "lastdata"
 		-- por una fecha calculada que se corresponde al día de ayer.

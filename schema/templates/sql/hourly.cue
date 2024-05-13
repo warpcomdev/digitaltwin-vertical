@@ -19,7 +19,7 @@ hourly: {
 		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_hourly"
 	}
 
-	sql: """
+	template: """
 		-- CREATE VIEW {{ .viewName }}
 		-- Vista que agrega todos los resultados de una tabla de gemelo,
 		-- por hora. Ignora el minuto.

@@ -19,7 +19,7 @@ daily: {
 		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_daily"
 	}
 
-	sql: """
+	template: """
 		-- CREATE VIEW {{ .viewName }}
 		-- Vista que agrega todos los resultados de una tabla de gemelo,
 		-- por día. Ignora la hora y minuto.

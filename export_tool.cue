@@ -9,10 +9,11 @@ import (
 
 #filename: string @tag(filename)
 #model:    string @tag(model)
+#section:  string @tag(section)
 
-command: sql: render: file.Create & {
+command: export: do: file.Create & {
 	filename: #filename
-	contents: strings.Join([for label, tmpl in models[#model].#sql_template {
-		template.Execute(tmpl.sql, tmpl.input)
+	contents: strings.Join([for label, sect in models[#model].#export[#section] {
+		template.Execute(sect.template, sect.input)
 	}], "\n\n")
 }

@@ -3,9 +3,10 @@ package templates
 import (
 	"list"
 	"strings"
+	"encoding/json"
 
 	"github.com/telefonicasc/digitaltwin-vertical/schema/types"
-	"github.com/telefonicasc/digitaltwin-vertical/schema/templates/sql"
+	sql_templates "github.com/telefonicasc/digitaltwin-vertical/schema/templates/sql"
 )
 
 #Twin: self={
@@ -231,9 +232,9 @@ import (
 	// que se les deben proporcionar.
 	#sql: [label = string]: _
 
-	#sql_template: {for label, data in #sql {
+	#export: sql: {for label, data in #sql {
 		(label): {
-			sql[label]
+			sql_templates[label]
 			input: {
 				data
 				namespace:  #namespace
@@ -245,9 +246,9 @@ import (
 		}
 	}}
 
-	flows: sql_template: {
+	flows: custom_sql: {
 		class: "FLOW_RAW"
-		sql: sources: sql_template: {
+		sql: sources: custom_sql: {
 			documentation: """
 				Conjunto de vistas utilitarias para la presentación de
 				datos de escenarios identidad y simulaciones.
@@ -257,23 +258,28 @@ import (
 				"custom_\(#entityType).sql",
 			]
 			weight: 10
-			relations: list.FlattenN([for _, data in #sql_template {
+			relations: list.FlattenN([for _, data in #export.sql {
 				data.relations
 			}], -1)
 		}
 	}
 
-	// Todos los objetos de tipo twin tienen un atributo #vector
+	// Todos los objetos de tipo twin tienen un atributo #meta
 	// que recoge información necesaria para que luego la ETL
-	// pueda utilizar los datos como vectores.
-	#vector: {
-		metrics: [for _k, _v in self.model if _v.#metric {_k}]
-		hasHour:   #hasHour
-		hasMinute: #hasMinute
-		multiZone: #multiZone
+	// pueda utilizar los datos de cualquier datasource
+	#export: meta: all: {
+		input: {
+			dimensions: ["sourceRef"] + #unique
+			metrics: [for _k, _v in self.model if _v.#metric {_k}]
+			hasHour:   #hasHour
+			hasMinute: #hasMinute
+			multiZone: #multiZone
 
-		namespace:  #namespace
-		entityType: #entityType
-		tableName:  "\(namespace)_\(strings.ToLower(entityType))_sim"
+			namespace:  #namespace
+			entityType: #entityType
+			tableName:  "\(namespace)_\(strings.ToLower(entityType))_sim"
+		}
+
+		template: "\(json.Marshal(input))"
 	}
 }

@@ -26,7 +26,7 @@ peak: {
 	if input.hasMinute {
 		_formula: "numeradas.hour || ':' || numeradas.minute"
 	}
-	sql: """
+	template: """
 		-- CREATE VIEW {{ .viewName }}
 		-- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 		-- una métrica dada.

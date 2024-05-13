@@ -22,7 +22,7 @@ freq: {
 	}
 
 	_rangeColumn: len(input.columns) + 1
-	sql:          """
+	template:     """
 		-- CREATE VIEW {{ .viewName }}
 		-- Vista que calcula la frecuencia con la que una métrica
 		-- está dentro de un umbral.

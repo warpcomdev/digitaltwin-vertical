@@ -19,7 +19,7 @@ vector: {
 		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_vector"
 	}
 
-	sql: """
+	template: """
 		-- CREATE VIEW {{ .viewName }}
 		-- Vista que extrae las métricas necesarias para calcular
 		-- el vector de estados que representa a la ciudad.

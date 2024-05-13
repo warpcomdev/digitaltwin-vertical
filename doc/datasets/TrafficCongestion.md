@@ -21,9 +21,29 @@ Adicionalmente es necesario un dataset adicional, estático, con información in
 
 Se considera que cada vía se puede asociar principalmente a una de las zonas en las que se divida la ciudad. No tendría sentido tener una sola medida de congestión para un tramo tan largo que concurra por varias zonas (en caso de existir semejantes tramos, la congestión debería medirse en diferentes puntos a lo largo del mismo, asignando a cada uno un `entityid` distinto).
 
-### Regularización
+## Regularización
 
 La regularización de este dataset consiste en aplicar los siguientes cambios:
 
 - `TimeInstant`: se trunca la hora de medida al intervalo de 10 minutos inmediatamente anterior.
 - `congestion`: se asigna como valor de congestión el **valor máximo** de todos los valores de congestión de las filas cuyos valores de `TimeInstant` y `entityId` coincidan. Esto es así porque se considera que hay congestión en un intervalo si la hay en cualquier momento dentro de ese intervalo.
+
+## Identidad
+
+La métrica identidad (caracterización estadística) derivada de este dataset se almacena en las entidades [TrafficCongestion](../../assets/model/README.md#TrafficCongestion), generándola a partir del dataset anterior con la siguiente lógica:
+
+- Derivamos dimensiones:
+    - daytype: ... (L-J, Viernes, Sábado, Domingo) 
+    - trend: ... (estacionalidad)
+    - hour  (extraído de TimeInstant)
+    - minute (extraído de TimeInstant)
+
+- Agregamos los datos por ID de entidad y conjunto de dimensiones:
+    - congestion:
+        - media matemática del valor de `congestion`. Nos da la probabilidad (en tanto por uno) de que la vía denotada por `entityid` sufra congestión en el intervalo de 10 minutos indicado por `TimeInstant` (hour y minute)
+    
+- Actualizamos los atributos de la entidad `RouteIntensity` dada por el entityId:
+    - `daytype`
+    - `trend`
+    - `TimeInstant`
+

@@ -270,11 +270,11 @@
           }
         ]
       },
-      "sql_template": {
+      "custom_sql": {
         "class": "FLOW_RAW",
         "sql": {
           "sources": {
-            "sql_template": {
+            "custom_sql": {
               "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
               "path": "./sql",
               "files": [

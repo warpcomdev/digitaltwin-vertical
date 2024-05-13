@@ -19,8 +19,8 @@ all: \
 models/%.json: schema/models/%.cue schema/types/* schema/templates/* schema/templates/sql/*
 	cue export -fo $@ -e '{ "$*": $* }' "${CUE_PKG}/models"
 
-assets/sql/custom_%.sql: schema/models/%.cue schema/types/* schema/templates/* schema/templates/sql/* sql_tool.cue
-	cue cmd -t filename=$@ -t model=$* sql
+assets/sql/custom_%.sql: schema/models/%.cue schema/types/* schema/templates/* schema/templates/sql/* export_tool.cue
+	cue cmd -t filename=$@ -t model=$* -t section=sql export
 
 clean:
 	rm -f models/*.json && \

@@ -148,10 +148,10 @@
         }
       }
     },
-    "sql_template": {
+    "custom_sql": {
       "sql": {
         "sources": {
-          "sql_template": {
+          "custom_sql": {
             "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
             "path": "./sql",
             "files": [
