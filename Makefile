@@ -14,13 +14,17 @@ all: \
 	assets/sql/custom_RouteIntensity.sql \
 	assets/sql/custom_RouteSchedule.sql \
 	assets/sql/custom_TrafficCongestion.sql \
-	assets/sql/custom_TrafficIntensity.sql
+	assets/sql/custom_TrafficIntensity.sql \
+	assets/etls/vectorize/meta.json
 
 models/%.json: schema/models/%.cue schema/types/* schema/templates/* schema/templates/sql/*
 	cue export -fo $@ -e '{ "$*": $* }' "${CUE_PKG}/models"
 
 assets/sql/custom_%.sql: schema/models/%.cue schema/types/* schema/templates/* schema/templates/sql/* export_tool.cue
 	cue cmd -t filename=$@ -t model=$* -t section=sql export
+
+assets/etls/vectorize/meta.json: schema/models/* schema/types/* schema/templates/* export_tool.cue
+	cue cmd -t filename=assets/etls/vectorize/meta.json -t section=meta -t json=true export
 
 clean:
 	rm -f models/*.json && \

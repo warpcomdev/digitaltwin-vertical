@@ -18,7 +18,6 @@ SELECT
 FROM :target_schema.dtwin_offstreetparking_sim AS t
 WHERE t.hour >= 8 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
-
 -- CREATE VIEW dtwin_offstreetparking_yesterday
 -- Vista que reemplaza el timeinstant de la tabla "lastdata"
 -- por una fecha calculada que se corresponde al día de ayer.
@@ -41,7 +40,6 @@ SELECT
   entityid,
   date_trunc('day'::text, now()) - '1 day'::interval + make_interval(hours => t.hour) AS generatedinstant
 FROM :target_schema.dtwin_offstreetparking_sim AS t;
-
 -- CREATE VIEW dtwin_offstreetparking_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 -- una métrica dada.
@@ -98,7 +96,6 @@ WHERE t.hour >= 8 AND t.hour <= 22
 ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.occupationPercent DESC) AS ordenadas) AS numeradas
 WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL
 GROUP BY  numeradas.timeinstant, numeradas.sourceref, numeradas.sceneref, numeradas.trend, numeradas.daytype, numeradas.name, numeradas.zone, entityid;
-
 -- CREATE VIEW dtwin_offstreetparking_freq
 -- Vista que calcula la frecuencia con la que una métrica
 -- está dentro de un umbral.

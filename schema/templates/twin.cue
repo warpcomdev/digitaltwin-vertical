@@ -280,6 +280,7 @@ import (
 			tableName:  "\(namespace)_\(strings.ToLower(entityType))_sim"
 		}
 
+		// Genera un json con todos los metadatos
 		template: "\(json.Marshal(input))"
 	}
 }

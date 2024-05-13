@@ -1,0 +1,90 @@
+[
+  {
+    "dimensions": [
+      "sourceRef",
+      "sceneRef",
+      "trend",
+      "dayType",
+      "hour"
+    ],
+    "metrics": [
+      "occupationPercent"
+    ],
+    "hasHour": true,
+    "hasMinute": false,
+    "multiZone": false,
+    "namespace": "dtwin",
+    "entityType": "OffStreetParking",
+    "tableName": "dtwin_offstreetparking_sim"
+  },
+  {
+    "dimensions": [
+      "sourceRef",
+      "sceneRef",
+      "trend",
+      "dayType"
+    ],
+    "metrics": [
+      "intensity"
+    ],
+    "hasHour": false,
+    "hasMinute": false,
+    "multiZone": true,
+    "namespace": "dtwin",
+    "entityType": "RouteIntensity",
+    "tableName": "dtwin_routeintensity_sim"
+  },
+  {
+    "dimensions": [
+      "sourceRef",
+      "sceneRef",
+      "trend",
+      "dayType",
+      "hour"
+    ],
+    "metrics": [],
+    "hasHour": true,
+    "hasMinute": false,
+    "multiZone": true,
+    "namespace": "dtwin",
+    "entityType": "RouteSchedule",
+    "tableName": "dtwin_routeschedule_sim"
+  },
+  {
+    "dimensions": [
+      "sourceRef",
+      "sceneRef",
+      "trend",
+      "dayType",
+      "hour",
+      "minute"
+    ],
+    "metrics": [
+      "congestion"
+    ],
+    "hasHour": true,
+    "hasMinute": true,
+    "multiZone": false,
+    "namespace": "dtwin",
+    "entityType": "TrafficCongestion",
+    "tableName": "dtwin_trafficcongestion_sim"
+  },
+  {
+    "dimensions": [
+      "sourceRef",
+      "sceneRef",
+      "trend",
+      "dayType",
+      "hour"
+    ],
+    "metrics": [
+      "intensity"
+    ],
+    "hasHour": true,
+    "hasMinute": false,
+    "multiZone": false,
+    "namespace": "dtwin",
+    "entityType": "TrafficIntensity",
+    "tableName": "dtwin_trafficintensity_sim"
+  }
+]

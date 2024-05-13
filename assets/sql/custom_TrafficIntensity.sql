@@ -16,7 +16,6 @@ SELECT
 FROM :target_schema.dtwin_trafficintensity_sim AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
-
 -- CREATE VIEW dtwin_trafficintensity_yesterday
 -- Vista que reemplaza el timeinstant de la tabla "lastdata"
 -- por una fecha calculada que se corresponde al día de ayer.
@@ -37,7 +36,6 @@ SELECT
   entityid,
   date_trunc('day'::text, now()) - '1 day'::interval + make_interval(hours => t.hour) AS generatedinstant
 FROM :target_schema.dtwin_trafficintensity_sim AS t;
-
 -- CREATE VIEW dtwin_trafficintensity_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 -- una métrica dada.

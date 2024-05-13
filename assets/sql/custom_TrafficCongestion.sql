@@ -17,7 +17,6 @@ SELECT
 FROM :target_schema.dtwin_trafficcongestion_sim AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
-
 -- CREATE VIEW dtwin_trafficcongestion_hourly
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por hora. Ignora el minuto.
@@ -37,7 +36,6 @@ t.hour,
 FROM :target_schema.dtwin_trafficcongestion_sim AS t
 WHERE t.hour >= 7 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.hour, t.entityid;
-
 -- CREATE VIEW dtwin_trafficcongestion_yesterday
 -- Vista que reemplaza el timeinstant de la tabla "lastdata"
 -- por una fecha calculada que se corresponde al día de ayer.
@@ -58,7 +56,6 @@ SELECT
   entityid,
   date_trunc('day'::text, now()) - '1 day'::interval  + make_interval(hours => t.hour, mins => t.minute) AS generatedinstant
 FROM :target_schema.dtwin_trafficcongestion_sim AS t;
-
 -- CREATE VIEW dtwin_trafficcongestion_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 -- una métrica dada.
