@@ -71,49 +71,48 @@ def psql_engine() -> typing.Iterable[Engine]:
 # -------------------------------------
 
 @dataclass
-class SceneData:
+class DatasetProperties:
     """
-    Contains data for a particular scene, trend and daytype.
-
-    This data is not scaled, i.e. it holds the original info
-    from the database for the scene.
+    Contains the properties for a particular scene,
+    trend and daytype.
     """
-    sceneref: str
     timeinstant: str
     trend: str
     daytype: str
+
+
+@dataclass
+class Dataset(DatasetProperties):
+    """
+    Contains data for a particular dia, classified by
+    trend and daytype, for all the entitytypes in the
+    database.
+
+    This data must be regularized, i.e. grouped at
+    the particular time interval proper of the dataset
+    (hour, or 10-minute interval). But it should not
+    be scaled.
+    """
+    entityType: str
     df: pd.DataFrame
 
 @dataclass
-class VectorData:
+class VectorProperties:
     """
-    Holds the data of a regularized dataframe. This data is:
-
-    - fixed length. There is a row per entity id, hour (if hasHour)
-      and 10-minute interval (if hasMinute).
-      - The entities included in the vector must always be the same
-        for a given entityType: the entities the model has been
-        trained on. This is given by the dimension table for the
-        entityType. Entities are always sorted by id in the vector.
-      - if hasHour, there is a row per hour from 00 to 23.
-      - if hasMinute, there is a row per 10-minute interval from 00 to 50.
-
-    - scaled so that all vales are between 0 and 1
+    Holds the properties of a regularized dataset for a given
+    entity type.
+    A regularized dataset must be scaled prior to analysis, so
+    that all values are comparable and the encoder does not
+    get too much issues with the scale.
+    
+    So in this implementation, all vales are scaled between
+    0 and 1:
       - metrics that contain probabilites are left as is.
       - metrics that do not contain probabilities are scaled
         to be between 0 and 1.
         If metrics could be negative, an offset would be applied
         before scaling. IT is currently not the case for any
         metric.
-
-    The columns in the dataframe are at least "sourceref",
-    "hour", "minute", and a column per "metric". Note that
-    "hour" and/or "minute" might be 0 if not hasHour or not
-    hasMinute, respectively.
-
-    Notice that the metrics in a row can be NaN if the source
-    does not have data for the given combination of sourceref,
-    hour and minute.
 
     In order to de-scale a metric, first you should multiply
     by the scale factor and then add the offset value.
@@ -124,6 +123,30 @@ class VectorData:
     metrics: typing.Tuple[str]
     offset: typing.Mapping[str, float]
     scale: typing.Mapping[str, float]
+
+@dataclass
+class TypedVector(VectorProperties):
+    """
+    Holds the data of a regularized dataset for a given entity type.
+    This data is fixed length: There is a row per entity id,
+    hour (if hasHour) and 10-minute interval (if hasMinute).
+
+    - The entities included in the vector must always be the same
+      for a given entityType: the entities the model has been
+      trained on. This is given by the dimension table for the
+      entityType. Entities are always sorted by id in the vector.
+    - if hasHour, there is a row per hour from 00 to 23.
+    - if hasMinute, there is a row per 10-minute interval from 00 to 50.
+
+    The columns in the dataframe are at least "sourceref",
+    "hour", "minute", and a column per metric. Note that
+    "hour" and/or "minute" might be 0 if not hasHour or not
+    hasMinute, respectively.
+
+    Notice that the metrics in a row can be NaN if the source
+    does not have data for the given combination of sourceref,
+    hour and minute.
+    """
     df: pd.DataFrame
 
 # -------------------------------------
@@ -170,10 +193,9 @@ class Metadata:
             columns = "sourceref, zone, Array[zone]::json[] as zonelist, ST_AsGeoJSON(location) AS location"
         return text(f"SELECT {columns} FROM {self.dimsTableName} ORDER BY sourceref ASC")
 
-    def dim_df(self, engine: Engine) -> pd.DataFrame:
+    def dim_df(self, engine: Engine, sceneref: str) -> pd.DataFrame:
         """Builds a dataframe of all entity IDs in the model"""
         query = self.dim_query()
-        logging.debug("Querying statics for %s: %s", self.entityType, query)
         df = pd.read_sql(query, engine)
         df['entitytype'] = self.entityType
         # Make sure to sort by entity id. The order of columns
@@ -192,29 +214,28 @@ class Metadata:
         AND timeinstant = :timeinstant
         """)
 
-    def scene_set(self, engine: Engine, sceneref: str, timeinstant: datetime) -> typing.Iterable[SceneData]:
-        """Retrieves a given sceneRef and TimeInstant, generates SceneData"""
+    def scene_data(self, engine: Engine, sceneref: str, timeinstant: datetime) -> typing.Iterable[Dataset]:
+        """Retrieves datasets for all trends and daytypes of the scene"""
         query = self.scene_query()
-        logging.info("Querying scene %s (at %s) for entity type  %s: %s", sceneref, timeinstant, self.entityType, query)
         df = pd.read_sql(query.bindparams(sceneref=sceneref, timeinstant=timeinstant), engine)
         # Separate by trend and dayType
         for group, data in df.groupby(['trend', 'daytype']):
-            yield SceneData(
-                sceneref=sceneref,
+            yield Dataset(
                 timeinstant=timeinstant,
                 trend=group[0],
                 daytype=group[1],
+                entityType=self.entityType,
                 df=data
             )
 
-    def vectorize(self, metrics_df: pd.DataFrame, dim_df: pd.DataFrame) -> VectorData:
+    def normalize(self, dataset: pd.DataFrame, dims: pd.DataFrame) -> TypedVector:
         """
-        Turns a regularized metrics dataframe into a vector, i.e.:
+        Turns a regularized dataset into a vector, i.e.:
         - Sorts entries so that they match the entity order in dim_df.
         - Fills in missing rows for hours or days.
         - Scales metrics so that the vector information is within range [0, 1]
 
-        The metrics_df must be regularized in time, i.e. there must be only
+        The dataset must be regularized in time, i.e. there must be only
         one entry per "sourceref" and set of dimensions:
         - if "hasHour" is true, there must be only one entry per sourceref
           and hour
@@ -224,7 +245,7 @@ class Metadata:
         Each dataset is regularized differently. See the documentation of
         datasets for more infor on regularization.
         """
-        vector = VectorData(
+        typed_vector = TypedVector(
             entityType=self.entityType,
             hasHour=self.hasHour,
             hasMinute=self.hasMinute,
@@ -237,22 +258,24 @@ class Metadata:
             },
             df=None
         )
-        for metric, props in self.metrics.items():
-            if not props.probability:
+        if dataset is not None:
+            for metric, props in self.metrics.items():
+                if props.probability:
+                    continue
                 # All our measures are either probabilities or intensities,
                 # larger than 0 in any case.
                 # We will normalize intensities to [0, 1] so that
                 # they are within the range of the vector.
-                max_val = metrics_df[metric].max()
+                max_val = dataset[metric].max()
                 if max_val > 0:
                     # Keep track of the scale factor to be able to de-scale later.
-                    vector.scale[metric] = max_val
-                    metrics_df[metric] = metrics_df[metric] / max_val
+                    typed_vector.scale[metric] = max_val
+                    dataset[metric] = dataset[metric] / max_val
         # Now, make sure there is a metric for each
-        # possible combiunation of dimensions, so the vector has
+        # possible combination of dimensions, so the vector has
         # always a fixed size. Even if some of the
         # metrics are NaN (they will be considered "padding")
-        merger_df = dim_df[['sourceref']]
+        merger_df = dims[['sourceref']].copy()
         on_columns = ['sourceref']
         if self.hasHour:
             hours = tuple(range(24))
@@ -271,31 +294,136 @@ class Metadata:
         # If might be the case that we need the vector, but we don't have any
         # data at all for the given entityType. Then just return a vector
         # with all dimensions being NaN
-        if metrics_df is None:
-            vector.df = merger_df
+        if dataset is None:
+            typed_vector.df = merger_df
             for col in self.metrics.keys():
-                vector.df[col] = np.nan
+                typed_vector.df[col] = np.nan
         else:
-            vector.df = pd.merge(merger_df, metrics_df, how='left', on=on_columns)
-        vector.df.reset_index(drop=True)
-        return vector
+            typed_vector.df = pd.merge(merger_df, dataset, how='left', on=on_columns)
+        typed_vector.df.reset_index(drop=True)
+        return typed_vector
+
+    def extract(self, vector: pd.Series, props: VectorProperties, dims_df: pd.DataFrame) -> TypedVector:
+        """
+        Extract the part corresponding to this entitytype from
+        a pd.Series that has a multi-index with the following
+        values:
+        (entitytype, metric, sourceref, hour, minute)
+        """
+        if not self.metrics:
+            # This is a type with no metrics, we return the dimension
+            # dataframe (one row per sourceref). We must also add
+            # hour and minute columns, if only to preserve the format
+            # of TypedVector dataframes, that must have at least
+            # 'sourceref', 'hour', 'minute'.
+            empty_df = dims_df[['sourceref', 'entitytype']]
+            empty_df['hour'] = 0
+            empty_df['minute'] = 0
+            return TypedVector(
+                entityType=props.entityType,
+                hasHour=props.hasHour,
+                hasMinute=props.hasMinute,
+                metrics=props.metrics,
+                offset=props.offset,
+                scale=props.scale,
+                df=empty_df
+            )
+        typed_series = vector.loc[props.entityType]
+        metrics = []
+        for metric in self.metrics.keys():
+            # Get measures for the metric
+            metric_series = typed_series.loc[metric]
+            metric_offset = props.offset[metric]
+            metric_scale = props.scale[metric]
+            metric_series = metric_series * metric_scale + metric_offset
+            # Rename the value column to the metric
+            metric_series.name = metric
+            metrics.append(metric_series)
+        # concatenate all metrics as columns
+        df = pd.concat(metrics, axis=1)
+        # Drop NaN and 0, but make sure we return at least one row per
+        # sourceref, otherwise the sourceref will not be present in
+        # the simulation dashboard.
+        groups = []
+        for sourceref, group in df.groupby(level='sourceref'):
+            # This filters out the rows where all values are 0
+            group = group.fillna(0)
+            group = group.loc[~(group == 0).all(axis=1)]
+            if group.empty:
+                original_group = df.loc[sourceref]
+                group = original_group.head(1)
+            # turn "hour" and "minute" into columns
+            group = group.reset_index()
+            # overwrite other columns
+            group['entitytype'] = props.entityType
+            group['sourceref'] = sourceref
+            groups.append(group)
+        # concatenate all groups
+        df = pd.concat(groups, axis=0).reset_index()
+        return TypedVector(
+            entityType=props.entityType,
+            hasHour=props.hasHour,
+            hasMinute=props.hasMinute,
+            metrics=props.metrics,
+            offset=props.offset,
+            scale=props.scale,
+            df=df
+        )
 
 # -------------------------------------
-# Model type
+# Schemaless types
 # -------------------------------------
 
 @dataclass
-class SceneModel:
-    trend: str
-    daytype: str
-    # Ordered mapping from entity type to entity ids.
-    # The entities in the vector must always be the same
-    # and sorted in the same order.
-    dims: typing.Mapping[str, pd.DataFrame]
-    # Ordered mapping from entity type to data vectors.
-    # The entries in each vector must always be the same
-    # and sorted in the same order.
-    vecs: typing.Optional[typing.Mapping[str, pd.DataFrame]]
+class Vector:
+    """
+    Untyped Vector class.
+
+    Contains both the complete series of metrics that make up
+    the inpt of the encoder, as well as the properties of all
+    TypedVectors that went into the series.
+
+    The index of the series is expected to be a tuple
+    (entitytype, metric, sourceRef, hour, minute).
+    """
+    properties: typing.Mapping[str, VectorProperties]
+    df: pd.Series
+
+    @staticmethod
+    def create(metadata: typing.Dict[str, Metadata], data: typing.Mapping[str, TypedVector]) -> 'Vector':
+        """
+        Created a Vector from the given set of metadata and data
+        
+        Both the meta and data maps are indexed by entitytype.
+        """
+        vector_list = []
+        props = {}
+        for entityType, meta in metadata.items():
+            typed_vector = data[entityType]
+            # Copy the properties for de-escalation
+            props[entityType] = VectorProperties(
+                entityType=typed_vector.entityType,
+                hasHour=typed_vector.hasHour,
+                hasMinute=typed_vector.hasMinute,
+                metrics=typed_vector.metrics,
+                offset=typed_vector.offset,
+                scale=typed_vector.scale
+            )
+            # Turn the dataframe into a series with a
+            # multilevel index. The index will have the following keys:
+            # (entitytype, metric, sourceref, hour, minute)
+            for metric in meta.metrics.keys():
+                slim_df = typed_vector.df[['sourceref', 'hour', 'minute', metric]].copy()
+                slim_df['entitytype'] = entityType
+                slim_df['metric'] = metric
+                slim_df = slim_df.set_index(['entitytype', 'metric', 'sourceref', 'hour', 'minute'])
+                vector_list.append(slim_df.squeeze())
+        vector = pd.concat(vector_list, axis=0)
+        return Vector(properties=props, df=vector)
+
+@dataclass
+class HiddenLayer:
+    private: pd.Series
 
 def read_meta(path: pathlib.Path) -> typing.Dict[str, Metadata]:
     """Reads metadata from json file"""
@@ -313,77 +441,110 @@ def last_simulation(engine: Engine, sceneref: str) -> datetime:
     ORDER BY timeinstant DESC
     LIMIT 1
     """)
-    logging.debug("Querying last simulation for %s: %s", sceneref, query)
     df = pd.read_sql(query.bindparams(sceneref=sceneref), engine)
     print(df)
     return df.iloc[0]['timeinstant']
 
-def vectorize(meta: typing.Mapping[str, Metadata], engine: Engine):
+def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
     """
     Vectorizes the data in the database
     """
     # Get the latest identity we are working with
     identityref = os.getenv("ETL_VECTORIZE_IDENTITYREF", "N/A")
     last_sim_date = last_simulation(engine=engine, sceneref=identityref)
-    logging.info("Last simulation date for sceneRef '%s': %s", identityref, last_sim_date)
+    logging.info("Latest simulation for sceneref %s: %s", identityref, last_sim_date)
 
     # Group all data by combinations of trend and daytype, and then by entityType
-    scene_sets: typing.Mapping[typing.Tuple[str, str], typing.Mapping[str, SceneData]] = defaultdict(dict)
-    for entityType, m in meta.items():
-        dim_df = m.dim_df(engine)
-        for scene_data in m.scene_set(engine=engine, sceneref=identityref, timeinstant=last_sim_date):
-            scene_sets[(scene_data.trend, scene_data.daytype)][entityType] = scene_data
+    scene_by_type: typing.Mapping[typing.Tuple[str, str], typing.Mapping[str, Dataset]] = defaultdict(dict)
+    dims_df: typing.Mapping[str, pd.DataFrame] = {}
+    for entityType, meta in metadata.items():
+        entity_dims = meta.dim_df(engine=engine, sceneref=identityref)
+        logging.info("Dims shape for scene %s, entity type %s: %s", identityref, entityType, entity_dims.shape)
+        dims_df[entityType] = entity_dims
+        for scene_data in meta.scene_data(engine=engine, sceneref=identityref, timeinstant=last_sim_date):
+            logging.info("Dataset shape for scene %s, timeinstant %s, trend %s, daytype %s, entity type %s: %s",
+                identityref,
+                last_sim_date,
+                scene_data.trend,
+                scene_data.daytype,
+                entityType,
+                scene_data.df.shape
+            )
+            scene_by_type[(scene_data.trend, scene_data.daytype)][entityType] = scene_data
 
     # Iterate over all combinations of trend and daytype
-    for k, entities in scene_sets.items():
-        trend, daytype = k
-        logging.info("Vectorizing trend %s, daytype %s", trend, daytype)
-        vector_list = []
-        for entityType, m in meta.items():
-            scene_set = entities.get(entityType, None)
+    for scene_index, entities in scene_by_type.items():
+        trend, daytype = scene_index
+        typed_vector_map = {}
+        for entityType, meta in metadata.items():
+            scene_data = entities.get(entityType, None)
+            scene_df: typing.Optional[pd.DataFrame] = None
             # If we got no data for this entity type, we will just
             # generate a vector with all NaN metrics.
-            if scene_set is None:
-                logging.info("No data for entity type %s, generating NaN frame", entityType)
-                scene_set = SceneData(
-                    sceneref=identityref,
-                    timeinstant=last_sim_date,
-                    trend=trend,
-                    daytype=daytype,
-                    df=None
+            if scene_data is None:
+                logging.info("No data for scene %s, timeinstant %s, trend %s, daytype %s, entity type %s: generating NaN frame",
+                    identityref,
+                    last_sim_date,
+                    trend,
+                    daytype,
+                    entityType
                 )
-            vector = m.vectorize(metrics_df=scene_set.df, dim_df=dim_df)
-            logging.info("Vector for entityType %s has size %s, scale %s, offset %s, columns: %s",
-                         entityType,
-                         vector.df.shape,
-                         vector.scale,
-                         vector.offset,
-                         ",".join(vector.df.columns)
+            else:
+                scene_df = scene_data.df
+            typed_vector = meta.normalize(dataset=scene_df, dims=dims_df[entityType])
+            logging.info("TypedVector shape for scene %s, timeinstant %s, trend %s, daytype %s, entity type %s: %s",
+                identityref,
+                last_sim_date,
+                trend,
+                daytype,
+                entityType,
+                typed_vector.df.shape
             )
-            # Now we will turn the dataframe into a series with a
-            # multilevel index. The index will have four keys:
-            # (sourceRef, metric, hour, minute)
-            for metric in m.metrics.keys():
-                logging.info("Creating series for metric %s", metric)
-                slim_df = vector.df[['sourceref', 'hour', 'minute', metric]].copy()
-                slim_df['metric'] = metric
-                slim_df = slim_df.set_index(['sourceref', 'metric', 'hour', 'minute'])
-                vector_list.append(slim_df.squeeze())
-        vector = pd.concat(vector_list, axis=0)
-        print("FINAL VECTOR FOR ", trend, ", ", daytype, ":\n", vector)
+            typed_vector_map[entityType] = typed_vector
+        
+        # Turn typed data into vector
+        vector = Vector.create(metadata=metadata, data=typed_vector_map)
+        logging.info("Vector shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
+            identityref,
+            last_sim_date,
+            trend,
+            daytype,
+            vector.df.shape
+        )
 
-        #hidden = encode_vector(metadata=m, trend=scene_data.trend, daytype=scene_data.daytype, vector=vector)
-        #sim_result = simulate_scene(metadata=m, trend=scene_data.trend, daytype=scene_data.daytype, hidden=hidden)
-        #m.save_data(engine=engine, data=sim_result)
+        # Encode, perturb and decode
+        hidden = encode_vector(metadata=meta, props=scene_data, vector=vector)
+        simulated_state = perturb_hidden(metadata=meta, props=scene_data, hidden=hidden)
+        simulated_result = decode_hidden(metadata=meta, props=scene_data, hidden=simulated_state)
 
+        # Split into TypedVectors
+        result = {}
+        for entityType, meta in metadata.items():
+            logging.info("Extracting TypeVector for scene %s, timeinstant %s, trend %s, daytype %s, entity type %s",
+                identityref,
+                last_sim_date,
+                trend,
+                daytype,
+                entityType
+            )
+            typed_vector = meta.extract(simulated_result, vector.properties[entityType], dims_df[entityType])
+            result[entityType] = typed_vector
+            logging.info("Simulated TypedVector shape for scene %s, timeinstant %s, trend %s, daytype %s, entity type %s: %s",
+                identityref,
+                last_sim_date,
+                trend,
+                daytype,
+                entityType,
+                typed_vector.df.shape
+            )
 
-def encode_vector(metadata: Metadata, trend: str, daytype: str, vector=pd.Series):
+def encode_vector(metadata: Metadata, props: DatasetProperties, vector: pd.Series) -> HiddenLayer:
     """
     Run the encoder over the given vector, and return the corresponding hidden states
     """
-    return vector
+    return HiddenLayer(private=vector.df)
 
-def simulate_scene(metadata: Metadata, trend: str, daytype: str, hidden=pd.Series):
+def perturb_hidden(metadata: Metadata, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
     """
     Run the simulation, given the hidden state vector.
 
@@ -391,6 +552,12 @@ def simulate_scene(metadata: Metadata, trend: str, daytype: str, hidden=pd.Serie
     unscaled before saving.
     """
     return hidden
+
+def decode_hidden(metadata: Metadata, props: DatasetProperties, hidden: HiddenLayer) -> pd.Series:
+    """
+    Run the decoder over the given hidden state tensor, and return the corresponding vector
+    """
+    return hidden.private
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -416,7 +583,7 @@ if __name__ == "__main__":
 
     try:
         with psql_engine() as engine:
-            vectorize(meta, engine)
+            main(meta, engine)
         logging.info("ETL OK")
     except Exception as err:
         logging.exception(msg="Error during vectorization", stack_info=True)
