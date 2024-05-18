@@ -7,15 +7,18 @@
       "dayType",
       "hour"
     ],
-    "metrics": [
-      "occupationPercent"
-    ],
+    "metrics": {
+      "occupationPercent": {
+        "percent": true
+      }
+    },
     "hasHour": true,
     "hasMinute": false,
     "multiZone": false,
     "namespace": "dtwin",
     "entityType": "OffStreetParking",
-    "tableName": "dtwin_offstreetparking_sim"
+    "dataTableName": "dtwin_offstreetparking",
+    "dimsTableName": "dtwin_offstreetparking_lastdata"
   },
   {
     "dimensions": [
@@ -24,15 +27,18 @@
       "trend",
       "dayType"
     ],
-    "metrics": [
-      "intensity"
-    ],
+    "metrics": {
+      "intensity": {
+        "percent": false
+      }
+    },
     "hasHour": false,
     "hasMinute": false,
     "multiZone": true,
     "namespace": "dtwin",
     "entityType": "RouteIntensity",
-    "tableName": "dtwin_routeintensity_sim"
+    "dataTableName": "dtwin_routeintensity",
+    "dimsTableName": "dtwin_routeintensity_lastdata"
   },
   {
     "dimensions": [
@@ -42,13 +48,14 @@
       "dayType",
       "hour"
     ],
-    "metrics": [],
+    "metrics": {},
     "hasHour": true,
     "hasMinute": false,
     "multiZone": true,
     "namespace": "dtwin",
     "entityType": "RouteSchedule",
-    "tableName": "dtwin_routeschedule_sim"
+    "dataTableName": "dtwin_routeschedule",
+    "dimsTableName": "dtwin_routeschedule_lastdata"
   },
   {
     "dimensions": [
@@ -59,15 +66,18 @@
       "hour",
       "minute"
     ],
-    "metrics": [
-      "congestion"
-    ],
+    "metrics": {
+      "congestion": {
+        "percent": true
+      }
+    },
     "hasHour": true,
     "hasMinute": true,
     "multiZone": false,
     "namespace": "dtwin",
     "entityType": "TrafficCongestion",
-    "tableName": "dtwin_trafficcongestion_sim"
+    "dataTableName": "dtwin_trafficcongestion",
+    "dimsTableName": "dtwin_trafficcongestion_lastdata"
   },
   {
     "dimensions": [
@@ -77,14 +87,17 @@
       "dayType",
       "hour"
     ],
-    "metrics": [
-      "intensity"
-    ],
+    "metrics": {
+      "intensity": {
+        "percent": false
+      }
+    },
     "hasHour": true,
     "hasMinute": false,
     "multiZone": false,
     "namespace": "dtwin",
     "entityType": "TrafficIntensity",
-    "tableName": "dtwin_trafficintensity_sim"
+    "dataTableName": "dtwin_trafficintensity",
+    "dimsTableName": "dtwin_trafficintensity_lastdata"
   }
 ]

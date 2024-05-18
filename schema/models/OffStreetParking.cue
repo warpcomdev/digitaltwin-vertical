@@ -32,6 +32,7 @@ OffStreetParking: templates.#Twin & {
 			example:     23.45
 			flows: ["historic"]
 			#metric: true
+			#probability: true
 		}
 
 		occupation: {

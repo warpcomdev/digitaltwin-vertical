@@ -28,6 +28,7 @@ import (
 	model: [string]: {
 		types.#ModelAttribute
 		#metric: bool | *false
+		#probability: bool | *false
 	}
 
 	model: {
@@ -270,14 +271,19 @@ import (
 	#export: meta: all: {
 		input: {
 			dimensions: ["sourceRef"] + #unique
-			metrics: [for _k, _v in self.model if _v.#metric {_k}]
+			metrics: {for _k, _v in self.model if _v.#metric {
+				(_k): {
+					percent: _v.#probability
+				}
+			}}
 			hasHour:   #hasHour
 			hasMinute: #hasMinute
 			multiZone: #multiZone
 
 			namespace:  #namespace
 			entityType: #entityType
-			tableName:  "\(namespace)_\(strings.ToLower(entityType))_sim"
+			dataTableName: "\(namespace)_\(strings.ToLower(entityType))"
+			dimsTableName: "\(namespace)_\(strings.ToLower(entityType))_lastdata"
 		}
 
 		// Genera un json con todos los metadatos
