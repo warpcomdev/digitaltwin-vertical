@@ -13,6 +13,7 @@ from collections import defaultdict
 from sqlalchemy import create_engine, event, text, URL, Engine, TextClause
 import pandas as pd
 import numpy as np
+import torch
 
 
 # -------------------------------------
@@ -228,15 +229,47 @@ class Metadata:
                 df=data
             )
 
-    def normalize(self, dataset: pd.DataFrame, dims: pd.DataFrame) -> TypedVector:
+    def fixed_frame(self, dims: pd.DataFrame) -> pd.DataFrame:
         """
-        Turns a regularized dataset into a vector, i.e.:
+        Generate a dimension dataframe with a fixed size. The generated
+        dataframe will have the columns:  "sourceref", "hour" and "minute",
+        and has a fixed number of rows, depending on the regularization
+        of this dataframe:
+        
         - Sorts entries so that they match the entity order in dim_df.
         - Fills in missing rows for hours or days.
-        - Scales metrics so that the vector information is within range [0, 1]
+        """
+        # Now, make sure there is a metric for each
+        # possible combination of dimensions, so the vector has
+        # always a fixed size. Even if some of the
+        # metrics are NaN (they will be considered "padding")
+        merger_df = dims[['sourceref']].copy()
+        if self.hasHour:
+            hours = tuple(range(24))
+            hours_df = pd.DataFrame({'hour': hours}, index=hours)
+            merger_df = pd.merge(merger_df, hours_df, how='cross')
+        else:
+            merger_df['hour'] = 0
+        if self.hasMinute:
+            minutes = tuple(m*10 for m in range(6))
+            minutes_df = pd.DataFrame({'minute': minutes}, index=minutes)
+            merger_df = pd.merge(merger_df, minutes_df, how='cross')
+        else:
+            merger_df['minute'] = 0
+        merger_df.reset_index(inplace=True)
+        return merger_df
 
+    def normalize(self, fixed_frame: pd.DataFrame, dataset: pd.DataFrame) -> TypedVector:
+        """
+        Turns a regularized dataset into a vector, i.e.:
+
+        - Sorts entries so that they match the order in fixed_frame.
+        - Fills in missing rows for hours or days.
+        - Scales metrics so that the vector information is within range [0, 1]
+        
         The dataset must be regularized in time, i.e. there must be only
         one entry per "sourceref" and set of dimensions:
+
         - if "hasHour" is true, there must be only one entry per sourceref
           and hour
         - if "hasMinute" is true, there must be only one entry per sourceref,
@@ -271,35 +304,25 @@ class Metadata:
                     # Keep track of the scale factor to be able to de-scale later.
                     typed_vector.scale[metric] = max_val
                     dataset[metric] = dataset[metric] / max_val
-        # Now, make sure there is a metric for each
-        # possible combination of dimensions, so the vector has
-        # always a fixed size. Even if some of the
-        # metrics are NaN (they will be considered "padding")
-        merger_df = dims[['sourceref']].copy()
-        on_columns = ['sourceref']
-        if self.hasHour:
-            hours = tuple(range(24))
-            hours_df = pd.DataFrame({'hour': hours}, index=hours)
-            merger_df = pd.merge(merger_df, hours_df, how='cross')
-            on_columns.append('hour')
-        else:
-            merger_df['hour'] = 0
-        if self.hasMinute:
-            minutes = tuple(m*10 for m in range(6))
-            minutes_df = pd.DataFrame({'minute': minutes}, index=minutes)
-            merger_df = pd.merge(merger_df, minutes_df, how='cross')
-            on_columns.append('minute')
-        else:
-            merger_df['minute'] = 0
         # If might be the case that we need the vector, but we don't have any
         # data at all for the given entityType. Then just return a vector
         # with all dimensions being NaN
+        df = fixed_frame.clone()
         if dataset is None:
-            typed_vector.df = merger_df
+            typed_vector.df = df
             for col in self.metrics.keys():
                 typed_vector.df[col] = np.nan
         else:
-            typed_vector.df = pd.merge(merger_df, dataset, how='left', on=on_columns)
+            # Now, make sure there is a metric for each
+            # possible combination of dimensions, so the vector has
+            # always a fixed size. Even if some of the
+            # metrics are NaN (they will be considered "padding")
+            on_columns = ['sourceref']
+            if self.hasHour:
+                on_columns.append('hour')
+            if self.hasMinute:
+                on_columns.append('minute')
+            typed_vector.df = pd.merge(df, dataset, how='left', on=on_columns)
         typed_vector.df.reset_index(drop=True)
         return typed_vector
 
@@ -390,16 +413,21 @@ class Vector:
     df: pd.Series
 
     @staticmethod
-    def create(metadata: typing.Dict[str, Metadata], data: typing.Mapping[str, TypedVector]) -> 'Vector':
+    def create(metadata: typing.Dict[str, Metadata], fixed_frames: typing.Mapping[str, pd.DataFrame], data: typing.Mapping[str, Dataset]) -> 'Vector':
         """
-        Created a Vector from the given set of metadata and data
-        
-        Both the meta and data maps are indexed by entitytype.
+        Created a Vector from the given set of metadata and data.
+        All the maps are indexed by entity type.
         """
         vector_list = []
         props = {}
         for entityType, meta in metadata.items():
-            typed_vector = data[entityType]
+            scene_data = data.get(entityType, None)
+            scene_df: typing.Optional[pd.DataFrame] = None
+            # If we got no data for this entity type, we will just
+            # generate a vector with all NaN metrics.
+            if scene_data is not None:
+                scene_df = scene_data.df
+            typed_vector = meta.normalize(fixed_frame=fixed_frames[entityType], dataset=scene_df)
             # Copy the properties for de-escalation
             props[entityType] = VectorProperties(
                 entityType=typed_vector.entityType,
@@ -423,7 +451,34 @@ class Vector:
 
 @dataclass
 class HiddenLayer:
-    private: pd.Series
+    """
+    Represents the hidden layer of the autoencoder
+    """
+    private: torch.Tensor
+
+class Decoder:
+    """
+    This class decodes the hidden layer to an output vector.
+    """
+    metadata: Metadata
+    # This series contains the index for the output vector.
+    # This series is indexed by (entityType, metric, sourceRef, hour, minute)
+    vector_index: pd.MultiIndex
+    # This is the decoding matrix
+    decode_matrix: torch.Tensor
+
+    def __init__(self, metadata: Metadata, index: pd.MultiIndex):
+        """Builds the decoder with the given metadata and props"""
+        self.metadata = metadata
+        self.vector_index = index
+        self.decode_matrix = torch.eye(len(index))
+
+    def decode(self, props: DatasetProperties, hidden: HiddenLayer) -> pd.Series:
+        """
+        Run the decoder over the given hidden state tensor, and return the corresponding vector
+        """
+        result = torch.matmul(self.decode_matrix, hidden.private)
+        return pd.Series(result.numpy(), index=self.output_index)
 
 def read_meta(path: pathlib.Path) -> typing.Dict[str, Metadata]:
     """Reads metadata from json file"""
@@ -457,10 +512,12 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
     # Group all data by combinations of trend and daytype, and then by entityType
     scene_by_type: typing.Mapping[typing.Tuple[str, str], typing.Mapping[str, Dataset]] = defaultdict(dict)
     dims_df: typing.Mapping[str, pd.DataFrame] = {}
+    fixed_frames_df: typing.Mapping[str, pd.DataFrame] = {}
     for entityType, meta in metadata.items():
         entity_dims = meta.dim_df(engine=engine, sceneref=identityref)
         logging.info("Dims shape for scene %s, entity type %s: %s", identityref, entityType, entity_dims.shape)
         dims_df[entityType] = entity_dims
+        fixed_frames_df[entityType] = meta.fixed_frame(entity_dims)
         for scene_data in meta.scene_data(engine=engine, sceneref=identityref, timeinstant=last_sim_date):
             logging.info("Dataset shape for scene %s, timeinstant %s, trend %s, daytype %s, entity type %s: %s",
                 identityref,
@@ -472,10 +529,14 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
             )
             scene_by_type[(scene_data.trend, scene_data.daytype)][entityType] = scene_data
 
+    # Crete the decoder
+    empty_vector = Vector.create(metadata=metadata, fixed_frames=fixed_frames_df, data={})
+    decoder = Decoder(metadata=metadata, index=empty_vector.index)
+
     # Iterate over all combinations of trend and daytype
     for scene_index, entities in scene_by_type.items():
         trend, daytype = scene_index
-        typed_vector_map = {}
+        dataset_map = {}
         for entityType, meta in metadata.items():
             scene_data = entities.get(entityType, None)
             scene_df: typing.Optional[pd.DataFrame] = None
@@ -491,19 +552,10 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
                 )
             else:
                 scene_df = scene_data.df
-            typed_vector = meta.normalize(dataset=scene_df, dims=dims_df[entityType])
-            logging.info("TypedVector shape for scene %s, timeinstant %s, trend %s, daytype %s, entity type %s: %s",
-                identityref,
-                last_sim_date,
-                trend,
-                daytype,
-                entityType,
-                typed_vector.df.shape
-            )
-            typed_vector_map[entityType] = typed_vector
+                dataset_map[entityType] = scene_data.df
         
         # Turn typed data into vector
-        vector = Vector.create(metadata=metadata, data=typed_vector_map)
+        vector = Vector.create(metadata=metadata, fixed_frames=fixed_frames_df, data=dataset_map)
         logging.info("Vector shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
             identityref,
             last_sim_date,
@@ -515,7 +567,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
         # Encode, perturb and decode
         hidden = encode_vector(metadata=meta, props=scene_data, vector=vector)
         simulated_state = perturb_hidden(metadata=meta, props=scene_data, hidden=hidden)
-        simulated_result = decode_hidden(metadata=meta, props=scene_data, hidden=simulated_state)
+        simulated_result = decoder.decode(props=scene_data, hidden=simulated_state)
 
         # Split into TypedVectors
         result = {}
@@ -542,7 +594,7 @@ def encode_vector(metadata: Metadata, props: DatasetProperties, vector: pd.Serie
     """
     Run the encoder over the given vector, and return the corresponding hidden states
     """
-    return HiddenLayer(private=vector.df)
+    return HiddenLayer(private=torch.Tensor(vector.df.values))
 
 def perturb_hidden(metadata: Metadata, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
     """
@@ -553,11 +605,6 @@ def perturb_hidden(metadata: Metadata, props: DatasetProperties, hidden: HiddenL
     """
     return hidden
 
-def decode_hidden(metadata: Metadata, props: DatasetProperties, hidden: HiddenLayer) -> pd.Series:
-    """
-    Run the decoder over the given hidden state tensor, and return the corresponding vector
-    """
-    return hidden.private
 
 if __name__ == "__main__":
     logging.basicConfig(
