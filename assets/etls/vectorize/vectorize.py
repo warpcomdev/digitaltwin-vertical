@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from contextlib import contextmanager
 from collections import defaultdict
 from sqlalchemy import create_engine, event, text, URL, Engine, TextClause
+import itertools
 import pandas as pd
 import numpy as np
 import torch
@@ -463,6 +464,11 @@ class HiddenLayer:
     Represents the hidden layer of the autoencoder
     """
     private: torch.Tensor
+    # This index describes the order in which the information is
+    # layed out in the hidden layer.
+    # Currently, it has the following levels:
+    # (entitytype, metric, sourceref, hour, minute)
+    index: pd.MultiIndex
 
 class Decoder:
     """
@@ -470,8 +476,8 @@ class Decoder:
     """
     meta_map: typing.Mapping[str, Metadata]
     # This series contains the index for the output vector.
-    # This series is indexed by (entityType, metric, sourceRef, hour, minute)
-    vector_index: pd.MultiIndex
+    # The series is indexed by (entityType, metric, sourceRef, hour, minute)
+    index: pd.MultiIndex
     # This is the decoding weights and biases
     weights: torch.Tensor
     biases: torch.Tensor
@@ -479,7 +485,7 @@ class Decoder:
     def __init__(self, meta_map: typing.Mapping[str, Metadata], index: pd.MultiIndex):
         """Builds the decoder with the given metadata and props"""
         self.meta_map = meta_map
-        self.vector_index = index
+        self.index = index
         self.weights = torch.eye(len(index))
         self.biases = torch.zeros(len(index))
 
@@ -487,9 +493,72 @@ class Decoder:
         """
         Run the decoder over the given hidden state tensor, and return the corresponding vector
         """
-        result = torch.matmul(self.weights, hidden.private)
+        result = torch.matmul(self.weights, torch.nan_to_num(hidden.private))
         result = result + self.biases
-        return pd.Series(result.numpy(), index=self.vector_index)
+        return pd.Series(result.numpy(), index=self.index)
+
+    def slices(self, entitytype: str, sourceref: str) -> typing.Iterable[typing.Tuple[int, int]]:
+        """
+        Find the numerical indexes in the vector_index that match the
+        entitytype and sourceref given.
+
+        Return them as a sequence of ranges
+        """
+        vector_offsets = pd.Series(range(0, len(self.index)), index=self.index, dtype=np.int32)
+        matching_indices = vector_offsets.loc[entitytype, :, sourceref, :, :]
+        # See https://docs.python.org/2.6/library/itertools.html#examples
+        for _, group in itertools.groupby(enumerate(matching_indices.values), lambda x: x[0] - x[1]):
+            g = tuple(group)
+            yield (g[0][1], g[-1][1] + 1)
+
+    def slices_not(self, entitytype: str, sourceref: str) -> typing.Iterable[typing.Tuple[int, int]]:
+        """
+        Find the numerical indexes in the vector_index that do not match the
+        entitytype and sourceref given.
+
+        Return them as a sequence of ranges.
+        """
+        # See https://docs.python.org/2.6/library/itertools.html#examples
+        bottom = 0
+        for p in self.slices(entitytype, sourceref):
+            if p[0] > bottom:
+                yield (bottom, p[0])
+            bottom = p[1]
+        top = len(self.index)
+        if bottom < top:
+            yield (bottom, top)
+
+    def drop_entity(self, entitytype: str, sourceref: str):
+        """
+        Updates the decoder so that it will disregard the results
+        for the provided sourceref and entitytype
+        """
+        # Get the parts of the vector that don't contain the removed entity
+        slices_not = tuple(self.slices_not(entitytype, sourceref))
+        # Build a new bias ensor with only these rows
+        self.biases = torch.cat(
+            tuple(self.biases[s[0]:s[1]] for s in slices_not),
+            dim=0
+        )
+        # Build a new weights tensor with only these rows
+        # consider the result is the multiplication of
+        # [weights matrix] x [hidden vector], so the number of rows
+        # must be the expected size of the output vector, and
+        # the number of columns is that of the hidden vector.
+        self.weights = torch.cat(
+            tuple(self.weights[s[0]:s[1], :] for s in slices_not),
+            dim=0
+        )
+        # Remove slices from the output vector index
+        index = None
+        for s in slices_not:
+            if index is None:
+                index = self.index[s[0]:s[1]]
+            else:
+                index = index.union(self.index[s[0]:s[1]], sort=False)
+        if index is None:
+            raise ValueError("No slices left in the index")
+        self.index = index
 
 def read_meta(path: pathlib.Path) -> typing.Dict[str, Metadata]:
     """Reads metadata from json file"""
@@ -544,6 +613,9 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
     empty_vector = Vector.create(meta_map=metadata, fixed_df_map=fixed_df_map, data_map={})
     decoder = Decoder(meta_map=metadata, index=typing.cast(pd.MultiIndex, empty_vector.df.index))
 
+    # Test: remove an entity from the simulation
+    #decoder.drop_entity('RouteSchedule', '10')
+
     # Iterate over all combinations of trend and daytype
     for scene_index, entities in scene_by_type.items():
         trend, daytype = scene_index
@@ -581,7 +653,10 @@ def encode_vector(metadata: Metadata, props: DatasetProperties, vector: Vector) 
     """
     Run the encoder over the given vector, and return the corresponding hidden states
     """
-    return HiddenLayer(private=torch.Tensor(vector.df.to_numpy()))
+    return HiddenLayer(
+        private=torch.Tensor(vector.df.to_numpy()),
+        index=typing.cast(pd.MultiIndex, vector.df.index)
+    )
 
 def perturb_hidden(metadata: Metadata, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
     """
