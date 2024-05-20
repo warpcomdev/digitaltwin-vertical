@@ -15,6 +15,7 @@ import itertools
 import pandas as pd
 import numpy as np
 import torch
+import psutil
 
 
 # -------------------------------------
@@ -272,6 +273,7 @@ class Metadata:
         Turns a regularized dataset into a typed vector, i.e.:
 
         - Sorts entries so that they match the order in fixed_df.
+        - Makes sure the dataset has a column per dimension.
         - Fills in missing metrics for hours or minutes, with NaN.
         - Scales metrics so that the vector information is within range [0, 1]
         
@@ -335,12 +337,38 @@ class Metadata:
             )
         return typed_vector
 
-    def extract(self, props: VectorProperties, vector: pd.Series) -> TypedVector:
+    def unpivot(self, typed_vector: TypedVector) -> pd.Series:
         """
-        Extract the part corresponding to this entitytype from
-        a pd.Series that has a multi-index with the following
+        Unpivots a typed vector into a pd.Series that has a multi-index
+        with the following values:
+        (entitytype, metric, sourceref, hour, minute)
+        """
+        vector_list = []
+        # Add entityType to the dataframe. If the entity type has
+        # no metrics, add a "fake" metric "_none_" with value np.NaN.
+        typed_vector.df['entitytype'] = self.entityType
+        metric_keys = list(self.metrics.keys())
+        if not self.metrics:
+            typed_vector.df['_none_'] = np.NaN
+            metric_keys = ['_none_']
+        # Turn the dataframe into a series with a
+        # multilevel index. The index will have the following keys:
+        # (entitytype, metric, sourceref, hour, minute)
+        for metric in metric_keys:
+            slim_df = typed_vector.df[['entitytype', 'sourceref', 'hour', 'minute', metric]].copy()
+            slim_df['metric'] = metric
+            slim_df = slim_df.set_index(['entitytype', 'metric', 'sourceref', 'hour', 'minute'])
+            vector_list.append(slim_df.squeeze())
+        return pd.concat(vector_list, axis=0)
+
+    def pivot(self, props: VectorProperties, vector: pd.Series) -> TypedVector:
+        """
+        Pivots a pd.Series that has a multi-index with the following
         values:
         (entitytype, metric, sourceref, hour, minute)
+
+        It will filter the rows for this particular entitytype, and
+        then pivot the metrics so that each metric becomes a column.
         """
         typed_series = vector.loc[props.entityType]
         if not self.metrics:
@@ -440,22 +468,8 @@ class Vector:
                 offset=typed_vector.offset,
                 scale=typed_vector.scale
             )
-            # Add entityType to the dataframe. If the entity type has
-            # no metrics, add a "fake" metric "_none_" with value np.NaN.
-            typed_vector.df['entitytype'] = entityType
-            metric_keys = list(meta.metrics.keys())
-            if not meta.metrics:
-                typed_vector.df['_none_'] = np.NaN
-                metric_keys = ['_none_']
-            # Turn the dataframe into a series with a
-            # multilevel index. The index will have the following keys:
-            # (entitytype, metric, sourceref, hour, minute)
-            for metric in metric_keys:
-                slim_df = typed_vector.df[['entitytype', 'sourceref', 'hour', 'minute', metric]].copy()
-                slim_df['metric'] = metric
-                slim_df = slim_df.set_index(['entitytype', 'metric', 'sourceref', 'hour', 'minute'])
-                vector_list.append(slim_df.squeeze())
-            vector = pd.concat(vector_list, axis=0)
+            vector_list.append(meta.unpivot(typed_vector=typed_vector))
+        vector = pd.concat(vector_list, axis=0)
         return Vector(properties=props, df=vector.astype(np.float64))
 
 @dataclass
@@ -470,11 +484,11 @@ class HiddenLayer:
     # (entitytype, metric, sourceref, hour, minute)
     index: pd.MultiIndex
 
-class Decoder:
+@dataclass
+class DecoderLayer:
     """
-    This class decodes the hidden layer to an output vector.
+    Represents the decoder layer of the autoencoder
     """
-    meta_map: typing.Mapping[str, Metadata]
     # This series contains the index for the output vector.
     # The series is indexed by (entityType, metric, sourceRef, hour, minute)
     index: pd.MultiIndex
@@ -482,83 +496,179 @@ class Decoder:
     weights: torch.Tensor
     biases: torch.Tensor
 
-    def __init__(self, meta_map: typing.Mapping[str, Metadata], index: pd.MultiIndex):
-        """Builds the decoder with the given metadata and props"""
-        self.meta_map = meta_map
-        self.index = index
-        self.weights = torch.eye(len(index))
-        self.biases = torch.zeros(len(index))
-
-    def decode(self, props: DatasetProperties, hidden: HiddenLayer) -> pd.Series:
-        """
-        Run the decoder over the given hidden state tensor, and return the corresponding vector
-        """
-        result = torch.matmul(self.weights, torch.nan_to_num(hidden.private))
-        result = result + self.biases
-        return pd.Series(result.numpy(), index=self.index)
-
-    def slices(self, entitytype: str, sourceref: str) -> typing.Iterable[typing.Tuple[int, int]]:
+    def index_matching(self, entitytype: str, sourceref: str) -> pd.Series:
         """
         Find the numerical indexes in the vector_index that match the
-        entitytype and sourceref given.
+        provided entitytype and sourceref
+        """
+        # Assign to each index the numerical position in the vector
+        vector_offsets = pd.Series(range(0, len(self.index)), index=self.index, dtype=np.int32)
+        # Filter out only those rows that match the filter
+        matches = vector_offsets.loc[entitytype, :, sourceref, :, :]
+        return vector_offsets[vector_offsets.isin(matches)]
 
-        Return them as a sequence of ranges
+    def index_except(self, entitytype: str, sourceref: str) -> pd.Series:
+        """
+        Find the numerical positions in the index that do not match the
+        entitytype and sourceref given.
         """
         vector_offsets = pd.Series(range(0, len(self.index)), index=self.index, dtype=np.int32)
-        matching_indices = vector_offsets.loc[entitytype, :, sourceref, :, :]
-        # See https://docs.python.org/2.6/library/itertools.html#examples
-        for _, group in itertools.groupby(enumerate(matching_indices.values), lambda x: x[0] - x[1]):
-            g = tuple(group)
-            yield (g[0][1], g[-1][1] + 1)
+        matching = self.index_matching(entitytype=entitytype, sourceref=sourceref)
+        return vector_offsets[vector_offsets.index.difference(matching.index)]
 
-    def slices_not(self, entitytype: str, sourceref: str) -> typing.Iterable[typing.Tuple[int, int]]:
+    def reductor_matrix(self, positions: pd.Series):
         """
-        Find the numerical indexes in the vector_index that do not match the
-        entitytype and sourceref given.
+        Generates a reductor tensor that when applied to the weights
+        or biases tensors, returns a new tensor with only the rows
+        that correspond to the provided positions.
 
-        Return them as a sequence of ranges.
+        Specifically,
+
+        - positions is a pd.Series of len M containing integer locations
+          to select from the output vector, from 0 to N (N = len(vector))
+        - The returned tensor is a M x N matrix
+        - Multiplying the returned tensor (M x N) times the weights matrix
+          (M x N) returns a new matrix (M x N) that contains only the
+          selected rows of the original matrix.
+        - Multiplying the returned tensor (M x N) times the biases vector
+          (N x 1) returns a new vector (M x 1) that contains only the
+          selected rows of the original vector.
         """
-        # See https://docs.python.org/2.6/library/itertools.html#examples
-        bottom = 0
-        for p in self.slices(entitytype, sourceref):
-            if p[0] > bottom:
-                yield (bottom, p[0])
-            bottom = p[1]
-        top = len(self.index)
-        if bottom < top:
-            yield (bottom, top)
+        reductor_pos = torch.tensor([range(len(positions)), positions.array])
+        reductor_val = torch.ones(len(positions))
+        return torch.sparse_coo_tensor(reductor_pos, reductor_val, (len(positions), len(self.index)))
 
     def drop_entity(self, entitytype: str, sourceref: str):
         """
         Updates the decoder so that it will disregard the results
         for the provided sourceref and entitytype
         """
-        # Get the parts of the vector that don't contain the removed entity
-        slices_not = tuple(self.slices_not(entitytype, sourceref))
+        # Get the indexes that don't contain the removed entity
+        preserved = self.index_except(entitytype, sourceref)
+        reductor = self.reductor_matrix(preserved)
         # Build a new bias ensor with only these rows
-        self.biases = torch.cat(
-            tuple(self.biases[s[0]:s[1]] for s in slices_not),
-            dim=0
+        self.weights = torch.matmul(reductor, self.weights)
+        self.biases = torch.matmul(reductor , self.biases)
+        # Leave only non matching items in the index
+        self.index = typing.cast(pd.MultiIndex, preserved.index)
+
+    def decode(self, hidden: torch.Tensor) -> pd.Series:
+        """
+        Run the decoder over the given hidden state tensor, and return the corresponding vector
+        """
+        result = torch.matmul(self.weights, hidden)
+        result = result + self.biases
+        return pd.Series(result.numpy(), index=self.index)
+
+class Decoder:
+    """
+    This class decodes the hidden layer to an output vector.
+    """
+    meta_map: typing.Mapping[str, Metadata]
+    main_layer: DecoderLayer
+    # If we add sourcerefs to the decoder, we must
+    # append new rows to the output vector.
+    #
+    # However, we can not do it by manipulating the
+    # weights and biases tensors of the main layer,
+    # because the weights are currently sparse, but the
+    # new sourcerefs will tipically use dense weights.
+    #
+    # So we keep a list of additional layers
+    add_layers: typing.List[DecoderLayer]
+
+    def __init__(self, meta_map: typing.Mapping[str, Metadata], index: pd.MultiIndex):
+        """Builds the decoder with the given metadata and props"""
+        self.meta_map = meta_map
+        ref_length = len(index)
+        # Indices of the non-zero elements (diagonal elements)
+        diagonal = torch.tensor([range(ref_length), range(ref_length)])
+        # Values of the non-zero elements
+        values = torch.ones(ref_length)
+        # Create the sparse tensor
+        self.main_layer = DecoderLayer(
+            index=index,
+            weights=torch.sparse_coo_tensor(diagonal, values, (ref_length, ref_length)),
+            biases=torch.zeros(ref_length)
         )
-        # Build a new weights tensor with only these rows
-        # consider the result is the multiplication of
-        # [weights matrix] x [hidden vector], so the number of rows
-        # must be the expected size of the output vector, and
-        # the number of columns is that of the hidden vector.
-        self.weights = torch.cat(
-            tuple(self.weights[s[0]:s[1], :] for s in slices_not),
-            dim=0
+        self.add_layers = []
+
+    def decode(self, props: DatasetProperties, hidden: HiddenLayer) -> pd.Series:
+        """
+        Run the decoder over the given hidden state tensor, and return the corresponding vector
+        """
+        private = torch.nan_to_num(hidden.private)
+        layers = [self.main_layer]
+        layers.extend(self.add_layers)
+        return pd.concat((layer.decode(private) for layer in layers), axis=0)
+
+    def drop_sourceref(self, entitytype: str, sourceref: str):
+        """
+        Updates the decoder so that it will disregard the results
+        for the provided sourceref and entitytype
+        """
+        self.main_layer.drop_entity(entitytype=entitytype, sourceref=sourceref)
+
+    def add_layer(self, layer: DecoderLayer):
+        """
+        Updates the decoder so that it will include the results
+        for the provided index. Index includes
+        (entitytype, metric, sourceref, hour and minute)
+
+        The dimensions of the weights must be A x B, where:
+
+        - A: length of the index.
+        - B: number of rows of the hidden layer, which is also the
+          width of the current weight matrix.
+
+        The dimensions of the bias must be A x 1
+        """
+        # Let's calculate a reference vector for the entity type,
+        # so we can make sure the sizes match
+        # Compare sizes for matrix multiplication
+        assert(layer.weights.shape[0] == len(layer.index))
+        assert(layer.weights.shape[1] == self.main_layer.weights.shape[1])
+        assert(layer.biases.shape[0] == len(layer.index))
+        # We will add the data for the new entity
+        # right to the end of the current index
+        self.add_layers.append(layer)
+
+    def averaged_layer(self, entitytype: str, sourceref: str) -> DecoderLayer:
+        """
+        Generates the index, weights and biases that have to be appended
+        to the decoder for it to produce results for a new sourceref of the
+        given entitytype.
+        
+        The weights and biases for this sourceref will be averaged
+        from the weights and biases of all other sourcerefs of the same
+        entitytype.
+        """
+        # Build a typed vector for the entitytype and sourceref
+        dims_df = pd.DataFrame([sourceref], columns=['sourceref'])
+        meta = self.meta_map[entitytype]
+        typed_vector = meta.normalize(fixed_df=meta.fixed_df(dims_df), dataset=None)
+        added_vector = meta.unpivot(typed_vector=typed_vector)
+        # Index of rows in the bias and wights
+        vector_offsets = pd.Series(
+            range(0, len(self.main_layer.index)),
+            index=self.main_layer.index,
+            dtype=np.int32
         )
-        # Remove slices from the output vector index
-        index = None
-        for s in slices_not:
-            if index is None:
-                index = self.index[s[0]:s[1]]
-            else:
-                index = index.union(self.index[s[0]:s[1]], sort=False)
-        if index is None:
-            raise ValueError("No slices left in the index")
-        self.index = index
+        weights = []
+        biases = []
+        for idx, _ in added_vector.items():
+            # Find other rows for the same sourceref, hour and minute
+            entitytype, metric, sourceref, hour, minute = typing.cast(tuple, idx)
+            related = vector_offsets.loc[entitytype, metric, :, hour, minute]
+            reductor = self.main_layer.reductor_matrix(related)
+            # Append the mean of the reduced weigths and biases
+            weights.append(torch.mean(torch.matmul(reductor, self.main_layer.weights).to_dense(), 0, keepdim=True))
+            biases.append(torch.mean(torch.matmul(reductor , self.main_layer.biases).to_dense(), 0, keepdim=True))
+        return DecoderLayer(
+            index=typing.cast(pd.MultiIndex, added_vector.index),
+            weights=torch.cat(weights, dim=0),
+            biases=torch.cat(biases)
+        )
 
 def read_meta(path: pathlib.Path) -> typing.Dict[str, Metadata]:
     """Reads metadata from json file"""
@@ -568,7 +678,7 @@ def read_meta(path: pathlib.Path) -> typing.Dict[str, Metadata]:
     return {k: meta[k] for k in sorted(meta.keys())}
 
 def last_simulation(engine: Engine, sceneref: str) -> datetime:
-    """Retrieeve the date of the latest simulation for the given sceneref"""
+    """Retrieve the date of the latest simulation for the given sceneref"""
     query = text(f"""
     SELECT timeinstant
     FROM dtwin_simulation_lastdata
@@ -614,7 +724,8 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
     decoder = Decoder(meta_map=metadata, index=typing.cast(pd.MultiIndex, empty_vector.df.index))
 
     # Test: remove an entity from the simulation
-    #decoder.drop_entity('RouteSchedule', '10')
+    decoder.drop_sourceref('RouteSchedule', '10')
+    decoder.add_layer(decoder.averaged_layer('RouteSchedule', 'TestSim'))
 
     # Iterate over all combinations of trend and daytype
     for scene_index, entities in scene_by_type.items():
@@ -647,7 +758,9 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
 
         # Split into TypedVectors
         for entityType, meta in metadata.items():
-            typed_vector = meta.extract(props=vector.properties[entityType], vector=simulated_result)
+            typed_vector = meta.pivot(props=vector.properties[entityType], vector=simulated_result)
+
+        logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
 
 def encode_vector(metadata: Metadata, props: DatasetProperties, vector: Vector) -> HiddenLayer:
     """
