@@ -1,2 +1,2 @@
-entityID,entityType,TimeInstant<DateTime>,description<TextUnrestricted>
-N/A,Simulation,2018-12-10T20:40:23,example text
+entityID,entityType,TimeInstant<DateTime>,sceneref<TextUnrestricted>,description<TextUnrestricted>
+N/A,Simulation,2018-12-10T20:40:23,example text,example text

@@ -318,6 +318,7 @@ Instancia de simulación. Recopila la última fecha en la que se ha ejecutado un
 | Atributo    | ngsiType         | dbType                            | description                                              | example                 | extra | unit | range |
 | ----------- | ---------------- | --------------------------------- | -------------------------------------------------------- | ----------------------- | ----- | ---- | ----- |
 | TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación | `"2018-12-10T20:40:23"` | -     | -    | -     |
+| sceneref    | TextUnrestricted | text                              | Escenario de simulación que ha creado la entidad         | `"example text"`        | -     | -    | -     |
 | description | TextUnrestricted | text                              | Texto descriptivo de la simulación                       | `"example text"`        | -     | -    | -     |
 
 Ejemplo de `Simulation` (en NGSIv2):
@@ -329,6 +330,10 @@ Ejemplo de `Simulation` (en NGSIv2):
     "TimeInstant": {
         "type": "DateTime",
         "value": "2018-12-10T20:40:23"
+    },
+    "sceneref": {
+        "type": "TextUnrestricted",
+        "value": "example text"
     },
     "description": {
         "type": "TextUnrestricted",

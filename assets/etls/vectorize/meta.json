@@ -7,10 +7,18 @@
       "dayType",
       "hour"
     ],
+    "fixedProps": {
+      "capacity": {
+        "percent": false
+      }
+    },
     "metrics": {
       "occupationPercent": {
         "percent": true
       }
+    },
+    "calcs": {
+      "occupation": "capacity * occupationPercent"
     },
     "hasHour": true,
     "hasMinute": false,
@@ -27,6 +35,14 @@
       "trend",
       "dayType"
     ],
+    "fixedProps": {
+      "forwardStops": {
+        "percent": false
+      },
+      "returnStops": {
+        "percent": false
+      }
+    },
     "metrics": {
       "forwardTrips": {
         "percent": false
@@ -38,6 +54,7 @@
         "percent": false
       }
     },
+    "calcs": {},
     "hasHour": false,
     "hasMinute": false,
     "multiZone": true,
@@ -54,6 +71,14 @@
       "dayType",
       "hour"
     ],
+    "fixedProps": {
+      "forwardStops": {
+        "percent": false
+      },
+      "returnStops": {
+        "percent": false
+      }
+    },
     "metrics": {
       "forwardTrips": {
         "percent": false
@@ -62,6 +87,7 @@
         "percent": false
       }
     },
+    "calcs": {},
     "hasHour": true,
     "hasMinute": false,
     "multiZone": true,
@@ -79,11 +105,13 @@
       "hour",
       "minute"
     ],
+    "fixedProps": {},
     "metrics": {
       "congestion": {
         "percent": true
       }
     },
+    "calcs": {},
     "hasHour": true,
     "hasMinute": true,
     "multiZone": false,
@@ -100,11 +128,13 @@
       "dayType",
       "hour"
     ],
+    "fixedProps": {},
     "metrics": {
       "intensity": {
         "percent": false
       }
     },
+    "calcs": {},
     "hasHour": true,
     "hasMinute": false,
     "multiZone": false,

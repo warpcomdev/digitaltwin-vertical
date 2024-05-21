@@ -43,6 +43,7 @@
           "notification": {
             "attrs": [
               "TimeInstant",
+              "sceneref",
               "description",
               "alterationType"
             ],

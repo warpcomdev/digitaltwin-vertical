@@ -39,6 +39,7 @@ OffStreetParking: templates.#Twin & {
 			types.#Double
 			description: "Número de plazas ocupadas"
 			flows: ["historic"]
+			#calc: "capacity * occupationPercent"
 		}
 	}
 

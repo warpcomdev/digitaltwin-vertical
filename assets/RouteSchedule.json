@@ -114,6 +114,7 @@
             "attrs": [
               "TimeInstant",
               "sourceRef",
+              "sceneRef",
               "name",
               "zoneList",
               "forwardStops",

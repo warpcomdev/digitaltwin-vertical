@@ -37,7 +37,8 @@
                 "extra": "-",
                 "unit": "-",
                 "flows": [
-                    "historic"
+                    "historic",
+                    "lastdata"
                 ],
                 "example": "example text",
                 "range": "-"

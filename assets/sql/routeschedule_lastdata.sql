@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeschedule_lastdata (
   timeinstant timestamp with time zone NOT NULL,
   sourceref text,
+  sceneref text,
   name text,
   zonelist json,
   forwardstops int,

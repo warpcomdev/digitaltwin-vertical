@@ -16,6 +16,18 @@
         "example": "2018-12-10T20:40:23",
         "range": "-"
       },
+      "sceneref": {
+        "description": "Escenario de simulación que ha creado la entidad",
+        "ngsiType": "TextUnrestricted",
+        "dbType": "text",
+        "extra": "-",
+        "unit": "-",
+        "flows": [
+          "lastdata"
+        ],
+        "example": "example text",
+        "range": "-"
+      },
       "description": {
         "description": "Texto descriptivo de la simulación",
         "ngsiType": "TextUnrestricted",
