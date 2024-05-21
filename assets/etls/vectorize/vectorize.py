@@ -16,7 +16,6 @@ import numpy as np
 import torch
 import psutil
 
-
 # -------------------------------------
 # Config management section
 # -------------------------------------
@@ -164,7 +163,7 @@ class Metric:
     """
     Describes properties of a metric
     """
-    probability: bool
+    scale: int
     integer: bool
 
 @dataclass
@@ -223,7 +222,7 @@ class Metadata:
     def scene_query(self) -> TextClause:
         """Build SQL query for a given sceneref and timeinstant"""
         metrics = {
-            k: Metric(probability=False, integer=False)
+            k: Metric(scale=0, integer=False)
             for k in self.dimensions
         }
         metrics.update(self.metrics)
@@ -341,9 +340,10 @@ class Metadata:
             # We will normalize intensities to [0, 1] so that
             # they are within the range of the vector.
             for metric, props in self.metrics.items():
-                if props.probability:
-                    continue
-                max_val = float(dataset[metric].max())
+                if props.scale:
+                    max_val = float(props.scale)
+                else:
+                    max_val = float(dataset[metric].max())
                 if max_val > 0:
                     # Keep track of the scale factor to be able to de-scale later.
                     typed_vector.scale[metric] = max_val
@@ -381,7 +381,7 @@ class Metadata:
             vector_list.append(slim_df.squeeze())
         return pd.concat(vector_list, axis=0)
 
-    def to_sql(self, engine: Engine, sceneref: str, dataset: Dataset, dims_df:typing.Optional[pd.DataFrame]=None):
+    def to_sql(self, engine: Engine, sceneref: str, dataset: Dataset, dims_df:typing.Optional[pd.DataFrame]=None, dryrun:bool=False):
                 # if we get a dims_df, try to join the
         # resulting dataframe to the dim_df to pick
         # up the staticProps
@@ -439,6 +439,9 @@ class Metadata:
                     AND daytype=:daytype
                     """).bindparams(**kw)
                 conn.execute(statement)
+            if dryrun:
+                conn.rollback()
+                
 
 # -------------------------------------
 # Schemaless types
@@ -779,7 +782,7 @@ def last_simulation(engine: Engine, sceneref: str) -> datetime:
     print(df)
     return df.iloc[0]['timeinstant']
 
-def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
+def main(metadata: typing.Mapping[str, Metadata], engine: Engine, dryrun: bool=False):
     """
     Vectorizes the data in the database
     """
@@ -817,7 +820,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
     decoder.add_layer(decoder.averaged_layer('RouteSchedule', 'TestSim'))
 
     # Iterate over all combinations of trend and daytype
-    sim_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    sim_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     for scene_index, entities in scene_by_type.items():
         trend, daytype = scene_index
         # Turn typed data into vector
@@ -855,7 +858,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
             )
             dataset = vector.pivot(meta=metadata[entityType], props=props, series=simulated_result)
             dims_df = dims_df_map[entityType]
-            meta.to_sql(engine=engine, sceneref="test", dataset=dataset, dims_df=dims_df)
+            meta.to_sql(engine=engine, sceneref="test", dataset=dataset, dims_df=dims_df, dryrun=dryrun)
 
         logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
 
@@ -889,6 +892,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", action="append", nargs=1)
     parser.add_argument("-m", "--meta", default="meta.json")
+    parser.add_argument("-d", "--dryrun", action="store_true", default=False)
     args = parser.parse_args()
 
     for config in args.config:
@@ -901,7 +905,7 @@ if __name__ == "__main__":
 
     try:
         with psql_engine() as engine:
-            main(meta, engine)
+            main(meta, engine, args.dryrun)
         logging.info("ETL OK")
     except Exception as err:
         logging.exception(msg="Error during vectorization", stack_info=True)

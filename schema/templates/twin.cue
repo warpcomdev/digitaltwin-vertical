@@ -28,7 +28,7 @@ import (
 	model: [string]: {
 		types.#ModelAttribute
 		#metric: bool | *false
-		#probability: bool | *false
+		#scale: int | *0
 		#calc: string | *""
 	}
 
@@ -274,13 +274,13 @@ import (
 			dimensions: ["sourceRef"] + #unique
 			fixedProps: {for _k, _v in self.model if !_v.#metric && list.Contains(_v.flows, "lastdata") && list.Contains(_v.flows, "historic") && !list.Contains(dimensions, _k) && _k != "TimeInstant" {
 				(_k): {
-					probability: _v.#probability
+					scale: _v.#scale
 					integer: _v.dbType == "integer"
 				}
 			}}
 			metrics: {for _k, _v in self.model if _v.#metric {
 				(_k): {
-					probability: _v.#probability
+					scale: _v.#scale
 					integer: _v.dbType == "integer"
 				}
 			}}

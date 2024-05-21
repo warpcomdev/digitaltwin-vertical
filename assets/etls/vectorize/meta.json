@@ -9,18 +9,18 @@
     ],
     "fixedProps": {
       "capacity": {
-        "probability": false,
+        "scale": 0,
         "integer": false
       }
     },
     "metrics": {
       "occupationPercent": {
-        "probability": true,
+        "scale": 100,
         "integer": false
       }
     },
     "calcs": {
-      "occupation": "capacity * occupationPercent"
+      "occupation": "capacity * occupationPercent / 100.0"
     },
     "hasHour": true,
     "hasMinute": false,
@@ -39,25 +39,25 @@
     ],
     "fixedProps": {
       "forwardStops": {
-        "probability": false,
+        "scale": 0,
         "integer": true
       },
       "returnStops": {
-        "probability": false,
+        "scale": 0,
         "integer": true
       }
     },
     "metrics": {
       "forwardTrips": {
-        "probability": false,
+        "scale": 0,
         "integer": false
       },
       "returnTrips": {
-        "probability": false,
+        "scale": 0,
         "integer": false
       },
       "intensity": {
-        "probability": false,
+        "scale": 0,
         "integer": false
       }
     },
@@ -80,21 +80,21 @@
     ],
     "fixedProps": {
       "forwardStops": {
-        "probability": false,
+        "scale": 0,
         "integer": true
       },
       "returnStops": {
-        "probability": false,
+        "scale": 0,
         "integer": true
       }
     },
     "metrics": {
       "forwardTrips": {
-        "probability": false,
+        "scale": 0,
         "integer": false
       },
       "returnTrips": {
-        "probability": false,
+        "scale": 0,
         "integer": false
       }
     },
@@ -119,7 +119,7 @@
     "fixedProps": {},
     "metrics": {
       "congestion": {
-        "probability": true,
+        "scale": 1,
         "integer": false
       }
     },
@@ -143,7 +143,7 @@
     "fixedProps": {},
     "metrics": {
       "intensity": {
-        "probability": false,
+        "scale": 0,
         "integer": false
       }
     },
