@@ -174,6 +174,8 @@ class Metadata:
     """
     dimensions: typing.List[str]
     metrics: typing.Mapping[str, Metric]
+    fixedProps: typing.Dict[str, Metric]
+    calcs: typing.Dict[str, str]
     hasHour: bool
     hasMinute: bool
     multiZone: bool
@@ -185,20 +187,22 @@ class Metadata:
     @staticmethod
     def fromdict(kw: typing.Dict[str, typing.Any]) -> 'Metadata':
         """Read Metadata from a json object"""
-        # Convert metrics to dict of `Metric` objects
-        metrics = {k: Metric(v) for k, v in kw.pop("metrics", {}).items()}
-        # Sort metrics in a stable order, and lowercase them
-        # to match database column names
-        kw['metrics'] = { k.lower(): metrics[k] for k in sorted(metrics.keys()) }
+        for metric_cols in ("fixedProps", "metrics"):
+            # Convert metrics to dict of `Metric` objects
+            props = {k: Metric(v) for k, v in kw.pop(metric_cols, {}).items()}
+            # Sort metrics in a stable order, and lowercase them
+            # to match database column names
+            kw[metric_cols] = { k.lower(): props[k] for k in sorted(props.keys()) }
         return Metadata(**kw)
 
     def dim_df(self, sceneref: str) -> TextClause:
         """Build SQL query to determine all entity IDs in the model"""
         if self.multiZone:
-            columns = "sourceref, zone, zonelist, ST_AsGeoJSON(location) AS location"
+            columns = ["sourceref", "zone", "zonelist", "ST_AsGeoJSON(location) AS location"]
         else:
-            columns = "sourceref, zone, Array[zone]::json[] as zonelist, ST_AsGeoJSON(location) AS location"
-        return text(f"SELECT {columns} FROM {self.dimsTableName} ORDER BY sourceref ASC")
+            columns = ["sourceref", "zone", "Array[zone]::json[] as zonelist", "ST_AsGeoJSON(location) AS location"]
+        columns.extend(self.fixedProps.keys())
+        return text(f"SELECT {','.join(columns)} FROM {self.dimsTableName} ORDER BY sourceref ASC")
 
     def dim_data(self, engine: Engine, sceneref: str) -> pd.DataFrame:
         """Builds a dataframe of all entity IDs in the model"""
@@ -361,7 +365,7 @@ class Metadata:
             vector_list.append(slim_df.squeeze())
         return pd.concat(vector_list, axis=0)
 
-    def pivot(self, props: VectorProperties, vector: pd.Series) -> TypedVector:
+    def pivot(self, props: VectorProperties, vector: pd.Series, dims_df:typing.Optional[pd.DataFrame]) -> TypedVector:
         """
         Pivots a pd.Series that has a multi-index with the following
         values:
@@ -417,6 +421,16 @@ class Metadata:
         df = pd.concat(groups, axis=0).reset_index()
         if '_none_' in df.columns:
             df.drop('_none_', axis=1, inplace=True)
+        # if we get a dims_df, try to join the
+        # resulting dataframe to the dim_df to pick
+        # up the staticProps
+        if dims_df is not None and self.fixedProps:
+            df = pd.merge(
+                df,
+                dims_df[['sourceref']+list(self.fixedProps.keys())],
+                how='left',
+                on=['sourceref']
+            )
         return TypedVector(
             entityType=props.entityType,
             offset=props.offset,
@@ -757,10 +771,11 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
         simulated_result.to_csv(output_vector_path)
 
         # Split into TypedVectors
+        sim_date = datetime.now()
         for entityType, meta in metadata.items():
-            entity_result = meta.pivot(props=vector.properties[entityType], vector=simulated_result)
-            entity_result['daytype'] = daytype
-            entity_result['trend'] = trend
+            dims_df = dims_df_map[entityType]
+            entity_result = meta.pivot(props=vector.properties[entityType], vector=simulated_result, dims_df=dims_df)
+            #meta.to_sql(engine=engine, sceneref="{trend}_{daytype}", timeinstant=sim_date, df=entity_result.df)
 
         logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
 
