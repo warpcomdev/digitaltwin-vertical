@@ -477,11 +477,12 @@ class Metadata:
                 AND trend=:trend
                 AND daytype=:daytype
                 """).bindparams(**kw)
-            conn.execute(statement)
+            with conn.execute(statement) as curr:
+                curr.close()
             logging.info("saving %d rows to the database for entityType %s, dimensions %s", len(df), self.entityType, kw)
             df.to_sql(
                 self.dataTableName,
-                con=engine,
+                con=conn,
                 if_exists='append',
                 index=False,
                 chunksize=1000
@@ -499,7 +500,8 @@ class Metadata:
                     AND trend=:trend
                     AND daytype=:daytype
                     """).bindparams(**kw)
-                conn.execute(statement)
+                with conn.execute(statement) as curr:
+                    curr.close()
             if dryrun:
                 conn.rollback()
                 
@@ -843,11 +845,60 @@ def last_simulation(engine: Engine, sceneref: str) -> datetime:
     print(df)
     return df.iloc[0]['timeinstant']
 
+class Simulation(typing.Protocol):
+    """
+    Protocol to represent the simulation API
+    """
+
+    def prepare_decoder(self, decoder: Decoder):
+        """
+        Prepare the decoder for simulation
+
+        Might update the decoder layers to add or remove
+        entities from the decoder output
+        """
+        pass
+
+    def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
+        """
+        Updates the hidden layer to reflect the impact
+        of the simulation in the city status
+        """
+        return hidden
+
+    def vet_output(self, result: pd.Series) -> pd.Series:
+        """
+        Vets the output of the simulation,
+        potentially changing values that deviate
+        from reasonable expections (e.g. percent > 100%)
+        """
+        return result
+
 def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker, dryrun: bool=False):
     """
     Vectorizes the data in the database
     """
     broker.feedback("initiating simulation")
+    fallback_sim = {
+        'type': 'SimulationParking',
+        'id': 'test',
+        'TimeInstant': { 'type': 'DateTime', 'value': '2024-05-21T00:00:00Z' },
+        'name': { 'type': 'Text', 'value': 'Simulated Parking 01' },
+        'description': { 'type': 'Text', 'value': 'Fallback simulation' },
+        'capacity': { 'type': 'Number', 'value': 1000 },
+        'location': {
+            'type': 'geo:json',
+            'value': {
+                'type': 'Point',
+                'coordinates': [ -122.4194, 37.7749 ]
+            }
+        },
+        'impact': { 'type': 'Text', 'value': '5' },
+    }
+    sceneref, sim_entities = broker.fetch_sim(fallback_sim)
+    if not sceneref:
+        broker.feedback("No simulation found")
+        return
     start = datetime.now()
 
     # Get the latest identity we are working with
@@ -878,39 +929,21 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
             broker.feedback("entity type %s, dataset shape %s", entityType, scene_data.df.shape)
             scene_by_type[(scene_data.trend, scene_data.daytype)][entityType] = scene_data
 
-    # Crete the decoder
+    # Create handlers for all the sims
+    sim_handlers = list(create_simulators(meta_map=metadata, dims_df_map=dims_df_map, sims=sim_entities))
+
+    # Create the decoder. Apply all simulation modifications.
     empty_vector = Vector.create(meta_map=metadata, fixed_df_map=fixed_df_map, data_map={})
     decoder = Decoder(meta_map=metadata, index=typing.cast(pd.MultiIndex, empty_vector.df.index))
-
-    # Test: remove an entity from the simulation
-    fallback_sim = {
-        'type': 'SimulationParking',
-        'id': 'test',
-        'TimeInstant': { 'type': 'DateTime', 'value': '2024-05-21T00:00:00Z' },
-        'name': { 'type': 'Text', 'value': 'Simulated Parking 01' },
-        'description': { 'type': 'Text', 'value': 'Fallback simulation' },
-        'capacity': { 'type': 'Number', 'value': 1000 },
-        'location': {
-            'type': 'geo:json',
-            'value': {
-                'type': 'Point',
-                'coordinates': [ -122.4194, 37.7749 ]
-            }
-        },
-        'impact': { 'type': 'Text', 'value': '5' },
-    }
-    sceneref, sims = broker.fetch_sim(fallback_sim)
-    if not sceneref:
-        broker.feedback("No simulation found")
-        return
-    for sim in sims:
-        prepare_sim(meta_map=metadata, dims_df_map=dims_df_map, decoder=decoder, sim=sim)
+    for handler in sim_handlers:
+        handler.prepare_decoder(decoder=decoder)
 
     # Iterate over all combinations of trend and daytype
     sim_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     for scene_index, entities in scene_by_type.items():
         trend, daytype = scene_index
-        # Turn typed data into vector
+
+        # Collect all simulation data into a vector
         vector = Vector.create(meta_map=metadata, fixed_df_map=fixed_df_map, data_map=entities)
         logging.info("Vector shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
             sceneref,
@@ -926,7 +959,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
         # logging.info("Saving input vector to %s", input_vector_path)
         # vector.df.to_csv(input_vector_path)
         
-        # Encode, perturb and decode
+        # Encode and update hidden state
         hidden = encode_vector(metadata=meta, props=scene_data, vector=vector)
         logging.info("Hidden shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
             sceneref,
@@ -936,46 +969,50 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
             hidden.private.shape
         )
         broker.feedback("hidden shape %s", hidden.private.shape)
-        
-        simulated_state = perturb_hidden(metadata=meta, props=scene_data, hidden=hidden)
+
+        dataset_props = DatasetProperties(
+            timeinstant=sim_date,
+            trend=trend,
+            daytype=daytype
+        )
+        for handler in sim_handlers:
+            hidden = handler.perturb_hidden(props=dataset_props, hidden=hidden)
         logging.info("Simulated state shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
             sceneref,
             last_sim_date,
             trend,
             daytype,
-            simulated_state.private.shape
+            hidden.private.shape
         )
-        broker.feedback("simulated state shape %s", simulated_state.private.shape)
+        broker.feedback("simulated state shape %s", hidden.private.shape)
 
-        simulated_result = decoder.decode(props=scene_data, hidden=simulated_state)
+        # Decode the hidden status and vet the results
+        result = decoder.decode(props=scene_data, hidden=hidden)
+        for handler in sim_handlers:
+            result = handler.vet_output(result)
         logging.info("Simulated result shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
             sceneref,
             last_sim_date,
             trend,
             daytype,
-            simulated_result.shape
+            result.shape
         )
-        broker.feedback("simulated result shape %s", simulated_result.shape)
+        broker.feedback("simulated result shape %s", result.shape)
 
         # Write output vector for debugging purposes
         # output_vector_path = f"output_vector_{trend}_{daytype}.csv"
         # logging.info("Saving output vector to %s", output_vector_path)
         # simulated_result.to_csv(output_vector_path)
 
-        # Split into TypedVectors
+        # Split into Datasets to save back to the database
         for entityType, meta in metadata.items():
-            props = DatasetProperties(
-                timeinstant=sim_date,
-                trend=trend,
-                daytype=daytype
-            )
-            dataset = vector.pivot(meta=metadata[entityType], props=props, series=simulated_result)
+            dataset = vector.pivot(meta=metadata[entityType], props=dataset_props, series=result)
             broker.feedback("entity type %s, dataset shape %s", entityType, dataset.df.shape)
             dims_df = dims_df_map[entityType]
             meta.to_sql(engine=engine, sceneref=sceneref, dataset=dataset, dims_df=dims_df, dryrun=dryrun)
-            logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
 
     stop = datetime.now()
+    logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
     broker.feedback(f"done in {stop - start}")
 
 def encode_vector(metadata: Metadata, props: DatasetProperties, vector: Vector) -> HiddenLayer:
@@ -987,33 +1024,35 @@ def encode_vector(metadata: Metadata, props: DatasetProperties, vector: Vector) 
         index=typing.cast(pd.MultiIndex, vector.df.index)
     )
 
-def perturb_hidden(metadata: Metadata, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
-    """
-    Run the simulation, given the hidden state vector.
+def create_simulators(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], sims: typing.Iterable[typing.Any]) -> typing.Iterable[Simulation]:
+    for sim in sims:
+        if sim['type'] == 'SimulationParking':
+            logging.info("SimulationParking")
+            yield SimParking(meta_map=meta_map, dims_df_map=dims_df_map, sim=sim)
+        elif sim['type'] == 'SimulationTraffic':
+            logging.warn("SimulationTraffic not implemented")
+        elif sim['type'] == 'SimulationRoute':
+            logging.warn("SimulationRoute not implemented")
+        else:
+            logging.warn("unrecognized simulation info: %s", sim)
+        return None
 
-    Returns a series with the results vector, scaled. The results should be
-    unscaled before saving.
-    """
-    return hidden
+class SimParking:
+    """Simulation for parking creation"""
 
-def prepare_sim(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], decoder: Decoder, sim: typing.Any):
-    if sim['type'] == 'SimulationParking':
-        sim_parking(meta_map=meta_map, dims_df_map=dims_df_map, decoder=decoder, sim=sim)
-    elif sim['type'] == 'SimulationTraffic':
-        sim_traffic(meta_map=meta_map, dims_df_map=dims_df_map, decoder=decoder, sim=sim)
-    elif sim['type'] == 'SimulationRoute':
-        sim_route(meta_map=meta_map, dims_df_map=dims_df_map, decoder=decoder, sim=sim)
-    else:
-        logging.warn("unrecognized simulation info: %s", sim)
+    def __init__(self, meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], sim: typing.Any):
+        self.meta_map = meta_map
+        self.dims_df_map = dims_df_map
+        self.sim = sim
 
-def sim_parking(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], decoder: Decoder, sim: typing.Any):
-    pass
+    def prepare_decoder(self, decoder: Decoder):
+        pass
 
-def sim_traffic(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], decoder: Decoder, sim: typing.Any):
-    pass
+    def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
+        return hidden
 
-def sim_route(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], decoder: Decoder, sim: typing.Any):
-    pass
+    def vet_output(self, result: pd.Series) -> pd.Series:
+        return result
 
 if __name__ == "__main__":
     logging.basicConfig(
