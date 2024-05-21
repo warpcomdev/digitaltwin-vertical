@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from contextlib import contextmanager
 from collections import defaultdict
 from sqlalchemy import create_engine, event, text, URL, Engine, TextClause
-import itertools
 import pandas as pd
 import numpy as np
 import torch
@@ -365,65 +364,18 @@ class Metadata:
             vector_list.append(slim_df.squeeze())
         return pd.concat(vector_list, axis=0)
 
-    def pivot(self, props: VectorProperties, vector: pd.Series, dims_df:typing.Optional[pd.DataFrame]) -> TypedVector:
-        """
-        Pivots a pd.Series that has a multi-index with the following
-        values:
-        (entitytype, metric, sourceref, hour, minute)
-
-        It will filter the rows for this particular entitytype, and
-        then pivot the metrics so that each metric becomes a column.
-        """
-        typed_series = vector.loc[props.entityType]
-        if not self.metrics:
-            # If the entity type has no metrics, we still need
-            # to identify the proper sourcerefs, because
-            # the simulation might have added or removed
-            # entities.
-            # In order to do so, we remove the next level from
-            # the multiindex, which in regular conditions would
-            # be the metric name; and rename the columns
-            # to just "_none_".
-            df = typed_series.loc['_none_'].to_frame()
-            df.columns = ['_none_']
-        else:
-            # Extract the rows corresponding to each metric
-            metrics = []
-            for metric in self.metrics.keys():
-                # Get measures for the metric
-                metric_series = typed_series.loc[metric]
-                metric_offset = props.offset[metric]
-                metric_scale = props.scale[metric]
-                metric_series = metric_series * metric_scale + metric_offset
-                # Rename the value column to the metric
-                metric_series.name = metric
-                metrics.append(metric_series)
-            # concatenate all metrics as columns
-            df = pd.concat(metrics, axis=1)
-        # Drop NaN and 0, but make sure we return at least one row per
-        # sourceref, otherwise the sourceref will not be present in
-        # the simulation dashboard.
-        groups = []
-        for sourceref, group in df.groupby(level='sourceref'):
-            # This filters out the rows where all values are 0
-            group = group.fillna(0)
-            group = group.loc[~(group == 0).all(axis=1)]
-            if group.empty:
-                original_group = df.loc[sourceref]
-                group = original_group.head(1)
-            # turn "hour" and "minute" into columns
-            group = group.reset_index()
-            # overwrite other columns
-            group['entitytype'] = props.entityType
-            group['sourceref'] = sourceref
-            groups.append(group)
-        # concatenate all groups
-        df = pd.concat(groups, axis=0).reset_index()
-        if '_none_' in df.columns:
-            df.drop('_none_', axis=1, inplace=True)
-        # if we get a dims_df, try to join the
+    def to_sql(self, sceneref: str, dataset: Dataset, dims_df:typing.Optional[pd.DataFrame]=None):
+                # if we get a dims_df, try to join the
         # resulting dataframe to the dim_df to pick
         # up the staticProps
+        df = dataset.df
+        df['entityid'] = df['sourceref']
+        df['fiwareservicepath'] = '/digitaltwin'
+        df['recvtime'] = dataset.timeinstant
+        df['timeinstant'] = dataset.timeinstant
+        df['sceneref'] = sceneref
+        df['trend'] = dataset.trend
+        df['daytype'] = dataset.daytype
         if dims_df is not None and self.fixedProps:
             df = pd.merge(
                 df,
@@ -431,12 +383,7 @@ class Metadata:
                 how='left',
                 on=['sourceref']
             )
-        return TypedVector(
-            entityType=props.entityType,
-            offset=props.offset,
-            scale=props.scale,
-            df=df
-        )
+        df.to_csv("dataset_{sceneref}_{dataseet.entitytype}_{dataset.trend}_{dataset.daytype}.csv")
 
 # -------------------------------------
 # Schemaless types
@@ -449,7 +396,8 @@ class Vector:
 
     Contains both the complete series of metrics that make up
     the inpt of the encoder, as well as the properties of all
-    TypedVectors that went into the series.
+    TypedVectors that went into the series, particularly
+    the scales and offsets.
 
     The index of the series is expected to be a tuple
     (entitytype, metric, sourceRef, hour, minute).
@@ -485,6 +433,72 @@ class Vector:
             vector_list.append(meta.unpivot(typed_vector=typed_vector))
         vector = pd.concat(vector_list, axis=0)
         return Vector(properties=props, df=vector.astype(np.float64))
+
+    def pivot(self, meta: Metadata, props: DatasetProperties, series: pd.Series) -> Dataset:
+        """
+        Pivots a pd.Series that has a multi-index with
+        (entitytype, metric, sourceref, hour, minute)
+        into a dataset for the given entitytupe.
+
+        It will filter the rows for this particular entitytype, and
+        then pivot the metrics so that each metric becomes a column.
+        """
+        typed_props = self.properties[meta.entityType]
+        typed_series: pd.Series = series.loc[meta.entityType]
+        metrics: typing.List[pd.Series] = []
+        if meta.metrics:
+            # Extract the rows corresponding to each metric
+            for metric in meta.metrics.keys():
+                # Get measures for the metric
+                metric_series = typed_series.loc[metric]
+                metric_offset = typed_props.offset[metric]
+                metric_scale = typed_props.scale[metric]
+                metric_series = metric_series * metric_scale + metric_offset
+                # Rename the value column to the metric
+                metric_series.name = metric
+                metrics.append(metric_series)
+        else:
+            # If the entity type has no metrics, we still need
+            # to identify the proper sourcerefs, because
+            # the simulation might have added or removed
+            # entities.
+            # In order to do so, we remove the next level from
+            # the multiindex, which in regular conditions would
+            # be the metric name; and rename the columns
+            # to just "_none_".
+            metric_series = typed_series.loc['_none_']
+            metric_series.name = '_none_'
+            metrics.append(metric_series)
+        # concatenate all metrics as columns
+        df: pd.DataFrame = pd.concat(metrics, axis=1)
+        # Drop NaN and 0, but make sure we return at least one row per
+        # sourceref, otherwise the sourceref will not be present in
+        # the simulation dashboard.
+        groups = []
+        for sourceref, group in df.groupby(level='sourceref'):
+            # This filters out the rows where all values are 0
+            group = group.fillna(0)
+            group = group.loc[~(group == 0).all(axis=1)]
+            if group.empty:
+                original_group = typing.cast(pd.DataFrame, df.loc[typing.cast(str, sourceref)])
+                group = original_group.head(1)
+            # turn "hour" and "minute" into columns
+            group = group.reset_index()
+            # overwrite other columns
+            group['entitytype'] = meta.entityType
+            group['sourceref'] = sourceref
+            groups.append(group)
+        # concatenate all groups
+        df = pd.concat(groups, axis=0).reset_index()
+        if '_none_' in df.columns:
+            df.drop('_none_', axis=1, inplace=True)
+        return Dataset(
+            timeinstant=props.timeinstant,
+            trend=props.trend,
+            daytype=props.daytype,
+            entityType=meta.entityType,
+            df=df
+        )
 
 @dataclass
 class HiddenLayer:
@@ -719,7 +733,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
     fixed_df_map: typing.Dict[str, pd.DataFrame] = {}
     for entityType, meta in metadata.items():
         entity_dims = meta.dim_data(engine=engine, sceneref=identityref)
-        logging.info("Dims shape for scene %s, entity type %s: %s", identityref, entityType, entity_dims.shape)
+        logging.info("Dims shape for scene %s, timeinstant %s, entity type %s: %s", identityref, last_sim_date, entityType, entity_dims.shape)
         dims_df_map[entityType] = entity_dims
         fixed_df_map[entityType] = meta.fixed_df(entity_dims)
         for scene_data in meta.scene_data(engine=engine, sceneref=identityref, timeinstant=last_sim_date):
@@ -771,10 +785,14 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
         simulated_result.to_csv(output_vector_path)
 
         # Split into TypedVectors
-        sim_date = datetime.now()
+        dataset_props = DatasetProperties(
+            timeinstant=datetime.now(),
+            trend=trend,
+            daytype=daytype,
+        )
         for entityType, meta in metadata.items():
             dims_df = dims_df_map[entityType]
-            entity_result = meta.pivot(props=vector.properties[entityType], vector=simulated_result, dims_df=dims_df)
+            entity_result = vector.pivot(meta=metadata[entityType], props=dataset_props, series=simulated_result)
             #meta.to_sql(engine=engine, sceneref="{trend}_{daytype}", timeinstant=sim_date, df=entity_result.df)
 
         logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
