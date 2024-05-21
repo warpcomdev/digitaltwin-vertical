@@ -82,7 +82,7 @@
       "hour": {
         "description": "Hora del día a la que corresponde la medida",
         "ngsiType": "Number",
-        "dbType": "int",
+        "dbType": "integer",
         "extra": "-",
         "unit": "-",
         "flows": [
@@ -109,7 +109,7 @@
       "forwardStops": {
         "description": "Número de paradas en el trayecto de ida",
         "ngsiType": "Number",
-        "dbType": "int",
+        "dbType": "integer",
         "extra": "-",
         "unit": "-",
         "flows": [
@@ -122,7 +122,7 @@
       "returnStops": {
         "description": "Número de paradas en el trayecto de vuelta",
         "ngsiType": "Number",
-        "dbType": "int",
+        "dbType": "integer",
         "extra": "-",
         "unit": "-",
         "flows": [

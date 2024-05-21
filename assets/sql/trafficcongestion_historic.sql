@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficcongestion (
   sceneref text,
   trend text,
   daytype text,
-  hour int,
-  minute int,
+  hour integer,
+  minute integer,
   congestion double precision,
   -- Common model attributes
   entityid text,

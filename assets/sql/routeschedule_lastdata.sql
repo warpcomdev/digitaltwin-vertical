@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeschedule_lastdata (
   sceneref text,
   name text,
   zonelist json,
-  forwardstops int,
-  returnstops int,
+  forwardstops integer,
+  returnstops integer,
   location geometry(MultiLineString),
   -- Common model attributes
   entityid text,

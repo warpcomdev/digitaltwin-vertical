@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS :target_schema.dtwin_zone_lastdata (
   timeinstant timestamp with time zone NOT NULL,
-  zoneid int,
+  zoneid integer,
   name text,
   label text,
   location geometry(Polygon),

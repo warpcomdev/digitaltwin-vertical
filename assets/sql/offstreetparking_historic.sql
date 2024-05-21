@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_offstreetparking (
   sceneref text,
   trend text,
   daytype text,
-  hour int,
+  hour integer,
   capacity double precision,
   occupationpercent double precision,
   occupation double precision,

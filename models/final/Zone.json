@@ -19,7 +19,7 @@
       "zoneId": {
         "description": "ID de zona",
         "ngsiType": "Number",
-        "dbType": "int",
+        "dbType": "integer",
         "extra": "-",
         "unit": "-",
         "flows": [

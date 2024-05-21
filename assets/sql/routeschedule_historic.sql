@@ -4,9 +4,9 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeschedule (
   sceneref text,
   trend text,
   daytype text,
-  hour int,
-  forwardstops int,
-  returnstops int,
+  hour integer,
+  forwardstops integer,
+  returnstops integer,
   forwardtrips double precision,
   returntrips double precision,
   -- Common model attributes

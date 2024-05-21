@@ -8,13 +8,14 @@ import typing
 import logging
 from datetime import datetime
 from dataclasses import dataclass
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from collections import defaultdict
 from sqlalchemy import create_engine, event, text, URL, Engine, TextClause
 import pandas as pd
 import numpy as np
 import torch
 import psutil
+import tc_etl_lib as tc
 
 # -------------------------------------
 # Config management section
@@ -66,6 +67,66 @@ def psql_engine() -> typing.Iterator[Engine]:
         yield engine
     finally:
         engine.dispose()
+
+@dataclass
+class Broker:
+    """
+    Encapsulates the communication to the context broker
+    """
+    auth: typing.Optional[tc.authManager] = None
+    cb: typing.Optional[tc.cbManager] = None
+    sim_type: typing.Optional[str] = None
+    sim_id: typing.Optional[str] = None
+
+    @staticmethod
+    def create() -> 'Broker':
+        sim_type = os.getenv("ETL_VECTORIZE_SIMULATION_TYPE")
+        sim_id = os.getenv("ETL_VECTORIZE_SIMULATION_ID")
+        if not sim_type or not sim_id:
+            # This is just for dry-run purposes
+            return Broker(auth=None, cb=None, sim_type=None, sim_id=None)
+        auth = tc.auth.authManager(
+            endpoint=os.getenv('ETL_VECTORIZE_ENDPOINT_KEYSTONE'),
+            service=os.getenv('ETL_VECTORIZE_SERVICE'),
+            subservice_cfg=os.getenv('ETL_VECTORIZE_SUBSERVICE'),
+            user=os.getenv('ETL_VECTORIZE_USER'),
+            password=os.getenv('ETL_VECTORIZE_PASSWORD'),
+        )
+        cb = tc.cb.cbManager(
+            endpoint_cb=os.getenv('ETL_VECTORIZE_ENDPOINT_CB'),
+            sleep_send_batch=int(os.getenv('ETL_VECTORIZE_SLEEP_SEND_BATCH', '5')),
+            timeout=int(os.getenv('ETL_VECTORIZE_TIMEOUT', '10')),
+            post_retry_connect=float(os.getenv('ETL_VECTORIZE_POST_RETRY_CONNECT', '3')),
+            post_retry_backoff_factor=float(os.getenv('ETL_VECTORIZE_POST_RETRY_BACKOFF_FACTOR', '2')),
+            batch_size=int(os.getenv('ETL_VECTORIZE_BATCH_SIZE', '50')),
+        )
+        return Broker(auth=auth, cb=cb, sim_type=sim_type, sim_id=sim_id)
+
+    def fetch_sim(self, fallback: typing.Any=None) -> typing.Tuple[typing.Optional[str], typing.Iterable[typing.Any]]:
+        """Fetch simulation info"""
+        if self.cb is None:
+            return ("test", (fallback,))
+        result = self.cb.get_entities_page(auth=self.auth, limit=1, type=self.sim_type, id=self.sim_id)
+        if not result:
+            return (None, tuple())
+        return (result[0]['id'], (result[0],))
+
+    def feedback(self, status: str, *args):
+        if self.cb is None:
+            return
+        self.cb.send_batch(auth=self.auth, entities=[{
+            'id': self.sim_id,
+            'type': self.sim_type,
+            'status': {
+                'type': 'TextUnrestricted',
+                'value': status % args
+            }
+        }])
+
+@contextmanager
+def orion_engine() -> typing.Iterator[Broker]:
+    """Yields a postgres connection to the database"""
+    yield Broker.create()
 
 # -------------------------------------
 # Data bearing types
@@ -782,14 +843,18 @@ def last_simulation(engine: Engine, sceneref: str) -> datetime:
     print(df)
     return df.iloc[0]['timeinstant']
 
-def main(metadata: typing.Mapping[str, Metadata], engine: Engine, dryrun: bool=False):
+def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker, dryrun: bool=False):
     """
     Vectorizes the data in the database
     """
+    broker.feedback("initiating simulation")
+    start = datetime.now()
+
     # Get the latest identity we are working with
     identityref = os.getenv("ETL_VECTORIZE_IDENTITYREF", "N/A")
     last_sim_date = last_simulation(engine=engine, sceneref=identityref)
     logging.info("Latest simulation for sceneref %s: %s", identityref, last_sim_date)
+    broker.feedback("latest simulation is %s", last_sim_date)
 
     # Group all data by combinations of trend and daytype, and then by entityType
     scene_by_type: typing.Dict[typing.Tuple[str, str], typing.Dict[str, Dataset]] = defaultdict(dict)
@@ -798,6 +863,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, dryrun: bool=F
     for entityType, meta in metadata.items():
         entity_dims = meta.dim_data(engine=engine, sceneref=identityref)
         logging.info("Dims shape for scene %s, timeinstant %s, entity type %s: %s", identityref, last_sim_date, entityType, entity_dims.shape)
+        broker.feedback("entity type %s, dims shape %s", entityType, entity_dims.shape)
         dims_df_map[entityType] = entity_dims
         fixed_df_map[entityType] = meta.fixed_df(entity_dims)
         for scene_data in meta.scene_data(engine=engine, sceneref=identityref, timeinstant=last_sim_date):
@@ -809,6 +875,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, dryrun: bool=F
                 entityType,
                 scene_data.df.shape
             )
+            broker.feedback("entity type %s, dataset shape %s", entityType, scene_data.df.shape)
             scene_by_type[(scene_data.trend, scene_data.daytype)][entityType] = scene_data
 
     # Crete the decoder
@@ -816,8 +883,28 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, dryrun: bool=F
     decoder = Decoder(meta_map=metadata, index=typing.cast(pd.MultiIndex, empty_vector.df.index))
 
     # Test: remove an entity from the simulation
-    decoder.drop_sourceref('RouteSchedule', '10')
-    decoder.add_layer(decoder.averaged_layer('RouteSchedule', 'TestSim'))
+    fallback_sim = {
+        'type': 'SimulationParking',
+        'id': 'test',
+        'TimeInstant': { 'type': 'DateTime', 'value': '2024-05-21T00:00:00Z' },
+        'name': { 'type': 'Text', 'value': 'Simulated Parking 01' },
+        'description': { 'type': 'Text', 'value': 'Fallback simulation' },
+        'capacity': { 'type': 'Number', 'value': 1000 },
+        'location': {
+            'type': 'geo:json',
+            'value': {
+                'type': 'Point',
+                'coordinates': [ -122.4194, 37.7749 ]
+            }
+        },
+        'impact': { 'type': 'Text', 'value': '5' },
+    }
+    sceneref, sims = broker.fetch_sim(fallback_sim)
+    if not sceneref:
+        broker.feedback("No simulation found")
+        return
+    for sim in sims:
+        prepare_sim(meta_map=metadata, dims_df_map=dims_df_map, decoder=decoder, sim=sim)
 
     # Iterate over all combinations of trend and daytype
     sim_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -826,28 +913,54 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, dryrun: bool=F
         # Turn typed data into vector
         vector = Vector.create(meta_map=metadata, fixed_df_map=fixed_df_map, data_map=entities)
         logging.info("Vector shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
-            identityref,
+            sceneref,
             last_sim_date,
             trend,
             daytype,
             vector.df.shape
         )
+        broker.feedback("vector shape %s", vector.df.shape)
 
         # Write input vector for debugging purposes
-        input_vector_path = f"input_vector_{trend}_{daytype}.csv"
-        logging.info("Saving input vector to %s", input_vector_path)
-        vector.df.to_csv(input_vector_path)
-        print("** DTYPE: ", vector.df.dtype)
-
+        # input_vector_path = f"input_vector_{trend}_{daytype}.csv"
+        # logging.info("Saving input vector to %s", input_vector_path)
+        # vector.df.to_csv(input_vector_path)
+        
         # Encode, perturb and decode
         hidden = encode_vector(metadata=meta, props=scene_data, vector=vector)
+        logging.info("Hidden shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
+            sceneref,
+            last_sim_date,
+            trend,
+            daytype,
+            hidden.private.shape
+        )
+        broker.feedback("hidden shape %s", hidden.private.shape)
+        
         simulated_state = perturb_hidden(metadata=meta, props=scene_data, hidden=hidden)
+        logging.info("Simulated state shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
+            sceneref,
+            last_sim_date,
+            trend,
+            daytype,
+            simulated_state.private.shape
+        )
+        broker.feedback("simulated state shape %s", simulated_state.private.shape)
+
         simulated_result = decoder.decode(props=scene_data, hidden=simulated_state)
+        logging.info("Simulated result shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
+            sceneref,
+            last_sim_date,
+            trend,
+            daytype,
+            simulated_result.shape
+        )
+        broker.feedback("simulated result shape %s", simulated_result.shape)
 
         # Write output vector for debugging purposes
-        output_vector_path = f"output_vector_{trend}_{daytype}.csv"
-        logging.info("Saving output vector to %s", output_vector_path)
-        simulated_result.to_csv(output_vector_path)
+        # output_vector_path = f"output_vector_{trend}_{daytype}.csv"
+        # logging.info("Saving output vector to %s", output_vector_path)
+        # simulated_result.to_csv(output_vector_path)
 
         # Split into TypedVectors
         for entityType, meta in metadata.items():
@@ -857,10 +970,13 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, dryrun: bool=F
                 daytype=daytype
             )
             dataset = vector.pivot(meta=metadata[entityType], props=props, series=simulated_result)
+            broker.feedback("entity type %s, dataset shape %s", entityType, dataset.df.shape)
             dims_df = dims_df_map[entityType]
-            meta.to_sql(engine=engine, sceneref="test", dataset=dataset, dims_df=dims_df, dryrun=dryrun)
+            meta.to_sql(engine=engine, sceneref=sceneref, dataset=dataset, dims_df=dims_df, dryrun=dryrun)
+            logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
 
-        logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
+    stop = datetime.now()
+    broker.feedback(f"done in {stop - start}")
 
 def encode_vector(metadata: Metadata, props: DatasetProperties, vector: Vector) -> HiddenLayer:
     """
@@ -879,6 +995,25 @@ def perturb_hidden(metadata: Metadata, props: DatasetProperties, hidden: HiddenL
     unscaled before saving.
     """
     return hidden
+
+def prepare_sim(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], decoder: Decoder, sim: typing.Any):
+    if sim['type'] == 'SimulationParking':
+        sim_parking(meta_map=meta_map, dims_df_map=dims_df_map, decoder=decoder, sim=sim)
+    elif sim['type'] == 'SimulationTraffic':
+        sim_traffic(meta_map=meta_map, dims_df_map=dims_df_map, decoder=decoder, sim=sim)
+    elif sim['type'] == 'SimulationRoute':
+        sim_route(meta_map=meta_map, dims_df_map=dims_df_map, decoder=decoder, sim=sim)
+    else:
+        logging.warn("unrecognized simulation info: %s", sim)
+
+def sim_parking(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], decoder: Decoder, sim: typing.Any):
+    pass
+
+def sim_traffic(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], decoder: Decoder, sim: typing.Any):
+    pass
+
+def sim_route(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], decoder: Decoder, sim: typing.Any):
+    pass
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -904,8 +1039,10 @@ if __name__ == "__main__":
     logging.info("Metadata order:\n%s", ", ".join(meta.keys()))
 
     try:
-        with psql_engine() as engine:
-            main(meta, engine, args.dryrun)
+        with ExitStack() as stack:
+            engine = stack.enter_context(psql_engine())
+            broker = stack.enter_context(orion_engine())
+            main(meta, engine, broker, args.dryrun)
         logging.info("ETL OK")
     except Exception as err:
         logging.exception(msg="Error during vectorization", stack_info=True)
