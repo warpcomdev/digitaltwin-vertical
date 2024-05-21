@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_offstreetparking_lastdata (
   sourceref text,
   name text,
   zone text,
+  capacity double precision,
   location geometry(Point),
   -- Common model attributes
   entityid text,

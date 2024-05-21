@@ -22,7 +22,7 @@ OffStreetParking: templates.#Twin & {
 		capacity: {
 			types.#Double
 			description: "Número de plazas totales en el parking"
-			flows: ["historic"]
+			flows: ["historic", "lastdata"]
 		}
 
 		occupationPercent: {

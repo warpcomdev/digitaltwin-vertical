@@ -758,7 +758,9 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
 
         # Split into TypedVectors
         for entityType, meta in metadata.items():
-            typed_vector = meta.pivot(props=vector.properties[entityType], vector=simulated_result)
+            entity_result = meta.pivot(props=vector.properties[entityType], vector=simulated_result)
+            entity_result['daytype'] = daytype
+            entity_result['trend'] = trend
 
         logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
 

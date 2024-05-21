@@ -1,7 +1,7 @@
 {
   "Simulation": {
     "namespace": "dtwin",
-    "exampleId": "NA",
+    "exampleId": "N/A",
     "description": "Instancia de simulación. Recopila la última fecha en la que se ha ejecutado\nuna simulación, o cálculo de vista identidad.",
     "model": {
       "TimeInstant": {

@@ -50,10 +50,10 @@
               "sceneRef",
               "trend",
               "dayType",
-              "forwardTrips",
-              "returnTrips",
               "forwardStops",
               "returnStops",
+              "forwardTrips",
+              "returnTrips",
               "intensity"
             ],
             "httpCustom": {
@@ -115,6 +115,8 @@
               "sourceRef",
               "name",
               "zoneList",
+              "forwardStops",
+              "returnStops",
               "location",
               "alterationType"
             ],

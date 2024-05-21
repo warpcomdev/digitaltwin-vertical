@@ -41,7 +41,7 @@ Parking con barrera de acceso
 | ----------------- | ---------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----- | ---- | ----------------------------- |
 | TimeInstant       | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación                                                                                                                                  | `"2018-12-10T20:40:23"`                                                        | -     | -    | -                             |
 | sourceRef         | TextUnrestricted | text                              | ID de entidad original. Reemplaza al entityId en a base de datos, ya que esta entidad es *singleton* y su ID en base de datos se ve sobrescrito por una composición de los campos únicos. | `"Parking-01"`                                                                 | -     | -    | -                             |
-| sceneRef          | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "NA" indica que se trata de una vista identidad.                                                             | `"example text"`                                                               | -     | -    | -                             |
+| sceneRef          | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "N/A" indica que se trata de una vista identidad.                                                            | `"example text"`                                                               | -     | -    | -                             |
 | trend             | TextUnrestricted | text                              | Estacionalidad o tendencia para la que se ha calculado el escenario                                                                                                                       | `"Verano"`                                                                     | -     | -    | Verano, Fallas, Otros         |
 | dayType           | TextUnrestricted | text                              | Tipo de día al que corresponde la medida                                                                                                                                                  | `"L-J"`                                                                        | -     | -    | L-J, Viernes, Sábado, Domingo |
 | name              | TextUnrestricted | text                              | Nombre descriptivo de la entidad                                                                                                                                                          | `"example text"`                                                               | -     | -    | -                             |
@@ -123,15 +123,15 @@ Intensidad de uso ruta. Describe el número de viajeros de una ruta dada una est
 | ------------ | ---------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----- | ---- | ----------------------------- |
 | TimeInstant  | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación                                                                                                                                  | `"2018-12-10T20:40:23"`                                                                     | -     | -    | -                             |
 | sourceRef    | TextUnrestricted | text                              | ID de entidad original. Reemplaza al entityId en a base de datos, ya que esta entidad es *singleton* y su ID en base de datos se ve sobrescrito por una composición de los campos únicos. | `"Parking-01"`                                                                              | -     | -    | -                             |
-| sceneRef     | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "NA" indica que se trata de una vista identidad.                                                             | `"example text"`                                                                            | -     | -    | -                             |
+| sceneRef     | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "N/A" indica que se trata de una vista identidad.                                                            | `"example text"`                                                                            | -     | -    | -                             |
 | trend        | TextUnrestricted | text                              | Estacionalidad o tendencia para la que se ha calculado el escenario                                                                                                                       | `"Verano"`                                                                                  | -     | -    | Verano, Fallas, Otros         |
 | dayType      | TextUnrestricted | text                              | Tipo de día al que corresponde la medida                                                                                                                                                  | `"L-J"`                                                                                     | -     | -    | L-J, Viernes, Sábado, Domingo |
 | name         | TextUnrestricted | text                              | Nombre descriptivo de la entidad                                                                                                                                                          | `"example text"`                                                                            | -     | -    | -                             |
 | zoneList     | Json             | json                              | Lista de identificadores de la zona o distrito a la que pertenece la entidad                                                                                                              | `["Distrito 1", "Distrito 4"]`                                                              | -     | -    | -                             |
-| forwardTrips | Number           | double precision                  | Número de trayectos de ida                                                                                                                                                                | `5.0`                                                                                       | -     | -    | -                             |
-| returnTrips  | Number           | double precision                  | Número de trayectos de vuelta                                                                                                                                                             | `5.0`                                                                                       | -     | -    | -                             |
 | forwardStops | Number           | int                               | Número de paradas en el trayecto de ida                                                                                                                                                   | `5`                                                                                         | -     | -    | -                             |
 | returnStops  | Number           | int                               | Número de paradas en el trayecto de vuelta                                                                                                                                                | `5`                                                                                         | -     | -    | -                             |
+| forwardTrips | Number           | double precision                  | Número de trayectos de ida                                                                                                                                                                | `5.0`                                                                                       | -     | -    | -                             |
+| returnTrips  | Number           | double precision                  | Número de trayectos de vuelta                                                                                                                                                             | `5.0`                                                                                       | -     | -    | -                             |
 | location     | geo:json         | geometry(MultiLineString)         | Ubicación de la entidad                                                                                                                                                                   | `{"type": "geo:json", "value": {"type": "Line", "coordinates": [[[3.5, 24.6], [33, 44]]]}}` | -     | -    | -                             |
 | intensity    | Number           | double precision                  | Número de viajeros                                                                                                                                                                        | `5.0`                                                                                       | -     | -    | -                             |
 
@@ -172,14 +172,6 @@ Ejemplo de `RouteIntensity` (en NGSIv2):
             "Distrito 4"
         ]
     },
-    "forwardTrips": {
-        "type": "Number",
-        "value": 5.0
-    },
-    "returnTrips": {
-        "type": "Number",
-        "value": 5.0
-    },
     "forwardStops": {
         "type": "Number",
         "value": 5
@@ -187,6 +179,14 @@ Ejemplo de `RouteIntensity` (en NGSIv2):
     "returnStops": {
         "type": "Number",
         "value": 5
+    },
+    "forwardTrips": {
+        "type": "Number",
+        "value": 5.0
+    },
+    "returnTrips": {
+        "type": "Number",
+        "value": 5.0
     },
     "location": {
         "type": "geo:json",
@@ -221,17 +221,17 @@ Programación de ruta. Describe el número de paradas de una ruta dada una estac
 | ------------ | ---------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----- | ---- | ----------------------------- |
 | TimeInstant  | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación                                                                                                                                  | `"2018-12-10T20:40:23"`                                                                     | -     | -    | -                             |
 | sourceRef    | TextUnrestricted | text                              | ID de entidad original. Reemplaza al entityId en a base de datos, ya que esta entidad es *singleton* y su ID en base de datos se ve sobrescrito por una composición de los campos únicos. | `"Parking-01"`                                                                              | -     | -    | -                             |
-| sceneRef     | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "NA" indica que se trata de una vista identidad.                                                             | `"example text"`                                                                            | -     | -    | -                             |
+| sceneRef     | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "N/A" indica que se trata de una vista identidad.                                                            | `"example text"`                                                                            | -     | -    | -                             |
 | trend        | TextUnrestricted | text                              | Estacionalidad o tendencia para la que se ha calculado el escenario                                                                                                                       | `"Verano"`                                                                                  | -     | -    | Verano, Fallas, Otros         |
 | dayType      | TextUnrestricted | text                              | Tipo de día al que corresponde la medida                                                                                                                                                  | `"L-J"`                                                                                     | -     | -    | L-J, Viernes, Sábado, Domingo |
 | name         | TextUnrestricted | text                              | Nombre descriptivo de la entidad                                                                                                                                                          | `"example text"`                                                                            | -     | -    | -                             |
 | hour         | Number           | int                               | Hora del día a la que corresponde la medida                                                                                                                                               | `15`                                                                                        | -     | -    | 0-23                          |
 | zoneList     | Json             | json                              | Lista de identificadores de la zona o distrito a la que pertenece la entidad                                                                                                              | `["Distrito 1", "Distrito 4"]`                                                              | -     | -    | -                             |
-| forwardTrips | Number           | double precision                  | Número de trayectos de ida                                                                                                                                                                | `5.0`                                                                                       | -     | -    | -                             |
-| returnTrips  | Number           | double precision                  | Número de trayectos de vuelta                                                                                                                                                             | `5.0`                                                                                       | -     | -    | -                             |
 | forwardStops | Number           | int                               | Número de paradas en el trayecto de ida                                                                                                                                                   | `5`                                                                                         | -     | -    | -                             |
-| location     | geo:json         | geometry(MultiLineString)         | Ubicación de la entidad                                                                                                                                                                   | `{"type": "geo:json", "value": {"type": "Line", "coordinates": [[[3.5, 24.6], [33, 44]]]}}` | -     | -    | -                             |
 | returnStops  | Number           | int                               | Número de paradas en el trayecto de vuelta                                                                                                                                                | `5`                                                                                         | -     | -    | -                             |
+| forwardTrips | Number           | double precision                  | Número de trayectos de ida                                                                                                                                                                | `5.0`                                                                                       | -     | -    | -                             |
+| location     | geo:json         | geometry(MultiLineString)         | Ubicación de la entidad                                                                                                                                                                   | `{"type": "geo:json", "value": {"type": "Line", "coordinates": [[[3.5, 24.6], [33, 44]]]}}` | -     | -    | -                             |
+| returnTrips  | Number           | double precision                  | Número de trayectos de vuelta                                                                                                                                                             | `5.0`                                                                                       | -     | -    | -                             |
 
 Ejemplo de `RouteSchedule` (en NGSIv2):
 
@@ -274,17 +274,17 @@ Ejemplo de `RouteSchedule` (en NGSIv2):
             "Distrito 4"
         ]
     },
-    "forwardTrips": {
-        "type": "Number",
-        "value": 5.0
-    },
-    "returnTrips": {
-        "type": "Number",
-        "value": 5.0
-    },
     "forwardStops": {
         "type": "Number",
         "value": 5
+    },
+    "returnStops": {
+        "type": "Number",
+        "value": 5
+    },
+    "forwardTrips": {
+        "type": "Number",
+        "value": 5.0
     },
     "location": {
         "type": "geo:json",
@@ -304,9 +304,9 @@ Ejemplo de `RouteSchedule` (en NGSIv2):
             ]
         }
     },
-    "returnStops": {
+    "returnTrips": {
         "type": "Number",
-        "value": 5
+        "value": 5.0
     }
 }
 ```
@@ -324,7 +324,7 @@ Ejemplo de `Simulation` (en NGSIv2):
 
 ```json
 {
-    "id": "NA",
+    "id": "N/A",
     "type": "Simulation",
     "TimeInstant": {
         "type": "DateTime",
@@ -345,7 +345,7 @@ Medidor de congestión de tráfico
 | ----------- | ---------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----- | ---- | ----------------------------- |
 | TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación                                                                                                                                  | `"2018-12-10T20:40:23"`                                                                   | -     | -    | -                             |
 | sourceRef   | TextUnrestricted | text                              | ID de entidad original. Reemplaza al entityId en a base de datos, ya que esta entidad es *singleton* y su ID en base de datos se ve sobrescrito por una composición de los campos únicos. | `"Parking-01"`                                                                            | -     | -    | -                             |
-| sceneRef    | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "NA" indica que se trata de una vista identidad.                                                             | `"example text"`                                                                          | -     | -    | -                             |
+| sceneRef    | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "N/A" indica que se trata de una vista identidad.                                                            | `"example text"`                                                                          | -     | -    | -                             |
 | trend       | TextUnrestricted | text                              | Estacionalidad o tendencia para la que se ha calculado el escenario                                                                                                                       | `"Verano"`                                                                                | -     | -    | Verano, Fallas, Otros         |
 | dayType     | TextUnrestricted | text                              | Tipo de día al que corresponde la medida                                                                                                                                                  | `"L-J"`                                                                                   | -     | -    | L-J, Viernes, Sábado, Domingo |
 | name        | TextUnrestricted | text                              | Nombre descriptivo de la entidad                                                                                                                                                          | `"example text"`                                                                          | -     | -    | -                             |
@@ -428,7 +428,7 @@ Medidor de intensidad de tráfico
 | ----------- | ---------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----- | ---- | ----------------------------- |
 | TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación                                                                                                                                  | `"2018-12-10T20:40:23"`                                                        | -     | -    | -                             |
 | sourceRef   | TextUnrestricted | text                              | ID de entidad original. Reemplaza al entityId en a base de datos, ya que esta entidad es *singleton* y su ID en base de datos se ve sobrescrito por una composición de los campos únicos. | `"Parking-01"`                                                                 | -     | -    | -                             |
-| sceneRef    | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "NA" indica que se trata de una vista identidad.                                                             | `"example text"`                                                               | -     | -    | -                             |
+| sceneRef    | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "N/A" indica que se trata de una vista identidad.                                                            | `"example text"`                                                               | -     | -    | -                             |
 | trend       | TextUnrestricted | text                              | Estacionalidad o tendencia para la que se ha calculado el escenario                                                                                                                       | `"Verano"`                                                                     | -     | -    | Verano, Fallas, Otros         |
 | dayType     | TextUnrestricted | text                              | Tipo de día al que corresponde la medida                                                                                                                                                  | `"L-J"`                                                                        | -     | -    | L-J, Viernes, Sábado, Domingo |
 | name        | TextUnrestricted | text                              | Nombre descriptivo de la entidad                                                                                                                                                          | `"example text"`                                                               | -     | -    | -                             |

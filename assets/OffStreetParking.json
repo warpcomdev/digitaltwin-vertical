@@ -115,6 +115,7 @@
               "sourceRef",
               "name",
               "zone",
+              "capacity",
               "location",
               "alterationType"
             ],

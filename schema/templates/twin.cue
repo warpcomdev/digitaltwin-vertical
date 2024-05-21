@@ -55,7 +55,7 @@ import (
 			types.#Text
 			description: """
 				ID del escenario de simulación.
-				Identifica la simulación realizada. El valor "NA"
+				Identifica la simulación realizada. El valor "N/A"
 				indica que se trata de una vista identidad.
 				"""
 			flows: ["historic"]

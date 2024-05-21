@@ -31,7 +31,7 @@
         "range": "-"
       },
       "sceneRef": {
-        "description": "ID del escenario de simulación.\nIdentifica la simulación realizada. El valor \"NA\"\nindica que se trata de una vista identidad.",
+        "description": "ID del escenario de simulación.\nIdentifica la simulación realizada. El valor \"N/A\"\nindica que se trata de una vista identidad.",
         "ngsiType": "TextUnrestricted",
         "dbType": "text",
         "extra": "-",
@@ -109,7 +109,8 @@
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic"
+          "historic",
+          "lastdata"
         ],
         "example": 5.0,
         "range": "-"

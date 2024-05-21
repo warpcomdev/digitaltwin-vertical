@@ -31,7 +31,7 @@
                 "range": "-"
             },
             "sceneRef": {
-                "description": "ID del escenario de simulación.\nIdentifica la simulación realizada. El valor \"NA\"\nindica que se trata de una vista identidad.",
+                "description": "ID del escenario de simulación.\nIdentifica la simulación realizada. El valor \"N/A\"\nindica que se trata de una vista identidad.",
                 "ngsiType": "TextUnrestricted",
                 "dbType": "text",
                 "extra": "-",
@@ -105,6 +105,32 @@
                 ],
                 "range": "-"
             },
+            "forwardStops": {
+                "description": "Número de paradas en el trayecto de ida",
+                "ngsiType": "Number",
+                "dbType": "int",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "historic",
+                    "lastdata"
+                ],
+                "example": 5,
+                "range": "-"
+            },
+            "returnStops": {
+                "description": "Número de paradas en el trayecto de vuelta",
+                "ngsiType": "Number",
+                "dbType": "int",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "historic",
+                    "lastdata"
+                ],
+                "example": 5,
+                "range": "-"
+            },
             "forwardTrips": {
                 "description": "Número de trayectos de ida",
                 "ngsiType": "Number",
@@ -115,30 +141,6 @@
                     "historic"
                 ],
                 "example": 5.0,
-                "range": "-"
-            },
-            "returnTrips": {
-                "description": "Número de trayectos de vuelta",
-                "ngsiType": "Number",
-                "dbType": "double precision",
-                "extra": "-",
-                "unit": "-",
-                "flows": [
-                    "historic"
-                ],
-                "example": 5.0,
-                "range": "-"
-            },
-            "forwardStops": {
-                "description": "Número de paradas en el trayecto de ida",
-                "ngsiType": "Number",
-                "dbType": "int",
-                "extra": "-",
-                "unit": "-",
-                "flows": [
-                    "historic"
-                ],
-                "example": 5,
                 "range": "-"
             },
             "location": {
@@ -170,16 +172,16 @@
                 },
                 "range": "-"
             },
-            "returnStops": {
-                "description": "Número de paradas en el trayecto de vuelta",
+            "returnTrips": {
+                "description": "Número de trayectos de vuelta",
                 "ngsiType": "Number",
-                "dbType": "int",
+                "dbType": "double precision",
                 "extra": "-",
                 "unit": "-",
                 "flows": [
                     "historic"
                 ],
-                "example": 5,
+                "example": 5.0,
                 "range": "-"
             }
         },
@@ -248,10 +250,10 @@
                         "trend",
                         "daytype",
                         "hour",
-                        "forwardtrips",
-                        "returntrips",
                         "forwardstops",
-                        "returnstops"
+                        "returnstops",
+                        "forwardtrips",
+                        "returntrips"
                     ],
                     "attrJoinOn": [
                         "entityid"
@@ -318,10 +320,10 @@
                             "name",
                             "location",
                             "zonelist",
-                            "forwardtrips",
-                            "returntrips",
                             "forwardstops",
-                            "returnstops"
+                            "returnstops",
+                            "forwardtrips",
+                            "returntrips"
                         ],
                         "attrJoinOn": [
                             "sceneRef",
