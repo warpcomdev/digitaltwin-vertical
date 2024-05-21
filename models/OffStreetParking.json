@@ -82,7 +82,7 @@
             "hour": {
                 "description": "Hora del día a la que corresponde la medida",
                 "ngsiType": "Number",
-                "dbType": "int",
+                "dbType": "integer",
                 "extra": "-",
                 "unit": "-",
                 "flows": [

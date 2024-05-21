@@ -165,6 +165,7 @@ class Metric:
     Describes properties of a metric
     """
     probability: bool
+    integer: bool
 
 @dataclass
 class Metadata:
@@ -188,7 +189,7 @@ class Metadata:
         """Read Metadata from a json object"""
         for metric_cols in ("fixedProps", "metrics"):
             # Convert metrics to dict of `Metric` objects
-            props = {k: Metric(v) for k, v in kw.pop(metric_cols, {}).items()}
+            props = {k: Metric(**v) for k, v in kw.pop(metric_cols, {}).items()}
             # Sort metrics in a stable order, and lowercase them
             # to match database column names
             kw[metric_cols] = { k.lower(): props[k] for k in sorted(props.keys()) }
@@ -200,7 +201,12 @@ class Metadata:
             columns = ["sourceref", "zone", "zonelist", "ST_AsGeoJSON(location) AS location"]
         else:
             columns = ["sourceref", "zone", "Array[zone]::json[] as zonelist", "ST_AsGeoJSON(location) AS location"]
-        columns.extend(self.fixedProps.keys())
+        # This is needed so integer rows with null values are
+        # preserved as integer instead of objects.
+        # See https://stackoverflow.com/questions/37796916/pandas-read-sql-integer-became-float
+        columns.extend(c.lower() if not v.integer
+            else f"COALESCE({c.lower()}, 0)::integer AS {c.lower()}"
+            for c, v in self.fixedProps.items())
         return text(f"SELECT {','.join(columns)} FROM {self.dimsTableName} ORDER BY sourceref ASC")
 
     def dim_data(self, engine: Engine, sceneref: str) -> pd.DataFrame:
@@ -216,7 +222,18 @@ class Metadata:
 
     def scene_query(self) -> TextClause:
         """Build SQL query for a given sceneref and timeinstant"""
-        columns = ", ".join(c.lower() for c in (self.dimensions + list(self.metrics.keys())))
+        metrics = {
+            k: Metric(probability=False, integer=False)
+            for k in self.dimensions
+        }
+        metrics.update(self.metrics)
+        # This is needed so integer rows with null values are
+        # preserved as integer instead of objects.
+        # See https://stackoverflow.com/questions/37796916/pandas-read-sql-integer-became-float
+        columns = ", ".join(c.lower() if not v.integer
+            else f"COALESCE({c.lower()}, 0)::integer AS {c.lower()}"
+            for c, v in metrics.items()
+        )
         return text(f"""
         SELECT {columns}
         FROM {self.dataTableName}
@@ -364,7 +381,7 @@ class Metadata:
             vector_list.append(slim_df.squeeze())
         return pd.concat(vector_list, axis=0)
 
-    def to_sql(self, sceneref: str, dataset: Dataset, dims_df:typing.Optional[pd.DataFrame]=None):
+    def to_sql(self, engine: Engine, sceneref: str, dataset: Dataset, dims_df:typing.Optional[pd.DataFrame]=None):
                 # if we get a dims_df, try to join the
         # resulting dataframe to the dim_df to pick
         # up the staticProps
@@ -383,7 +400,45 @@ class Metadata:
                 how='left',
                 on=['sourceref']
             )
-        df.to_csv("dataset_{sceneref}_{dataseet.entitytype}_{dataset.trend}_{dataset.daytype}.csv")
+        with engine.begin() as conn:
+            kw = {
+                "sceneref": sceneref,
+                "timeinstant": dataset.timeinstant,
+                "trend": dataset.trend,
+                "daytype": dataset.daytype,
+            }
+            # Clear the simulation table to avoid pkey duplicates
+            statement = text(
+                f"""
+                DELETE FROM {self.dataTableName}
+                WHERE sceneref=:sceneref
+                AND timeinstant=:timeinstant
+                AND trend=:trend
+                AND daytype=:daytype
+                """).bindparams(**kw)
+            conn.execute(statement)
+            logging.info("saving %d rows to the database for entityType %s, dimensions %s", len(df), self.entityType, kw)
+            df.to_sql(
+                self.dataTableName,
+                con=engine,
+                if_exists='append',
+                index=False,
+                chunksize=1000
+            )
+            # Do the calculations, if needed
+            expressions = []
+            if self.calcs:
+                for col, expr in self.calcs.items():
+                    expressions.append(f"{col} = {expr}")
+            if expressions:
+                statement = text(f"""
+                    UPDATE {self.dataTableName} SET {','.join(expressions)} 
+                    WHERE sceneref=:sceneref
+                    AND timeinstant=:timeinstant
+                    AND trend=:trend
+                    AND daytype=:daytype
+                    """).bindparams(**kw)
+                conn.execute(statement)
 
 # -------------------------------------
 # Schemaless types
@@ -489,9 +544,15 @@ class Vector:
             group['sourceref'] = sourceref
             groups.append(group)
         # concatenate all groups
-        df = pd.concat(groups, axis=0).reset_index()
+        df = pd.concat(groups, axis=0).reset_index(drop=True)
         if '_none_' in df.columns:
             df.drop('_none_', axis=1, inplace=True)
+        # Hour and minute only belong in the dataset if the
+        # input has those dimensions
+        if not meta.hasHour:
+            df = df.drop('hour', axis=1)
+        if not meta.hasMinute:
+            df = df.drop('minute', axis=1)
         return Dataset(
             timeinstant=props.timeinstant,
             trend=props.trend,
@@ -756,6 +817,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
     decoder.add_layer(decoder.averaged_layer('RouteSchedule', 'TestSim'))
 
     # Iterate over all combinations of trend and daytype
+    sim_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     for scene_index, entities in scene_by_type.items():
         trend, daytype = scene_index
         # Turn typed data into vector
@@ -785,15 +847,15 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
         simulated_result.to_csv(output_vector_path)
 
         # Split into TypedVectors
-        dataset_props = DatasetProperties(
-            timeinstant=datetime.now(),
-            trend=trend,
-            daytype=daytype,
-        )
         for entityType, meta in metadata.items():
+            props = DatasetProperties(
+                timeinstant=sim_date,
+                trend=trend,
+                daytype=daytype
+            )
+            dataset = vector.pivot(meta=metadata[entityType], props=props, series=simulated_result)
             dims_df = dims_df_map[entityType]
-            entity_result = vector.pivot(meta=metadata[entityType], props=dataset_props, series=simulated_result)
-            #meta.to_sql(engine=engine, sceneref="{trend}_{daytype}", timeinstant=sim_date, df=entity_result.df)
+            meta.to_sql(engine=engine, sceneref="test", dataset=dataset, dims_df=dims_df)
 
         logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
 

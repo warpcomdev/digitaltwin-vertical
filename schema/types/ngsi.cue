@@ -55,7 +55,7 @@ import (
 
 #Integer: #ModelAttribute & {
 	ngsiType: "Number"
-	dbType:   "int"
+	dbType:   "integer"
 	example:  number | *5
 }
 
