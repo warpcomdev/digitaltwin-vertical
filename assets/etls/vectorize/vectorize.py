@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import os
 import pathlib
 import argparse
@@ -88,12 +89,12 @@ class Broker:
         auth = tc.auth.authManager(
             endpoint=os.getenv('ETL_VECTORIZE_ENDPOINT_KEYSTONE'),
             service=os.getenv('ETL_VECTORIZE_SERVICE'),
-            subservice_cfg=os.getenv('ETL_VECTORIZE_SUBSERVICE'),
+            subservice=os.getenv('ETL_VECTORIZE_SUBSERVICE'),
             user=os.getenv('ETL_VECTORIZE_USER'),
             password=os.getenv('ETL_VECTORIZE_PASSWORD'),
         )
         cb = tc.cb.cbManager(
-            endpoint_cb=os.getenv('ETL_VECTORIZE_ENDPOINT_CB'),
+            endpoint=os.getenv('ETL_VECTORIZE_ENDPOINT_CB'),
             sleep_send_batch=int(os.getenv('ETL_VECTORIZE_SLEEP_SEND_BATCH', '5')),
             timeout=int(os.getenv('ETL_VECTORIZE_TIMEOUT', '10')),
             post_retry_connect=float(os.getenv('ETL_VECTORIZE_POST_RETRY_CONNECT', '3')),
@@ -914,7 +915,6 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
     for entityType, meta in metadata.items():
         entity_dims = meta.dim_data(engine=engine, sceneref=identityref)
         logging.info("Dims shape for scene %s, timeinstant %s, entity type %s: %s", identityref, last_sim_date, entityType, entity_dims.shape)
-        broker.feedback("entity type %s, dims shape %s", entityType, entity_dims.shape)
         dims_df_map[entityType] = entity_dims
         fixed_df_map[entityType] = meta.fixed_df(entity_dims)
         for scene_data in meta.scene_data(engine=engine, sceneref=identityref, timeinstant=last_sim_date):
@@ -926,7 +926,6 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
                 entityType,
                 scene_data.df.shape
             )
-            broker.feedback("entity type %s, dataset shape %s", entityType, scene_data.df.shape)
             scene_by_type[(scene_data.trend, scene_data.daytype)][entityType] = scene_data
 
     # Create handlers for all the sims
@@ -1007,7 +1006,6 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
         # Split into Datasets to save back to the database
         for entityType, meta in metadata.items():
             dataset = vector.pivot(meta=metadata[entityType], props=dataset_props, series=result)
-            broker.feedback("entity type %s, dataset shape %s", entityType, dataset.df.shape)
             dims_df = dims_df_map[entityType]
             meta.to_sql(engine=engine, sceneref=sceneref, dataset=dataset, dims_df=dims_df, dryrun=dryrun)
 
@@ -1085,3 +1083,4 @@ if __name__ == "__main__":
         logging.info("ETL OK")
     except Exception as err:
         logging.exception(msg="Error during vectorization", stack_info=True)
+        sys.exit(-1)
