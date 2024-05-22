@@ -6,12 +6,13 @@ El vertical utiliza los siguientes modelos:
 4. [RouteSchedule](#RouteSchedule)
 5. [Simulation](#Simulation)
 6. [SimulationParking](#SimulationParking)
-7. [SimulationTraffic](#SimulationTraffic)
-8. [Stop](#Stop)
-9. [TrafficCongestion](#TrafficCongestion)
-10. [TrafficIntensity](#TrafficIntensity)
-11. [Trend](#Trend)
-12. [Zone](#Zone)
+7. [SimulationRoute](#SimulationRoute)
+8. [SimulationTraffic](#SimulationTraffic)
+9. [Stop](#Stop)
+10. [TrafficCongestion](#TrafficCongestion)
+11. [TrafficIntensity](#TrafficIntensity)
+12. [Trend](#Trend)
+13. [Zone](#Zone)
 
 # Entidades Principales
 
@@ -388,6 +389,74 @@ Ejemplo de `SimulationParking` (en NGSIv2):
         }
     },
     "capacity": {
+        "type": "Number",
+        "value": 5
+    },
+    "bias": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "status": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    }
+}
+```
+
+## SimulationRoute
+
+Parámetros de simulación de nueva línea de transporte
+
+| Atributo    | ngsiType         | dbType                            | description                  | example                                                                                   | extra | unit | range |
+| ----------- | ---------------- | --------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------- | ----- | ---- | ----- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha de la simulacion       | `"2018-12-10T20:40:23"`                                                                   | -     | -    | -     |
+| name        | TextUnrestricted | text                              | Nombre de la simulación      | `"example text"`                                                                          | -     | -    | -     |
+| description | TextUnrestricted | text                              | Descripción de la simulación | `"example text"`                                                                          | -     | -    | -     |
+| location    | geo:json         | geometry(LineString)              | Geometría de la línea        | `{"type": "geo:json", "value": {"type": "Line", "coordinates": [[3.5, 24.6], [33, 44]]}}` | -     | -    | -     |
+| trips       | Number           | integer                           | Número de viajes diarios     | `5`                                                                                       | -     | -    | -     |
+| intensity   | Number           | integer                           | Número de viajeros diarios   | `5`                                                                                       | -     | -    | -     |
+| bias        | TextUnrestricted | text                              | Bias de la simulación        | `"example text"`                                                                          | -     | -    | -     |
+| status      | TextUnrestricted | text                              | Estado de la simulación      | `"example text"`                                                                          | -     | -    | -     |
+
+Ejemplo de `SimulationRoute` (en NGSIv2):
+
+```json
+{
+    "id": "tramo-100",
+    "type": "SimulationRoute",
+    "TimeInstant": {
+        "type": "DateTime",
+        "value": "2018-12-10T20:40:23"
+    },
+    "name": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "description": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "location": {
+        "type": "geo:json",
+        "value": {
+            "type": "Line",
+            "coordinates": [
+                [
+                    3.5,
+                    24.6
+                ],
+                [
+                    33,
+                    44
+                ]
+            ]
+        }
+    },
+    "trips": {
+        "type": "Number",
+        "value": 5
+    },
+    "intensity": {
         "type": "Number",
         "value": 5
     },

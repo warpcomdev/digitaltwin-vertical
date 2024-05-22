@@ -856,12 +856,12 @@ class Simulation(typing.Protocol):
     Protocol to represent the simulation API
     """
 
-    def prepare_engine(self, engine: Engine, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+    def prepare_platform(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
         """
-        Prepare the engine and dimensions for simulation
+        Setup the engine and broker for simulation
         
-        Might add information to the dimension table if needed
-        for the simulation.
+        Might create rows, update entities, or add information to
+        the dimension table if needed for the simulation.
         """
 
     def prepare_decoder(self, decoder: Decoder):
@@ -947,7 +947,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
     # Prepare the engine for all the dims
     logging.info("Preparing engine for %s, %s", sceneref, sim_date)
     for handler in sim_handlers:
-        handler.prepare_engine(engine=engine, dims_df_map=dims_df_map, dryrun=dryrun)
+        handler.prepare_platform(engine=engine, broker=broker, dims_df_map=dims_df_map, dryrun=dryrun)
 
     # Create the decoder. Apply all simulation modifications.
     logging.info("Preparing decoder for %s, %s", sceneref, sim_date)
@@ -1047,9 +1047,11 @@ def create_simulators(meta_map: typing.Mapping[str, Metadata], sceneref: str, si
             logging.info("SimulationParking")
             yield SimParking(meta_map=meta_map, sceneref=sceneref, sim_date=sim_date, sim=sim)
         elif sim['type'] == 'SimulationTraffic':
-            logging.warn("SimulationTraffic not implemented")
+            logging.info("SimulationParking")
+            yield SimTraffic(meta_map=meta_map, sceneref=sceneref, sim_date=sim_date, sim=sim)
         elif sim['type'] == 'SimulationRoute':
-            logging.warn("SimulationRoute not implemented")
+            logging.info("SimulationParking")
+            yield SimRoute(meta_map=meta_map, sceneref=sceneref, sim_date=sim_date, sim=sim)
         else:
             logging.warn("unrecognized simulation info: %s", sim)
         return None
@@ -1065,7 +1067,7 @@ class SimParking:
         self.entitytype = "OffStreetParking"
         self.sourceref = f"{sceneref}_{datetime.now().strftime('%Y_%m_%d')}"
 
-    def prepare_engine(self, engine: Engine, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+    def prepare_platform(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
         # Create a parking for the sim
         metadata = self.meta_map[self.entitytype]
         sim = self.sim
@@ -1136,6 +1138,60 @@ class SimParking:
         # Add a new layer for the new parking, averaging the
         # values of the other parkings
         decoder.add_layer(decoder.averaged_layer(self.entitytype, self.sourceref))
+
+    def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
+        # Produce an impact on other things close to the parking
+        return hidden
+
+    def vet_output(self, result: pd.Series) -> pd.Series:
+        return result
+
+class SimTraffic:
+    """Simulation for traffic affectation"""
+
+    def __init__(self, meta_map: typing.Mapping[str, Metadata], sceneref: str, sim_date: datetime, sim: typing.Any):
+        self.meta_map = meta_map
+        self.sceneref = sceneref
+        self.sim_date = sim_date
+        self.category = sim.get('category', {}).get('value', 'pedestrian').lower().strip()
+        self.bbox = sim.get('location').get('value', [[0,0],[0,0]])
+        self.sim = sim
+        self.sourceref = f"{sceneref}_{datetime.now().strftime('%Y_%m_%d')}"
+
+    def prepare_platform(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+        # Create a parking for the sim
+        pass
+
+    def prepare_decoder(self, decoder: Decoder):
+        # Add a new layer for the new parking, averaging the
+        # values of the other parkings
+        pass
+
+    def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
+        # Produce an impact on other things close to the parking
+        return hidden
+
+    def vet_output(self, result: pd.Series) -> pd.Series:
+        return result
+
+class SimRoute:
+    """Simulation for route affectation"""
+
+    def __init__(self, meta_map: typing.Mapping[str, Metadata], sceneref: str, sim_date: datetime, sim: typing.Any):
+        self.meta_map = meta_map
+        self.sceneref = sceneref
+        self.sim_date = sim_date
+        self.sim = sim
+        self.sourceref = f"{sceneref}_{datetime.now().strftime('%Y_%m_%d')}"
+
+    def prepare_platform(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+        # Create a parking for the sim
+        pass
+
+    def prepare_decoder(self, decoder: Decoder):
+        # Add a new layer for the new parking, averaging the
+        # values of the other parkings
+        pass
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
         # Produce an impact on other things close to the parking

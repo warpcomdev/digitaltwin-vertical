@@ -1,0 +1,146 @@
+{
+    "SimulationRoute": {
+        "description": "Parámetros de simulación de nueva línea de transporte",
+        "exampleId": "tramo-100",
+        "model": {
+            "TimeInstant": {
+                "description": "Fecha de la simulacion",
+                "ngsiType": "DateTime",
+                "dbType": "timestamp with time zone NOT NULL",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "etl_vectorize"
+                ],
+                "example": "2018-12-10T20:40:23",
+                "range": "-"
+            },
+            "name": {
+                "description": "Nombre de la simulación",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            },
+            "description": {
+                "description": "Descripción de la simulación",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            },
+            "location": {
+                "description": "Geometría de la línea",
+                "ngsiType": "geo:json",
+                "dbType": "geometry(LineString)",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": {
+                    "type": "geo:json",
+                    "value": {
+                        "type": "Line",
+                        "coordinates": [
+                            [
+                                3.5,
+                                24.6
+                            ],
+                            [
+                                33,
+                                44
+                            ]
+                        ]
+                    }
+                },
+                "range": "-"
+            },
+            "trips": {
+                "description": "Número de viajes diarios",
+                "ngsiType": "Number",
+                "dbType": "integer",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": 5,
+                "range": "-"
+            },
+            "intensity": {
+                "description": "Número de viajeros diarios",
+                "ngsiType": "Number",
+                "dbType": "integer",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": 5,
+                "range": "-"
+            },
+            "bias": {
+                "description": "Bias de la simulación",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            },
+            "status": {
+                "description": "Estado de la simulación",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            }
+        },
+        "flows": {
+            "etl_vectorize": {
+                "class": "FLOW_RAW",
+                "subscriptions": {
+                    "simulationroute_etl": {
+                        "documentation": "Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationRoute",
+                        "description": "SimulationRoute:JENKINS::etl",
+                        "status": "active",
+                        "subject": {
+                            "entities": [
+                                {
+                                    "idPattern": ".*",
+                                    "type": "SimulationRoute"
+                                }
+                            ],
+                            "condition": {
+                                "attrs": [
+                                    "TimeInstant"
+                                ]
+                            }
+                        },
+                        "notification": {
+                            "attrs": [
+                                "TimeInstant"
+                            ],
+                            "httpCustom": {
+                                "url": "JENKINS/etl_digitaltwin_vectorize/buildWithParameters",
+                                "headers": {
+                                    "Authorization": "Basic !!{JENKINS_BASIC_AUTH}"
+                                },
+                                "qs": {
+                                    "ETL_VECTORIZE_SIMULATION_TYPE": "${type}",
+                                    "ETL_VECTORIZE_SIMULATION_ID": "${id}"
+                                },
+                                "payload": null
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

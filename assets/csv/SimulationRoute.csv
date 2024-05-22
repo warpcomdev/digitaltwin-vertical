@@ -1,0 +1,2 @@
+entityID,entityType,TimeInstant<DateTime>,name<TextUnrestricted>,description<TextUnrestricted>,location<geo:json>,trips<Number>,intensity<Number>,bias<TextUnrestricted>,status<TextUnrestricted>
+tramo-100,SimulationRoute,2018-12-10T20:40:23,example text,example text,"{""type"": ""geo:json"", ""value"": {""type"": ""Line"", ""coordinates"": [[3.5, 24.6], [33, 44]]}}",5,5,example text,example text

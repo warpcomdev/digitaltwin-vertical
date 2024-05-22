@@ -7,6 +7,7 @@ all: \
 	models/Simulation.json \
 	models/SimulationParking.json \
 	models/SimulationTraffic.json \
+	models/SimulationRoute.json \
 	models/Stop.json \
 	models/OffStreetParking.json \
 	models/TrafficCongestion.json \

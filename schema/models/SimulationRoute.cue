@@ -4,14 +4,13 @@ import (
 	"github.com/telefonicasc/digitaltwin-vertical/schema/types"
 )
 
-SimulationTraffic: {
+SimulationRoute: {
 
-	#entityType: "SimulationTraffic"
+	#entityType:   "SimulationRoute"
+	#geometryType: "LineString"
 
-	description: """
-		Parámetros de simulación de corte o peatonalización de tramo
-		"""
-	exampleId: "tramo-100"
+	description: "Parámetros de simulación de nueva línea de transporte"
+	exampleId:   "tramo-100"
 
 	model: {
 		TimeInstant: {
@@ -28,14 +27,25 @@ SimulationTraffic: {
 
 		description: {
 			types.#TextUnrestricted
-			description: "Descripción de la somulación"
+			description: "Descripción de la simulación"
 			flows: []
 		}
 
 		location: {
-			types.#Json
-			description: "Bounding-box de la zona afectada"
-			example: [[0.1111, 0.2222], [0.3333, 0.4444]]
+			types.#Geometry[#geometryType]
+			description: "Geometría de la línea"
+			flows: []
+		}
+
+		trips: {
+			types.#Integer
+			description: "Número de viajes diarios"
+			flows: []
+		}
+
+		intensity: {
+			types.#Integer
+			description: "Número de viajeros diarios"
 			flows: []
 		}
 
@@ -78,15 +88,15 @@ SimulationTraffic: {
 		etl_vectorize: {
 			class: "FLOW_RAW"
 			subscriptions: {
-				SimulationParking_etl: {
-					documentation: "Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking"
-					description:   "SimulationParking:JENKINS::etl"
+				simulationroute_etl: {
+					documentation: "Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationRoute"
+					description:   "SimulationRoute:JENKINS::etl"
 					status:        "active"
 					subject: {
 						entities: [
 							{
 								idPattern: ".*"
-								type:      "SimulationParking"
+								type:      "SimulationRoute"
 							},
 						]
 						condition: {

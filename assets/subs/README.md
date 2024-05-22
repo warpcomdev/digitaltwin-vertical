@@ -161,6 +161,23 @@ Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: SimulationParking
 
+# Suscripción a SimulationRoute JENKINS
+
+Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationRoute
+
+- **Estado** : Activa
+- **Descripción**: SimulationRoute:JENKINS::etl
+- **Fecha y hora de expiración**: en blanco
+- **Segundos entre notificaciones**: en blanco
+- **Protocolo**: HTTP
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente al JENKINS en el entorno>/etl_digitaltwin_vectorize/buildWithParameters", "headers": {"Authorization": "Basic !!{JENKINS_BASIC_AUTH}"}, "qs": {"ETL_VECTORIZE_SIMULATION_TYPE": "${type}", "ETL_VECTORIZE_SIMULATION_ID": "${id}"}, "payload": null}`
+- **Formato de atributos**: normalized
+- **Atributos a notificar**: TimeInstant
+- **Condición**: TimeInstant
+- **Entidades**:
+  - ID: `.*` (con checkbox de patrón de búsqueda marcado)
+  - Type: SimulationRoute
+
 # Suscripción a SimulationTraffic JENKINS
 
 Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking
