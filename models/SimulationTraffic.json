@@ -1,0 +1,120 @@
+{
+    "SimulationTraffic": {
+        "description": "Parámetros de simulación de corte o peatonalización de tramo",
+        "exampleId": "tramo-100",
+        "model": {
+            "TimeInstant": {
+                "description": "Fecha de la simulacion",
+                "ngsiType": "DateTime",
+                "dbType": "timestamp with time zone NOT NULL",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "etl_vectorize"
+                ],
+                "example": "2018-12-10T20:40:23",
+                "range": "-"
+            },
+            "name": {
+                "description": "Nombre de la simulación",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            },
+            "description": {
+                "description": "Descripción de la somulación",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            },
+            "location": {
+                "description": "Bounding-box de la zona afectada",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "json",
+                "extra": "-",
+                "unit": "-",
+                "example": [
+                    [
+                        0.1111,
+                        0.2222
+                    ],
+                    [
+                        0.3333,
+                        0.4444
+                    ]
+                ],
+                "flows": [],
+                "range": "-"
+            },
+            "bias": {
+                "description": "Bias de la simulación",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            },
+            "status": {
+                "description": "Estado de la simulación",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            }
+        },
+        "flows": {
+            "etl_vectorize": {
+                "class": "FLOW_RAW",
+                "subscriptions": {
+                    "SimulationParking_etl": {
+                        "documentation": "Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking",
+                        "description": "SimulationParking:JENKINS::etl",
+                        "status": "active",
+                        "subject": {
+                            "entities": [
+                                {
+                                    "idPattern": ".*",
+                                    "type": "SimulationParking"
+                                }
+                            ],
+                            "condition": {
+                                "attrs": [
+                                    "TimeInstant"
+                                ]
+                            }
+                        },
+                        "notification": {
+                            "attrs": [
+                                "TimeInstant"
+                            ],
+                            "httpCustom": {
+                                "url": "JENKINS/etl_digitaltwin_vectorize/buildWithParameters",
+                                "headers": {
+                                    "Authorization": "Basic !!{JENKINS_BASIC_AUTH}"
+                                },
+                                "qs": {
+                                    "ETL_VECTORIZE_SIMULATION_TYPE": "${type}",
+                                    "ETL_VECTORIZE_SIMULATION_ID": "${id}"
+                                },
+                                "payload": null
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

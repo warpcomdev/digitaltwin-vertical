@@ -6,10 +6,12 @@ El vertical utiliza los siguientes modelos:
 4. [RouteSchedule](#RouteSchedule)
 5. [Simulation](#Simulation)
 6. [SimulationParking](#SimulationParking)
-7. [TrafficCongestion](#TrafficCongestion)
-8. [TrafficIntensity](#TrafficIntensity)
-9. [Trend](#Trend)
-10. [Zone](#Zone)
+7. [SimulationTraffic](#SimulationTraffic)
+8. [Stop](#Stop)
+9. [TrafficCongestion](#TrafficCongestion)
+10. [TrafficIntensity](#TrafficIntensity)
+11. [Trend](#Trend)
+12. [Zone](#Zone)
 
 # Entidades Principales
 
@@ -394,6 +396,103 @@ Ejemplo de `SimulationParking` (en NGSIv2):
         "value": "example text"
     },
     "status": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    }
+}
+```
+
+## SimulationTraffic
+
+Parámetros de simulación de corte o peatonalización de tramo
+
+| Atributo    | ngsiType         | dbType                            | description                      | example                                | extra | unit | range |
+| ----------- | ---------------- | --------------------------------- | -------------------------------- | -------------------------------------- | ----- | ---- | ----- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha de la simulacion           | `"2018-12-10T20:40:23"`                | -     | -    | -     |
+| name        | TextUnrestricted | text                              | Nombre de la simulación          | `"example text"`                       | -     | -    | -     |
+| description | TextUnrestricted | text                              | Descripción de la somulación     | `"example text"`                       | -     | -    | -     |
+| location    | TextUnrestricted | json                              | Bounding-box de la zona afectada | `[[0.1111, 0.2222], [0.3333, 0.4444]]` | -     | -    | -     |
+| bias        | TextUnrestricted | text                              | Bias de la simulación            | `"example text"`                       | -     | -    | -     |
+| status      | TextUnrestricted | text                              | Estado de la simulación          | `"example text"`                       | -     | -    | -     |
+
+Ejemplo de `SimulationTraffic` (en NGSIv2):
+
+```json
+{
+    "id": "tramo-100",
+    "type": "SimulationTraffic",
+    "TimeInstant": {
+        "type": "DateTime",
+        "value": "2018-12-10T20:40:23"
+    },
+    "name": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "description": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "location": {
+        "type": "TextUnrestricted",
+        "value": [
+            [
+                0.1111,
+                0.2222
+            ],
+            [
+                0.3333,
+                0.4444
+            ]
+        ]
+    },
+    "bias": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "status": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    }
+}
+```
+
+## Stop
+
+Parada - para la creacion de simulaciones de paradas de autobús
+
+| Atributo      | ngsiType         | dbType                            | description                             | example                                                                        | extra | unit | range |
+| ------------- | ---------------- | --------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------ | ----- | ---- | ----- |
+| TimeInstant   | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora de creación del objeto     | `"2018-12-10T20:40:23"`                                                        | -     | -    | -     |
+| name          | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora de creación de la parada   | `"2018-12-10T20:40:23"`                                                        | -     | -    | -     |
+| location      | geo:json         | geometry(Point)                   | Coordenadas dfe la parada               | `{"type": "geo:json", "value": {"type": "Point", "coordinates": [3.5, 24.6]}}` | -     | -    | -     |
+| refSimulation | TextUnrestricted | text                              | referencia a la entidad SimulationRoute | `"example text"`                                                               | -     | -    | -     |
+
+Ejemplo de `Stop` (en NGSIv2):
+
+```json
+{
+    "id": "Stop01",
+    "type": "Stop",
+    "TimeInstant": {
+        "type": "DateTime",
+        "value": "2018-12-10T20:40:23"
+    },
+    "name": {
+        "type": "DateTime",
+        "value": "2018-12-10T20:40:23"
+    },
+    "location": {
+        "type": "geo:json",
+        "value": {
+            "type": "Point",
+            "coordinates": [
+                3.5,
+                24.6
+            ]
+        }
+    },
+    "refSimulation": {
         "type": "TextUnrestricted",
         "value": "example text"
     }

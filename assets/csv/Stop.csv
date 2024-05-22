@@ -1,0 +1,2 @@
+entityID,entityType,TimeInstant<DateTime>,name<DateTime>,location<geo:json>,refSimulation<TextUnrestricted>
+Stop01,Stop,2018-12-10T20:40:23,2018-12-10T20:40:23,"{""type"": ""geo:json"", ""value"": {""type"": ""Point"", ""coordinates"": [3.5, 24.6]}}",example text

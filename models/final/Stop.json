@@ -1,0 +1,58 @@
+{
+  "Stop": {
+    "namespace": "dtwin",
+    "exampleId": "Stop01",
+    "description": "Parada - para la creacion de simulaciones de paradas de autobús",
+    "model": {
+      "TimeInstant": {
+        "description": "Fecha / Hora de creación del objeto",
+        "ngsiType": "DateTime",
+        "dbType": "timestamp with time zone NOT NULL",
+        "extra": "-",
+        "unit": "-",
+        "flows": [],
+        "example": "2018-12-10T20:40:23",
+        "range": "-"
+      },
+      "name": {
+        "description": "Fecha / Hora de creación de la parada",
+        "ngsiType": "DateTime",
+        "dbType": "timestamp with time zone NOT NULL",
+        "extra": "-",
+        "unit": "-",
+        "flows": [],
+        "example": "2018-12-10T20:40:23",
+        "range": "-"
+      },
+      "location": {
+        "description": "Coordenadas dfe la parada",
+        "ngsiType": "geo:json",
+        "dbType": "geometry(Point)",
+        "extra": "-",
+        "unit": "-",
+        "flows": [],
+        "example": {
+          "type": "geo:json",
+          "value": {
+            "type": "Point",
+            "coordinates": [
+              3.5,
+              24.6
+            ]
+          }
+        },
+        "range": "-"
+      },
+      "refSimulation": {
+        "description": "referencia a la entidad SimulationRoute",
+        "ngsiType": "TextUnrestricted",
+        "dbType": "text",
+        "extra": "-",
+        "unit": "-",
+        "flows": [],
+        "example": "example text",
+        "range": "-"
+      }
+    }
+  }
+}

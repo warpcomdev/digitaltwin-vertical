@@ -1,0 +1,2 @@
+entityID,entityType,TimeInstant<DateTime>,name<TextUnrestricted>,description<TextUnrestricted>,location<TextUnrestricted>,bias<TextUnrestricted>,status<TextUnrestricted>
+tramo-100,SimulationTraffic,2018-12-10T20:40:23,example text,example text,"[[0.1111, 0.2222], [0.3333, 0.4444]]",example text,example text
