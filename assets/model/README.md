@@ -5,10 +5,11 @@ El vertical utiliza los siguientes modelos:
 3. [RouteIntensity](#RouteIntensity)
 4. [RouteSchedule](#RouteSchedule)
 5. [Simulation](#Simulation)
-6. [TrafficCongestion](#TrafficCongestion)
-7. [TrafficIntensity](#TrafficIntensity)
-8. [Trend](#Trend)
-9. [Zone](#Zone)
+6. [SimulationParking](#SimulationParking)
+7. [TrafficCongestion](#TrafficCongestion)
+8. [TrafficIntensity](#TrafficIntensity)
+9. [Trend](#Trend)
+10. [Zone](#Zone)
 
 # Entidades Principales
 
@@ -336,6 +337,63 @@ Ejemplo de `Simulation` (en NGSIv2):
         "value": "example text"
     },
     "description": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    }
+}
+```
+
+## SimulationParking
+
+Parámetros de simulación de nuevo parking
+
+| Atributo    | ngsiType         | dbType                            | description                 | example                                                                        | extra | unit | range |
+| ----------- | ---------------- | --------------------------------- | --------------------------- | ------------------------------------------------------------------------------ | ----- | ---- | ----- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha de la simulacion      | `"2018-12-10T20:40:23"`                                                        | -     | -    | -     |
+| name        | TextUnrestricted | text                              | Nombre del nuevo parking    | `"example text"`                                                               | -     | -    | -     |
+| description | TextUnrestricted | text                              | Descripción del parking     | `"example text"`                                                               | -     | -    | -     |
+| location    | geo:json         | geometry(Point)                   | Ubicación de la entidad     | `{"type": "geo:json", "value": {"type": "Point", "coordinates": [3.5, 24.6]}}` | -     | -    | -     |
+| capacity    | Number           | integer                           | Capacidad del nuevo parking | `5`                                                                            | -     | -    | -     |
+| bias        | TextUnrestricted | text                              | Bias del nuevo parking      | `"example text"`                                                               | -     | -    | -     |
+| status      | TextUnrestricted | text                              | Estado de la simulación     | `"example text"`                                                               | -     | -    | -     |
+
+Ejemplo de `SimulationParking` (en NGSIv2):
+
+```json
+{
+    "id": "tramo-100",
+    "type": "SimulationParking",
+    "TimeInstant": {
+        "type": "DateTime",
+        "value": "2018-12-10T20:40:23"
+    },
+    "name": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "description": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "location": {
+        "type": "geo:json",
+        "value": {
+            "type": "Point",
+            "coordinates": [
+                3.5,
+                24.6
+            ]
+        }
+    },
+    "capacity": {
+        "type": "Number",
+        "value": 5
+    },
+    "bias": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "status": {
         "type": "TextUnrestricted",
         "value": "example text"
     }

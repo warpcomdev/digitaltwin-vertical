@@ -5,6 +5,7 @@ all: \
 	models/Trend.json \
 	models/Zone.json \
 	models/Simulation.json \
+	models/SimulationParking.json \
 	models/OffStreetParking.json \
 	models/TrafficCongestion.json \
 	models/TrafficIntensity.json \

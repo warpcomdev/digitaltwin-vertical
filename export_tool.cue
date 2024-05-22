@@ -50,7 +50,7 @@ command: export: {
 			filename: #filename
 			contents: json.Indent(json.Marshal([for _, sect in sections {
 				sect.input
-			}]),  "", "  ")
+			}]), "", "  ")
 		}
 	}
 }
