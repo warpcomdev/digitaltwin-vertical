@@ -112,6 +112,12 @@ class Broker:
             return (None, tuple())
         return (result[0]['id'], (result[0],))
 
+    def fetch(self, entitytype: str, entityid: typing.Optional[str], q: typing.Optional[str]) -> typing.Iterable[typing.Any]:
+        """Fetch simulation info"""
+        if self.cb is None:
+            return tuple()
+        return self.cb.get_entities(auth=self.auth, type=entitytype, id=entityid, q=q)
+
     def feedback(self, status: str, *args):
         if self.cb is None:
             return

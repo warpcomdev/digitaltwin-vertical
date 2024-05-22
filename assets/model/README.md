@@ -323,6 +323,7 @@ Instancia de simulación. Recopila la última fecha en la que se ha ejecutado un
 | ----------- | ---------------- | --------------------------------- | -------------------------------------------------------- | ----------------------- | ----- | ---- | ----- |
 | TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación | `"2018-12-10T20:40:23"` | -     | -    | -     |
 | sceneref    | TextUnrestricted | text                              | Escenario de simulación que ha creado la entidad         | `"example text"`        | -     | -    | -     |
+| name        | TextUnrestricted | text                              | Nombre de la simulación                                  | `"example text"`        | -     | -    | -     |
 | description | TextUnrestricted | text                              | Texto descriptivo de la simulación                       | `"example text"`        | -     | -    | -     |
 
 Ejemplo de `Simulation` (en NGSIv2):
@@ -336,6 +337,10 @@ Ejemplo de `Simulation` (en NGSIv2):
         "value": "2018-12-10T20:40:23"
     },
     "sceneref": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "name": {
         "type": "TextUnrestricted",
         "value": "example text"
     },

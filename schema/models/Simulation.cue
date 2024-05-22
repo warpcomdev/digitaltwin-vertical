@@ -28,6 +28,12 @@ Simulation: {
 			flows: ["lastdata"]
 		}
 
+		name: {
+			types.#TextUnrestricted
+			description: "Nombre de la simulación"
+			flows: ["lastdata"]
+		}
+
 		description: {
 			types.#TextUnrestricted
 			description: "Texto descriptivo de la simulación"

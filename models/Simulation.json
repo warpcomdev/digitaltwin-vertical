@@ -28,6 +28,18 @@
                 "example": "example text",
                 "range": "-"
             },
+            "name": {
+                "description": "Nombre de la simulación",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": "example text",
+                "range": "-"
+            },
             "description": {
                 "description": "Texto descriptivo de la simulación",
                 "ngsiType": "TextUnrestricted",
