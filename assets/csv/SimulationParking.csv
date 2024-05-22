@@ -1,0 +1,2 @@
+entityID,entityType,TimeInstant<DateTime>,name<TextUnrestricted>,description<TextUnrestricted>,location<geo:json>,capacity<Number>,bias<TextUnrestricted>,status<TextUnrestricted>
+tramo-100,SimulationParking,2018-12-10T20:40:23,example text,example text,"{""type"": ""geo:json"", ""value"": {""type"": ""Point"", ""coordinates"": [3.5, 24.6]}}",5,example text,example text

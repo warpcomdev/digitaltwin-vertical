@@ -1,0 +1,130 @@
+{
+    "SimulationParking": {
+        "description": "Parámetros de simulación de nuevo parking",
+        "exampleId": "tramo-100",
+        "model": {
+            "TimeInstant": {
+                "description": "Fecha de la simulacion",
+                "ngsiType": "DateTime",
+                "dbType": "timestamp with time zone NOT NULL",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "etl_vectorize"
+                ],
+                "example": "2018-12-10T20:40:23",
+                "range": "-"
+            },
+            "name": {
+                "description": "Nombre del nuevo parking",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            },
+            "description": {
+                "description": "Descripción del parking",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            },
+            "location": {
+                "description": "Ubicación de la entidad",
+                "ngsiType": "geo:json",
+                "dbType": "geometry(Point)",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": {
+                    "type": "geo:json",
+                    "value": {
+                        "type": "Point",
+                        "coordinates": [
+                            3.5,
+                            24.6
+                        ]
+                    }
+                },
+                "range": "-"
+            },
+            "capacity": {
+                "description": "Capacidad del nuevo parking",
+                "ngsiType": "Number",
+                "dbType": "integer",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": 5,
+                "range": "-"
+            },
+            "bias": {
+                "description": "Bias del nuevo parking",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            },
+            "status": {
+                "description": "Estado de la simulación",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [],
+                "example": "example text",
+                "range": "-"
+            }
+        },
+        "flows": {
+            "etl_vectorize": {
+                "class": "FLOW_RAW",
+                "subscriptions": {
+                    "SimulationParking_etl": {
+                        "documentation": "Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking",
+                        "description": "SimulationParking:JENKINS::etl",
+                        "status": "active",
+                        "subject": {
+                            "entities": [
+                                {
+                                    "idPattern": ".*",
+                                    "type": "SimulationParking"
+                                }
+                            ],
+                            "condition": {
+                                "attrs": [
+                                    "TimeInstant"
+                                ]
+                            }
+                        },
+                        "notification": {
+                            "attrs": [
+                                "TimeInstant"
+                            ],
+                            "httpCustom": {
+                                "url": "JENKINS/etl_digitaltwin_vectorize/buildWithParameters",
+                                "headers": {
+                                    "Authorization": "Basic !!{JENKINS_BASIC_AUTH}"
+                                },
+                                "qs": {
+                                    "ETL_VECTORIZE_SIMULATION_TYPE": "${type}",
+                                    "ETL_VECTORIZE_SIMULATION_ID": "${id}"
+                                },
+                                "payload": null
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

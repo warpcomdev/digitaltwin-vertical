@@ -1,0 +1,42 @@
+{
+  "SimulationParking": {
+    "etl_vectorize": {
+      "subscriptions": {
+        "SimulationParking_etl": {
+          "documentation": "Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking",
+          "description": "SimulationParking:JENKINS::etl",
+          "status": "active",
+          "subject": {
+            "entities": [
+              {
+                "idPattern": ".*",
+                "type": "SimulationParking"
+              }
+            ],
+            "condition": {
+              "attrs": [
+                "TimeInstant"
+              ]
+            }
+          },
+          "notification": {
+            "attrs": [
+              "TimeInstant"
+            ],
+            "httpCustom": {
+              "url": "JENKINS/etl_digitaltwin_vectorize/buildWithParameters",
+              "headers": {
+                "Authorization": "Basic !!{JENKINS_BASIC_AUTH}"
+              },
+              "qs": {
+                "ETL_VECTORIZE_SIMULATION_TYPE": "${type}",
+                "ETL_VECTORIZE_SIMULATION_ID": "${id}"
+              },
+              "payload": null
+            }
+          }
+        }
+      }
+    }
+  }
+}

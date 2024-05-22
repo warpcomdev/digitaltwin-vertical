@@ -45,6 +45,61 @@
             "lastdata": {
                 "class": "FLOW_LASTDATA",
                 "endpoint": "LASTDATA"
+            },
+            "etl_vectorize": {
+                "class": "FLOW_RAW",
+                "etls": {
+                    "sources": {
+                        "etl_digitaltwin_vectorize": {
+                            "documentation": "ETL cálculo de escenario",
+                            "path": "etls/vectorize"
+                        }
+                    },
+                    "jobs": {
+                        "etl_digitaltwin_vectorize": {
+                            "job": "etl_digitaltwin_vectorize",
+                            "etl": "etl_digitaltwin_vectorize",
+                            "envFrom": {
+                                "git": "telefonicasc/!!{projectName}-project",
+                                "tag": "!!{projectTag}",
+                                "path": "!!{environmentLabel}/etls/configuration/digitaltwin/vectorize",
+                                "files": [
+                                    "env.json"
+                                ]
+                            },
+                            "envFromSecrets": {
+                                "git": "telefonicasc/!!{projectName}-project",
+                                "tag": "!!{projectTag}",
+                                "path": "!!{environmentLabel}/etls/configuration/digitaltwin/vectorize",
+                                "files": [
+                                    "env.secrets.json"
+                                ]
+                            },
+                            "entrypoint": "vectorize.py",
+                            "buildParams": {
+                                "ETL_LOG_LEVEL": {
+                                    "type": "choice",
+                                    "choices": [
+                                        "INFO",
+                                        "DEBUG",
+                                        "ERROR"
+                                    ],
+                                    "description": "Por defecto el nivel de las trazas es de INFO"
+                                },
+                                "ETL_VECTORIZE_SIMULATION_TYPE": {
+                                    "type": "string",
+                                    "description": "Tipo de entidad que dispara la simulación",
+                                    "default": ""
+                                },
+                                "ETL_VECTORIZE_SIMULATION_ID": {
+                                    "type": "string",
+                                    "description": "ID de la entidad que dispara la simulación",
+                                    "default": ""
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
