@@ -12,10 +12,10 @@ CREATE OR REPLACE VIEW :target_schema.dtwin_routeintensity_sim AS
     right_table.name,
     right_table.location,
     right_table.zonelist,
-    right_table.forwardtrips,
-    right_table.returntrips,
     right_table.forwardstops,
     right_table.returnstops,
+    right_table.forwardtrips,
+    right_table.returntrips,
     right_table.intensity
   FROM
     :target_schema.dtwin_simulation_lastdata left_table

@@ -20,29 +20,30 @@ RouteSchedule: templates.#Twin & {
 	exampleId: "C1"
 
 	model: {
+		forwardStops: {
+			types.#Integer
+			description: "Número de paradas en el trayecto de ida"
+			flows: ["historic", "lastdata"]
+		}
+
+		returnStops: {
+			types.#Integer
+			description: "Número de paradas en el trayecto de vuelta"
+			flows: ["historic", "lastdata"]
+		}
 
 		forwardTrips: {
 			types.#Double
 			description: "Número de trayectos de ida"
 			flows: ["historic"]
+			#metric: true
 		}
 
 		returnTrips: {
 			types.#Double
 			description: "Número de trayectos de vuelta"
 			flows: ["historic"]
-		}
-
-		forwardStops: {
-			types.#Integer
-			description: "Número de paradas en el trayecto de ida"
-			flows: ["historic"]
-		}
-
-		returnStops: {
-			types.#Integer
-			description: "Número de paradas en el trayecto de vuelta"
-			flows: ["historic"]
+			#metric: true
 		}
 	}
 }

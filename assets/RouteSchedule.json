@@ -52,10 +52,10 @@
               "trend",
               "dayType",
               "hour",
-              "forwardTrips",
-              "returnTrips",
               "forwardStops",
-              "returnStops"
+              "returnStops",
+              "forwardTrips",
+              "returnTrips"
             ],
             "httpCustom": {
               "url": "HISTORIC",
@@ -114,8 +114,11 @@
             "attrs": [
               "TimeInstant",
               "sourceRef",
+              "sceneRef",
               "name",
               "zoneList",
+              "forwardStops",
+              "returnStops",
               "location",
               "alterationType"
             ],

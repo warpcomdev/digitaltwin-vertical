@@ -7,10 +7,20 @@
       "dayType",
       "hour"
     ],
+    "fixedProps": {
+      "capacity": {
+        "scale": 0,
+        "integer": false
+      }
+    },
     "metrics": {
       "occupationPercent": {
-        "percent": true
+        "scale": 100,
+        "integer": false
       }
+    },
+    "calcs": {
+      "occupation": "capacity * occupationPercent / 100.0"
     },
     "hasHour": true,
     "hasMinute": false,
@@ -27,11 +37,31 @@
       "trend",
       "dayType"
     ],
-    "metrics": {
-      "intensity": {
-        "percent": false
+    "fixedProps": {
+      "forwardStops": {
+        "scale": 0,
+        "integer": true
+      },
+      "returnStops": {
+        "scale": 0,
+        "integer": true
       }
     },
+    "metrics": {
+      "forwardTrips": {
+        "scale": 0,
+        "integer": false
+      },
+      "returnTrips": {
+        "scale": 0,
+        "integer": false
+      },
+      "intensity": {
+        "scale": 0,
+        "integer": false
+      }
+    },
+    "calcs": {},
     "hasHour": false,
     "hasMinute": false,
     "multiZone": true,
@@ -48,7 +78,27 @@
       "dayType",
       "hour"
     ],
-    "metrics": {},
+    "fixedProps": {
+      "forwardStops": {
+        "scale": 0,
+        "integer": true
+      },
+      "returnStops": {
+        "scale": 0,
+        "integer": true
+      }
+    },
+    "metrics": {
+      "forwardTrips": {
+        "scale": 0,
+        "integer": false
+      },
+      "returnTrips": {
+        "scale": 0,
+        "integer": false
+      }
+    },
+    "calcs": {},
     "hasHour": true,
     "hasMinute": false,
     "multiZone": true,
@@ -66,11 +116,14 @@
       "hour",
       "minute"
     ],
+    "fixedProps": {},
     "metrics": {
       "congestion": {
-        "percent": true
+        "scale": 1,
+        "integer": false
       }
     },
+    "calcs": {},
     "hasHour": true,
     "hasMinute": true,
     "multiZone": false,
@@ -87,11 +140,14 @@
       "dayType",
       "hour"
     ],
+    "fixedProps": {},
     "metrics": {
       "intensity": {
-        "percent": false
+        "scale": 0,
+        "integer": false
       }
     },
+    "calcs": {},
     "hasHour": true,
     "hasMinute": false,
     "multiZone": false,

@@ -25,7 +25,7 @@ TrafficCongestion: templates.#Twin & {
 			example:     0.33
 			flows: ["historic"]
 			#metric: true
-			#probability: true
+			#scale: 1
 		}
 	}
 

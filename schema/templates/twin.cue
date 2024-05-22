@@ -28,7 +28,8 @@ import (
 	model: [string]: {
 		types.#ModelAttribute
 		#metric: bool | *false
-		#probability: bool | *false
+		#scale: int | *0
+		#calc: string | *""
 	}
 
 	model: {
@@ -55,10 +56,10 @@ import (
 			types.#Text
 			description: """
 				ID del escenario de simulación.
-				Identifica la simulación realizada. El valor "NA"
+				Identifica la simulación realizada. El valor "N/A"
 				indica que se trata de una vista identidad.
 				"""
-			flows: ["historic"]
+			flows: ["historic", "lastdata"]
 		}
 
 		trend: {
@@ -271,10 +272,20 @@ import (
 	#export: meta: all: {
 		input: {
 			dimensions: ["sourceRef"] + #unique
+			fixedProps: {for _k, _v in self.model if !_v.#metric && list.Contains(_v.flows, "lastdata") && list.Contains(_v.flows, "historic") && !list.Contains(dimensions, _k) && _k != "TimeInstant" {
+				(_k): {
+					scale: _v.#scale
+					integer: _v.dbType == "integer"
+				}
+			}}
 			metrics: {for _k, _v in self.model if _v.#metric {
 				(_k): {
-					percent: _v.#probability
+					scale: _v.#scale
+					integer: _v.dbType == "integer"
 				}
+			}}
+			calcs: {for _k, _v in self.model if !_v.#metric && _v.#calc != "" {
+				(_k): _v.#calc
 			}}
 			hasHour:   #hasHour
 			hasMinute: #hasMinute

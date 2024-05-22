@@ -111,6 +111,7 @@
             "attrs": [
               "TimeInstant",
               "sourceRef",
+              "sceneRef",
               "name",
               "zone",
               "location",

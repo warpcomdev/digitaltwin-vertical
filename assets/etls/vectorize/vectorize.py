@@ -8,13 +8,14 @@ import typing
 import logging
 from datetime import datetime
 from dataclasses import dataclass
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 from collections import defaultdict
 from sqlalchemy import create_engine, event, text, URL, Engine, TextClause
 import pandas as pd
 import numpy as np
 import torch
-
+import psutil
+import tc_etl_lib as tc
 
 # -------------------------------------
 # Config management section
@@ -66,6 +67,66 @@ def psql_engine() -> typing.Iterator[Engine]:
         yield engine
     finally:
         engine.dispose()
+
+@dataclass
+class Broker:
+    """
+    Encapsulates the communication to the context broker
+    """
+    auth: typing.Optional[tc.authManager] = None
+    cb: typing.Optional[tc.cbManager] = None
+    sim_type: typing.Optional[str] = None
+    sim_id: typing.Optional[str] = None
+
+    @staticmethod
+    def create() -> 'Broker':
+        sim_type = os.getenv("ETL_VECTORIZE_SIMULATION_TYPE")
+        sim_id = os.getenv("ETL_VECTORIZE_SIMULATION_ID")
+        if not sim_type or not sim_id:
+            # This is just for dry-run purposes
+            return Broker(auth=None, cb=None, sim_type=None, sim_id=None)
+        auth = tc.auth.authManager(
+            endpoint=os.getenv('ETL_VECTORIZE_ENDPOINT_KEYSTONE'),
+            service=os.getenv('ETL_VECTORIZE_SERVICE'),
+            subservice_cfg=os.getenv('ETL_VECTORIZE_SUBSERVICE'),
+            user=os.getenv('ETL_VECTORIZE_USER'),
+            password=os.getenv('ETL_VECTORIZE_PASSWORD'),
+        )
+        cb = tc.cb.cbManager(
+            endpoint_cb=os.getenv('ETL_VECTORIZE_ENDPOINT_CB'),
+            sleep_send_batch=int(os.getenv('ETL_VECTORIZE_SLEEP_SEND_BATCH', '5')),
+            timeout=int(os.getenv('ETL_VECTORIZE_TIMEOUT', '10')),
+            post_retry_connect=float(os.getenv('ETL_VECTORIZE_POST_RETRY_CONNECT', '3')),
+            post_retry_backoff_factor=float(os.getenv('ETL_VECTORIZE_POST_RETRY_BACKOFF_FACTOR', '2')),
+            batch_size=int(os.getenv('ETL_VECTORIZE_BATCH_SIZE', '50')),
+        )
+        return Broker(auth=auth, cb=cb, sim_type=sim_type, sim_id=sim_id)
+
+    def fetch_sim(self, fallback: typing.Any=None) -> typing.Tuple[typing.Optional[str], typing.Iterable[typing.Any]]:
+        """Fetch simulation info"""
+        if self.cb is None:
+            return ("test", (fallback,))
+        result = self.cb.get_entities_page(auth=self.auth, limit=1, type=self.sim_type, id=self.sim_id)
+        if not result:
+            return (None, tuple())
+        return (result[0]['id'], (result[0],))
+
+    def feedback(self, status: str, *args):
+        if self.cb is None:
+            return
+        self.cb.send_batch(auth=self.auth, entities=[{
+            'id': self.sim_id,
+            'type': self.sim_type,
+            'status': {
+                'type': 'TextUnrestricted',
+                'value': status % args
+            }
+        }])
+
+@contextmanager
+def orion_engine() -> typing.Iterator[Broker]:
+    """Yields a postgres connection to the database"""
+    yield Broker.create()
 
 # -------------------------------------
 # Data bearing types
@@ -163,7 +224,8 @@ class Metric:
     """
     Describes properties of a metric
     """
-    probability: bool
+    scale: int
+    integer: bool
 
 @dataclass
 class Metadata:
@@ -172,6 +234,8 @@ class Metadata:
     """
     dimensions: typing.List[str]
     metrics: typing.Mapping[str, Metric]
+    fixedProps: typing.Dict[str, Metric]
+    calcs: typing.Dict[str, str]
     hasHour: bool
     hasMinute: bool
     multiZone: bool
@@ -183,20 +247,27 @@ class Metadata:
     @staticmethod
     def fromdict(kw: typing.Dict[str, typing.Any]) -> 'Metadata':
         """Read Metadata from a json object"""
-        # Convert metrics to dict of `Metric` objects
-        metrics = {k: Metric(v) for k, v in kw.pop("metrics", {}).items()}
-        # Sort metrics in a stable order, and lowercase them
-        # to match database column names
-        kw['metrics'] = { k.lower(): metrics[k] for k in sorted(metrics.keys()) }
+        for metric_cols in ("fixedProps", "metrics"):
+            # Convert metrics to dict of `Metric` objects
+            props = {k: Metric(**v) for k, v in kw.pop(metric_cols, {}).items()}
+            # Sort metrics in a stable order, and lowercase them
+            # to match database column names
+            kw[metric_cols] = { k.lower(): props[k] for k in sorted(props.keys()) }
         return Metadata(**kw)
 
     def dim_df(self, sceneref: str) -> TextClause:
         """Build SQL query to determine all entity IDs in the model"""
         if self.multiZone:
-            columns = "sourceref, zone, zonelist, ST_AsGeoJSON(location) AS location"
+            columns = ["sourceref", "zone", "zonelist", "ST_AsGeoJSON(location) AS location"]
         else:
-            columns = "sourceref, zone, Array[zone]::json[] as zonelist, ST_AsGeoJSON(location) AS location"
-        return text(f"SELECT {columns} FROM {self.dimsTableName} ORDER BY sourceref ASC")
+            columns = ["sourceref", "zone", "Array[zone]::json[] as zonelist", "ST_AsGeoJSON(location) AS location"]
+        # This is needed so integer rows with null values are
+        # preserved as integer instead of objects.
+        # See https://stackoverflow.com/questions/37796916/pandas-read-sql-integer-became-float
+        columns.extend(c.lower() if not v.integer
+            else f"COALESCE({c.lower()}, 0)::integer AS {c.lower()}"
+            for c, v in self.fixedProps.items())
+        return text(f"SELECT {','.join(columns)} FROM {self.dimsTableName} ORDER BY sourceref ASC")
 
     def dim_data(self, engine: Engine, sceneref: str) -> pd.DataFrame:
         """Builds a dataframe of all entity IDs in the model"""
@@ -211,7 +282,18 @@ class Metadata:
 
     def scene_query(self) -> TextClause:
         """Build SQL query for a given sceneref and timeinstant"""
-        columns = ", ".join(c.lower() for c in (self.dimensions + list(self.metrics.keys())))
+        metrics = {
+            k: Metric(scale=0, integer=False)
+            for k in self.dimensions
+        }
+        metrics.update(self.metrics)
+        # This is needed so integer rows with null values are
+        # preserved as integer instead of objects.
+        # See https://stackoverflow.com/questions/37796916/pandas-read-sql-integer-became-float
+        columns = ", ".join(c.lower() if not v.integer
+            else f"COALESCE({c.lower()}, 0)::integer AS {c.lower()}"
+            for c, v in metrics.items()
+        )
         return text(f"""
         SELECT {columns}
         FROM {self.dataTableName}
@@ -271,6 +353,7 @@ class Metadata:
         Turns a regularized dataset into a typed vector, i.e.:
 
         - Sorts entries so that they match the order in fixed_df.
+        - Makes sure the dataset has a column per dimension.
         - Fills in missing metrics for hours or minutes, with NaN.
         - Scales metrics so that the vector information is within range [0, 1]
         
@@ -318,9 +401,10 @@ class Metadata:
             # We will normalize intensities to [0, 1] so that
             # they are within the range of the vector.
             for metric, props in self.metrics.items():
-                if props.probability:
-                    continue
-                max_val = float(dataset[metric].max())
+                if props.scale:
+                    max_val = float(props.scale)
+                else:
+                    max_val = float(dataset[metric].max())
                 if max_val > 0:
                     # Keep track of the scale factor to be able to de-scale later.
                     typed_vector.scale[metric] = max_val
@@ -334,66 +418,93 @@ class Metadata:
             )
         return typed_vector
 
-    def extract(self, props: VectorProperties, vector: pd.Series) -> TypedVector:
+    def unpivot(self, typed_vector: TypedVector) -> pd.Series:
         """
-        Extract the part corresponding to this entitytype from
-        a pd.Series that has a multi-index with the following
-        values:
+        Unpivots a typed vector into a pd.Series that has a multi-index
+        with the following values:
         (entitytype, metric, sourceref, hour, minute)
         """
-        typed_series = vector.loc[props.entityType]
+        vector_list = []
+        # Add entityType to the dataframe. If the entity type has
+        # no metrics, add a "fake" metric "_none_" with value np.NaN.
+        typed_vector.df['entitytype'] = self.entityType
+        metric_keys = list(self.metrics.keys())
         if not self.metrics:
-            # If the entity type has no metrics, we still need
-            # to identify the proper sourcerefs, because
-            # the simulation might have added or removed
-            # entities.
-            # In order to do so, we remove the next level from
-            # the multiindex, which in regular conditions would
-            # be the metric name; and rename the columns
-            # to just "_none_".
-            df = typed_series.loc['_none_'].to_frame()
-            df.columns = ['_none_']
-        else:
-            # Extract the rows corresponding to each metric
-            metrics = []
-            for metric in self.metrics.keys():
-                # Get measures for the metric
-                metric_series = typed_series.loc[metric]
-                metric_offset = props.offset[metric]
-                metric_scale = props.scale[metric]
-                metric_series = metric_series * metric_scale + metric_offset
-                # Rename the value column to the metric
-                metric_series.name = metric
-                metrics.append(metric_series)
-            # concatenate all metrics as columns
-            df = pd.concat(metrics, axis=1)
-        # Drop NaN and 0, but make sure we return at least one row per
-        # sourceref, otherwise the sourceref will not be present in
-        # the simulation dashboard.
-        groups = []
-        for sourceref, group in df.groupby(level='sourceref'):
-            # This filters out the rows where all values are 0
-            group = group.fillna(0)
-            group = group.loc[~(group == 0).all(axis=1)]
-            if group.empty:
-                original_group = df.loc[sourceref]
-                group = original_group.head(1)
-            # turn "hour" and "minute" into columns
-            group = group.reset_index()
-            # overwrite other columns
-            group['entitytype'] = props.entityType
-            group['sourceref'] = sourceref
-            groups.append(group)
-        # concatenate all groups
-        df = pd.concat(groups, axis=0).reset_index()
-        if '_none_' in df.columns:
-            df.drop('_none_', axis=1, inplace=True)
-        return TypedVector(
-            entityType=props.entityType,
-            offset=props.offset,
-            scale=props.scale,
-            df=df
-        )
+            typed_vector.df['_none_'] = np.NaN
+            metric_keys = ['_none_']
+        # Turn the dataframe into a series with a
+        # multilevel index. The index will have the following keys:
+        # (entitytype, metric, sourceref, hour, minute)
+        for metric in metric_keys:
+            slim_df = typed_vector.df[['entitytype', 'sourceref', 'hour', 'minute', metric]].copy()
+            slim_df['metric'] = metric
+            slim_df = slim_df.set_index(['entitytype', 'metric', 'sourceref', 'hour', 'minute'])
+            vector_list.append(slim_df.squeeze())
+        return pd.concat(vector_list, axis=0)
+
+    def to_sql(self, engine: Engine, sceneref: str, dataset: Dataset, dims_df:typing.Optional[pd.DataFrame]=None, dryrun:bool=False):
+                # if we get a dims_df, try to join the
+        # resulting dataframe to the dim_df to pick
+        # up the staticProps
+        df = dataset.df
+        df['entityid'] = df['sourceref']
+        df['fiwareservicepath'] = '/digitaltwin'
+        df['recvtime'] = dataset.timeinstant
+        df['timeinstant'] = dataset.timeinstant
+        df['sceneref'] = sceneref
+        df['trend'] = dataset.trend
+        df['daytype'] = dataset.daytype
+        if dims_df is not None and self.fixedProps:
+            df = pd.merge(
+                df,
+                dims_df[['sourceref']+list(self.fixedProps.keys())],
+                how='left',
+                on=['sourceref']
+            )
+        with engine.begin() as conn:
+            kw = {
+                "sceneref": sceneref,
+                "timeinstant": dataset.timeinstant,
+                "trend": dataset.trend,
+                "daytype": dataset.daytype,
+            }
+            # Clear the simulation table to avoid pkey duplicates
+            statement = text(
+                f"""
+                DELETE FROM {self.dataTableName}
+                WHERE sceneref=:sceneref
+                AND timeinstant=:timeinstant
+                AND trend=:trend
+                AND daytype=:daytype
+                """).bindparams(**kw)
+            with conn.execute(statement) as curr:
+                curr.close()
+            logging.info("saving %d rows to the database for entityType %s, dimensions %s", len(df), self.entityType, kw)
+            df.to_sql(
+                self.dataTableName,
+                con=conn,
+                if_exists='append',
+                index=False,
+                chunksize=1000
+            )
+            # Do the calculations, if needed
+            expressions = []
+            if self.calcs:
+                for col, expr in self.calcs.items():
+                    expressions.append(f"{col} = {expr}")
+            if expressions:
+                statement = text(f"""
+                    UPDATE {self.dataTableName} SET {','.join(expressions)} 
+                    WHERE sceneref=:sceneref
+                    AND timeinstant=:timeinstant
+                    AND trend=:trend
+                    AND daytype=:daytype
+                    """).bindparams(**kw)
+                with conn.execute(statement) as curr:
+                    curr.close()
+            if dryrun:
+                conn.rollback()
+                
 
 # -------------------------------------
 # Schemaless types
@@ -406,7 +517,8 @@ class Vector:
 
     Contains both the complete series of metrics that make up
     the inpt of the encoder, as well as the properties of all
-    TypedVectors that went into the series.
+    TypedVectors that went into the series, particularly
+    the scales and offsets.
 
     The index of the series is expected to be a tuple
     (entitytype, metric, sourceRef, hour, minute).
@@ -439,23 +551,81 @@ class Vector:
                 offset=typed_vector.offset,
                 scale=typed_vector.scale
             )
-            # Add entityType to the dataframe. If the entity type has
-            # no metrics, add a "fake" metric "_none_" with value np.NaN.
-            typed_vector.df['entitytype'] = entityType
-            metric_keys = list(meta.metrics.keys())
-            if not meta.metrics:
-                typed_vector.df['_none_'] = np.NaN
-                metric_keys = ['_none_']
-            # Turn the dataframe into a series with a
-            # multilevel index. The index will have the following keys:
-            # (entitytype, metric, sourceref, hour, minute)
-            for metric in metric_keys:
-                slim_df = typed_vector.df[['entitytype', 'sourceref', 'hour', 'minute', metric]].copy()
-                slim_df['metric'] = metric
-                slim_df = slim_df.set_index(['entitytype', 'metric', 'sourceref', 'hour', 'minute'])
-                vector_list.append(slim_df.squeeze())
-            vector = pd.concat(vector_list, axis=0)
+            vector_list.append(meta.unpivot(typed_vector=typed_vector))
+        vector = pd.concat(vector_list, axis=0)
         return Vector(properties=props, df=vector.astype(np.float64))
+
+    def pivot(self, meta: Metadata, props: DatasetProperties, series: pd.Series) -> Dataset:
+        """
+        Pivots a pd.Series that has a multi-index with
+        (entitytype, metric, sourceref, hour, minute)
+        into a dataset for the given entitytupe.
+
+        It will filter the rows for this particular entitytype, and
+        then pivot the metrics so that each metric becomes a column.
+        """
+        typed_props = self.properties[meta.entityType]
+        typed_series: pd.Series = series.loc[meta.entityType]
+        metrics: typing.List[pd.Series] = []
+        if meta.metrics:
+            # Extract the rows corresponding to each metric
+            for metric in meta.metrics.keys():
+                # Get measures for the metric
+                metric_series = typed_series.loc[metric]
+                metric_offset = typed_props.offset[metric]
+                metric_scale = typed_props.scale[metric]
+                metric_series = metric_series * metric_scale + metric_offset
+                # Rename the value column to the metric
+                metric_series.name = metric
+                metrics.append(metric_series)
+        else:
+            # If the entity type has no metrics, we still need
+            # to identify the proper sourcerefs, because
+            # the simulation might have added or removed
+            # entities.
+            # In order to do so, we remove the next level from
+            # the multiindex, which in regular conditions would
+            # be the metric name; and rename the columns
+            # to just "_none_".
+            metric_series = typed_series.loc['_none_']
+            metric_series.name = '_none_'
+            metrics.append(metric_series)
+        # concatenate all metrics as columns
+        df: pd.DataFrame = pd.concat(metrics, axis=1)
+        # Drop NaN and 0, but make sure we return at least one row per
+        # sourceref, otherwise the sourceref will not be present in
+        # the simulation dashboard.
+        groups = []
+        for sourceref, group in df.groupby(level='sourceref'):
+            # This filters out the rows where all values are 0
+            group = group.fillna(0)
+            group = group.loc[~(group == 0).all(axis=1)]
+            if group.empty:
+                original_group = typing.cast(pd.DataFrame, df.loc[typing.cast(str, sourceref)])
+                group = original_group.head(1)
+            # turn "hour" and "minute" into columns
+            group = group.reset_index()
+            # overwrite other columns
+            group['entitytype'] = meta.entityType
+            group['sourceref'] = sourceref
+            groups.append(group)
+        # concatenate all groups
+        df = pd.concat(groups, axis=0).reset_index(drop=True)
+        if '_none_' in df.columns:
+            df.drop('_none_', axis=1, inplace=True)
+        # Hour and minute only belong in the dataset if the
+        # input has those dimensions
+        if not meta.hasHour:
+            df = df.drop('hour', axis=1)
+        if not meta.hasMinute:
+            df = df.drop('minute', axis=1)
+        return Dataset(
+            timeinstant=props.timeinstant,
+            trend=props.trend,
+            daytype=props.daytype,
+            entityType=meta.entityType,
+            df=df
+        )
 
 @dataclass
 class HiddenLayer:
@@ -463,33 +633,197 @@ class HiddenLayer:
     Represents the hidden layer of the autoencoder
     """
     private: torch.Tensor
+    # This index describes the order in which the information is
+    # layed out in the hidden layer.
+    # Currently, it has the following levels:
+    # (entitytype, metric, sourceref, hour, minute)
+    index: pd.MultiIndex
+
+@dataclass
+class DecoderLayer:
+    """
+    Represents the decoder layer of the autoencoder
+    """
+    # This series contains the index for the output vector.
+    # The series is indexed by (entityType, metric, sourceRef, hour, minute)
+    index: pd.MultiIndex
+    # This is the decoding weights and biases
+    weights: torch.Tensor
+    biases: torch.Tensor
+
+    def index_matching(self, entitytype: str, sourceref: str) -> pd.Series:
+        """
+        Find the numerical indexes in the vector_index that match the
+        provided entitytype and sourceref
+        """
+        # Assign to each index the numerical position in the vector
+        vector_offsets = pd.Series(range(0, len(self.index)), index=self.index, dtype=np.int32)
+        # Filter out only those rows that match the filter
+        matches = vector_offsets.loc[entitytype, :, sourceref, :, :]
+        return vector_offsets[vector_offsets.isin(matches)]
+
+    def index_except(self, entitytype: str, sourceref: str) -> pd.Series:
+        """
+        Find the numerical positions in the index that do not match the
+        entitytype and sourceref given.
+        """
+        vector_offsets = pd.Series(range(0, len(self.index)), index=self.index, dtype=np.int32)
+        matching = self.index_matching(entitytype=entitytype, sourceref=sourceref)
+        return vector_offsets[vector_offsets.index.difference(matching.index)]
+
+    def reductor_matrix(self, positions: pd.Series):
+        """
+        Generates a reductor tensor that when applied to the weights
+        or biases tensors, returns a new tensor with only the rows
+        that correspond to the provided positions.
+
+        Specifically,
+
+        - positions is a pd.Series of len M containing integer locations
+          to select from the output vector, from 0 to N (N = len(vector))
+        - The returned tensor is a M x N matrix
+        - Multiplying the returned tensor (M x N) times the weights matrix
+          (M x N) returns a new matrix (M x N) that contains only the
+          selected rows of the original matrix.
+        - Multiplying the returned tensor (M x N) times the biases vector
+          (N x 1) returns a new vector (M x 1) that contains only the
+          selected rows of the original vector.
+        """
+        reductor_pos = torch.tensor([range(len(positions)), positions.array])
+        reductor_val = torch.ones(len(positions))
+        return torch.sparse_coo_tensor(reductor_pos, reductor_val, (len(positions), len(self.index)))
+
+    def drop_entity(self, entitytype: str, sourceref: str):
+        """
+        Updates the decoder so that it will disregard the results
+        for the provided sourceref and entitytype
+        """
+        # Get the indexes that don't contain the removed entity
+        preserved = self.index_except(entitytype, sourceref)
+        reductor = self.reductor_matrix(preserved)
+        # Build a new bias ensor with only these rows
+        self.weights = torch.matmul(reductor, self.weights)
+        self.biases = torch.matmul(reductor , self.biases)
+        # Leave only non matching items in the index
+        self.index = typing.cast(pd.MultiIndex, preserved.index)
+
+    def decode(self, hidden: torch.Tensor) -> pd.Series:
+        """
+        Run the decoder over the given hidden state tensor, and return the corresponding vector
+        """
+        result = torch.matmul(self.weights, hidden)
+        result = result + self.biases
+        return pd.Series(result.numpy(), index=self.index)
 
 class Decoder:
     """
     This class decodes the hidden layer to an output vector.
     """
     meta_map: typing.Mapping[str, Metadata]
-    # This series contains the index for the output vector.
-    # This series is indexed by (entityType, metric, sourceRef, hour, minute)
-    vector_index: pd.MultiIndex
-    # This is the decoding weights and biases
-    weights: torch.Tensor
-    biases: torch.Tensor
+    main_layer: DecoderLayer
+    # If we add sourcerefs to the decoder, we must
+    # append new rows to the output vector.
+    #
+    # However, we can not do it by manipulating the
+    # weights and biases tensors of the main layer,
+    # because the weights are currently sparse, but the
+    # new sourcerefs will tipically use dense weights.
+    #
+    # So we keep a list of additional layers
+    add_layers: typing.List[DecoderLayer]
 
     def __init__(self, meta_map: typing.Mapping[str, Metadata], index: pd.MultiIndex):
         """Builds the decoder with the given metadata and props"""
         self.meta_map = meta_map
-        self.vector_index = index
-        self.weights = torch.eye(len(index))
-        self.biases = torch.zeros(len(index))
+        ref_length = len(index)
+        # Indices of the non-zero elements (diagonal elements)
+        diagonal = torch.tensor([range(ref_length), range(ref_length)])
+        # Values of the non-zero elements
+        values = torch.ones(ref_length)
+        # Create the sparse tensor
+        self.main_layer = DecoderLayer(
+            index=index,
+            weights=torch.sparse_coo_tensor(diagonal, values, (ref_length, ref_length)),
+            biases=torch.zeros(ref_length)
+        )
+        self.add_layers = []
 
     def decode(self, props: DatasetProperties, hidden: HiddenLayer) -> pd.Series:
         """
         Run the decoder over the given hidden state tensor, and return the corresponding vector
         """
-        result = torch.matmul(self.weights, hidden.private)
-        result = result + self.biases
-        return pd.Series(result.numpy(), index=self.vector_index)
+        private = torch.nan_to_num(hidden.private)
+        layers = [self.main_layer]
+        layers.extend(self.add_layers)
+        return pd.concat((layer.decode(private) for layer in layers), axis=0)
+
+    def drop_sourceref(self, entitytype: str, sourceref: str):
+        """
+        Updates the decoder so that it will disregard the results
+        for the provided sourceref and entitytype
+        """
+        self.main_layer.drop_entity(entitytype=entitytype, sourceref=sourceref)
+
+    def add_layer(self, layer: DecoderLayer):
+        """
+        Updates the decoder so that it will include the results
+        for the provided index. Index includes
+        (entitytype, metric, sourceref, hour and minute)
+
+        The dimensions of the weights must be A x B, where:
+
+        - A: length of the index.
+        - B: number of rows of the hidden layer, which is also the
+          width of the current weight matrix.
+
+        The dimensions of the bias must be A x 1
+        """
+        # Let's calculate a reference vector for the entity type,
+        # so we can make sure the sizes match
+        # Compare sizes for matrix multiplication
+        assert(layer.weights.shape[0] == len(layer.index))
+        assert(layer.weights.shape[1] == self.main_layer.weights.shape[1])
+        assert(layer.biases.shape[0] == len(layer.index))
+        # We will add the data for the new entity
+        # right to the end of the current index
+        self.add_layers.append(layer)
+
+    def averaged_layer(self, entitytype: str, sourceref: str) -> DecoderLayer:
+        """
+        Generates the index, weights and biases that have to be appended
+        to the decoder for it to produce results for a new sourceref of the
+        given entitytype.
+        
+        The weights and biases for this sourceref will be averaged
+        from the weights and biases of all other sourcerefs of the same
+        entitytype.
+        """
+        # Build a typed vector for the entitytype and sourceref
+        dims_df = pd.DataFrame([sourceref], columns=['sourceref'])
+        meta = self.meta_map[entitytype]
+        typed_vector = meta.normalize(fixed_df=meta.fixed_df(dims_df), dataset=None)
+        added_vector = meta.unpivot(typed_vector=typed_vector)
+        # Index of rows in the bias and wights
+        vector_offsets = pd.Series(
+            range(0, len(self.main_layer.index)),
+            index=self.main_layer.index,
+            dtype=np.int32
+        )
+        weights = []
+        biases = []
+        for idx, _ in added_vector.items():
+            # Find other rows for the same sourceref, hour and minute
+            entitytype, metric, sourceref, hour, minute = typing.cast(tuple, idx)
+            related = vector_offsets.loc[entitytype, metric, :, hour, minute]
+            reductor = self.main_layer.reductor_matrix(related)
+            # Append the mean of the reduced weigths and biases
+            weights.append(torch.mean(torch.matmul(reductor, self.main_layer.weights).to_dense(), 0, keepdim=True))
+            biases.append(torch.mean(torch.matmul(reductor , self.main_layer.biases).to_dense(), 0, keepdim=True))
+        return DecoderLayer(
+            index=typing.cast(pd.MultiIndex, added_vector.index),
+            weights=torch.cat(weights, dim=0),
+            biases=torch.cat(biases)
+        )
 
 def read_meta(path: pathlib.Path) -> typing.Dict[str, Metadata]:
     """Reads metadata from json file"""
@@ -499,7 +833,7 @@ def read_meta(path: pathlib.Path) -> typing.Dict[str, Metadata]:
     return {k: meta[k] for k in sorted(meta.keys())}
 
 def last_simulation(engine: Engine, sceneref: str) -> datetime:
-    """Retrieeve the date of the latest simulation for the given sceneref"""
+    """Retrieve the date of the latest simulation for the given sceneref"""
     query = text(f"""
     SELECT timeinstant
     FROM dtwin_simulation_lastdata
@@ -511,14 +845,67 @@ def last_simulation(engine: Engine, sceneref: str) -> datetime:
     print(df)
     return df.iloc[0]['timeinstant']
 
-def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
+class Simulation(typing.Protocol):
+    """
+    Protocol to represent the simulation API
+    """
+
+    def prepare_decoder(self, decoder: Decoder):
+        """
+        Prepare the decoder for simulation
+
+        Might update the decoder layers to add or remove
+        entities from the decoder output
+        """
+        pass
+
+    def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
+        """
+        Updates the hidden layer to reflect the impact
+        of the simulation in the city status
+        """
+        return hidden
+
+    def vet_output(self, result: pd.Series) -> pd.Series:
+        """
+        Vets the output of the simulation,
+        potentially changing values that deviate
+        from reasonable expections (e.g. percent > 100%)
+        """
+        return result
+
+def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker, dryrun: bool=False):
     """
     Vectorizes the data in the database
     """
+    broker.feedback("initiating simulation")
+    fallback_sim = {
+        'type': 'SimulationParking',
+        'id': 'test',
+        'TimeInstant': { 'type': 'DateTime', 'value': '2024-05-21T00:00:00Z' },
+        'name': { 'type': 'Text', 'value': 'Simulated Parking 01' },
+        'description': { 'type': 'Text', 'value': 'Fallback simulation' },
+        'capacity': { 'type': 'Number', 'value': 1000 },
+        'location': {
+            'type': 'geo:json',
+            'value': {
+                'type': 'Point',
+                'coordinates': [ -122.4194, 37.7749 ]
+            }
+        },
+        'impact': { 'type': 'Text', 'value': '5' },
+    }
+    sceneref, sim_entities = broker.fetch_sim(fallback_sim)
+    if not sceneref:
+        broker.feedback("No simulation found")
+        return
+    start = datetime.now()
+
     # Get the latest identity we are working with
     identityref = os.getenv("ETL_VECTORIZE_IDENTITYREF", "N/A")
     last_sim_date = last_simulation(engine=engine, sceneref=identityref)
     logging.info("Latest simulation for sceneref %s: %s", identityref, last_sim_date)
+    broker.feedback("latest simulation is %s", last_sim_date)
 
     # Group all data by combinations of trend and daytype, and then by entityType
     scene_by_type: typing.Dict[typing.Tuple[str, str], typing.Dict[str, Dataset]] = defaultdict(dict)
@@ -526,7 +913,8 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
     fixed_df_map: typing.Dict[str, pd.DataFrame] = {}
     for entityType, meta in metadata.items():
         entity_dims = meta.dim_data(engine=engine, sceneref=identityref)
-        logging.info("Dims shape for scene %s, entity type %s: %s", identityref, entityType, entity_dims.shape)
+        logging.info("Dims shape for scene %s, timeinstant %s, entity type %s: %s", identityref, last_sim_date, entityType, entity_dims.shape)
+        broker.feedback("entity type %s, dims shape %s", entityType, entity_dims.shape)
         dims_df_map[entityType] = entity_dims
         fixed_df_map[entityType] = meta.fixed_df(entity_dims)
         for scene_data in meta.scene_data(engine=engine, sceneref=identityref, timeinstant=last_sim_date):
@@ -538,59 +926,133 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine):
                 entityType,
                 scene_data.df.shape
             )
+            broker.feedback("entity type %s, dataset shape %s", entityType, scene_data.df.shape)
             scene_by_type[(scene_data.trend, scene_data.daytype)][entityType] = scene_data
 
-    # Crete the decoder
+    # Create handlers for all the sims
+    sim_handlers = list(create_simulators(meta_map=metadata, dims_df_map=dims_df_map, sims=sim_entities))
+
+    # Create the decoder. Apply all simulation modifications.
     empty_vector = Vector.create(meta_map=metadata, fixed_df_map=fixed_df_map, data_map={})
     decoder = Decoder(meta_map=metadata, index=typing.cast(pd.MultiIndex, empty_vector.df.index))
+    for handler in sim_handlers:
+        handler.prepare_decoder(decoder=decoder)
 
     # Iterate over all combinations of trend and daytype
+    sim_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     for scene_index, entities in scene_by_type.items():
         trend, daytype = scene_index
-        # Turn typed data into vector
+
+        # Collect all simulation data into a vector
         vector = Vector.create(meta_map=metadata, fixed_df_map=fixed_df_map, data_map=entities)
         logging.info("Vector shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
-            identityref,
+            sceneref,
             last_sim_date,
             trend,
             daytype,
             vector.df.shape
         )
+        broker.feedback("vector shape %s", vector.df.shape)
 
         # Write input vector for debugging purposes
-        input_vector_path = f"input_vector_{trend}_{daytype}.csv"
-        logging.info("Saving input vector to %s", input_vector_path)
-        vector.df.to_csv(input_vector_path)
-        print("** DTYPE: ", vector.df.dtype)
-
-        # Encode, perturb and decode
+        # input_vector_path = f"input_vector_{trend}_{daytype}.csv"
+        # logging.info("Saving input vector to %s", input_vector_path)
+        # vector.df.to_csv(input_vector_path)
+        
+        # Encode and update hidden state
         hidden = encode_vector(metadata=meta, props=scene_data, vector=vector)
-        simulated_state = perturb_hidden(metadata=meta, props=scene_data, hidden=hidden)
-        simulated_result = decoder.decode(props=scene_data, hidden=simulated_state)
+        logging.info("Hidden shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
+            sceneref,
+            last_sim_date,
+            trend,
+            daytype,
+            hidden.private.shape
+        )
+        broker.feedback("hidden shape %s", hidden.private.shape)
+
+        dataset_props = DatasetProperties(
+            timeinstant=sim_date,
+            trend=trend,
+            daytype=daytype
+        )
+        for handler in sim_handlers:
+            hidden = handler.perturb_hidden(props=dataset_props, hidden=hidden)
+        logging.info("Simulated state shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
+            sceneref,
+            last_sim_date,
+            trend,
+            daytype,
+            hidden.private.shape
+        )
+        broker.feedback("simulated state shape %s", hidden.private.shape)
+
+        # Decode the hidden status and vet the results
+        result = decoder.decode(props=scene_data, hidden=hidden)
+        for handler in sim_handlers:
+            result = handler.vet_output(result)
+        logging.info("Simulated result shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
+            sceneref,
+            last_sim_date,
+            trend,
+            daytype,
+            result.shape
+        )
+        broker.feedback("simulated result shape %s", result.shape)
 
         # Write output vector for debugging purposes
-        output_vector_path = f"output_vector_{trend}_{daytype}.csv"
-        logging.info("Saving output vector to %s", output_vector_path)
-        simulated_result.to_csv(output_vector_path)
+        # output_vector_path = f"output_vector_{trend}_{daytype}.csv"
+        # logging.info("Saving output vector to %s", output_vector_path)
+        # simulated_result.to_csv(output_vector_path)
 
-        # Split into TypedVectors
+        # Split into Datasets to save back to the database
         for entityType, meta in metadata.items():
-            typed_vector = meta.extract(props=vector.properties[entityType], vector=simulated_result)
+            dataset = vector.pivot(meta=metadata[entityType], props=dataset_props, series=result)
+            broker.feedback("entity type %s, dataset shape %s", entityType, dataset.df.shape)
+            dims_df = dims_df_map[entityType]
+            meta.to_sql(engine=engine, sceneref=sceneref, dataset=dataset, dims_df=dims_df, dryrun=dryrun)
+
+    stop = datetime.now()
+    logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
+    broker.feedback(f"done in {stop - start}")
 
 def encode_vector(metadata: Metadata, props: DatasetProperties, vector: Vector) -> HiddenLayer:
     """
     Run the encoder over the given vector, and return the corresponding hidden states
     """
-    return HiddenLayer(private=torch.Tensor(vector.df.to_numpy()))
+    return HiddenLayer(
+        private=torch.Tensor(vector.df.to_numpy()),
+        index=typing.cast(pd.MultiIndex, vector.df.index)
+    )
 
-def perturb_hidden(metadata: Metadata, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
-    """
-    Run the simulation, given the hidden state vector.
+def create_simulators(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], sims: typing.Iterable[typing.Any]) -> typing.Iterable[Simulation]:
+    for sim in sims:
+        if sim['type'] == 'SimulationParking':
+            logging.info("SimulationParking")
+            yield SimParking(meta_map=meta_map, dims_df_map=dims_df_map, sim=sim)
+        elif sim['type'] == 'SimulationTraffic':
+            logging.warn("SimulationTraffic not implemented")
+        elif sim['type'] == 'SimulationRoute':
+            logging.warn("SimulationRoute not implemented")
+        else:
+            logging.warn("unrecognized simulation info: %s", sim)
+        return None
 
-    Returns a series with the results vector, scaled. The results should be
-    unscaled before saving.
-    """
-    return hidden
+class SimParking:
+    """Simulation for parking creation"""
+
+    def __init__(self, meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Dict[str, pd.DataFrame], sim: typing.Any):
+        self.meta_map = meta_map
+        self.dims_df_map = dims_df_map
+        self.sim = sim
+
+    def prepare_decoder(self, decoder: Decoder):
+        pass
+
+    def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
+        return hidden
+
+    def vet_output(self, result: pd.Series) -> pd.Series:
+        return result
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -604,6 +1066,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", action="append", nargs=1)
     parser.add_argument("-m", "--meta", default="meta.json")
+    parser.add_argument("-d", "--dryrun", action="store_true", default=False)
     args = parser.parse_args()
 
     for config in args.config:
@@ -615,8 +1078,10 @@ if __name__ == "__main__":
     logging.info("Metadata order:\n%s", ", ".join(meta.keys()))
 
     try:
-        with psql_engine() as engine:
-            main(meta, engine)
+        with ExitStack() as stack:
+            engine = stack.enter_context(psql_engine())
+            broker = stack.enter_context(orion_engine())
+            main(meta, engine, broker, args.dryrun)
         logging.info("ETL OK")
     except Exception as err:
         logging.exception(msg="Error during vectorization", stack_info=True)

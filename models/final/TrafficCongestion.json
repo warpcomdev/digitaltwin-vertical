@@ -31,13 +31,14 @@
         "range": "-"
       },
       "sceneRef": {
-        "description": "ID del escenario de simulación.\nIdentifica la simulación realizada. El valor \"NA\"\nindica que se trata de una vista identidad.",
+        "description": "ID del escenario de simulación.\nIdentifica la simulación realizada. El valor \"N/A\"\nindica que se trata de una vista identidad.",
         "ngsiType": "TextUnrestricted",
         "dbType": "text",
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic"
+          "historic",
+          "lastdata"
         ],
         "example": "example text",
         "range": "-"
@@ -81,7 +82,7 @@
       "hour": {
         "description": "Hora del día a la que corresponde la medida",
         "ngsiType": "Number",
-        "dbType": "int",
+        "dbType": "integer",
         "extra": "-",
         "unit": "-",
         "flows": [
@@ -93,7 +94,7 @@
       "minute": {
         "description": "Intervalo de 10 minutos al que corresponde la medida",
         "ngsiType": "Number",
-        "dbType": "int",
+        "dbType": "integer",
         "extra": "-",
         "unit": "-",
         "flows": [

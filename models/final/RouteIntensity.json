@@ -31,13 +31,14 @@
         "range": "-"
       },
       "sceneRef": {
-        "description": "ID del escenario de simulación.\nIdentifica la simulación realizada. El valor \"NA\"\nindica que se trata de una vista identidad.",
+        "description": "ID del escenario de simulación.\nIdentifica la simulación realizada. El valor \"N/A\"\nindica que se trata de una vista identidad.",
         "ngsiType": "TextUnrestricted",
         "dbType": "text",
         "extra": "-",
         "unit": "-",
         "flows": [
-          "historic"
+          "historic",
+          "lastdata"
         ],
         "example": "example text",
         "range": "-"
@@ -93,6 +94,32 @@
         ],
         "range": "-"
       },
+      "forwardStops": {
+        "description": "Número de paradas en el trayecto de ida",
+        "ngsiType": "Number",
+        "dbType": "integer",
+        "extra": "-",
+        "unit": "-",
+        "flows": [
+          "historic",
+          "lastdata"
+        ],
+        "example": 5,
+        "range": "-"
+      },
+      "returnStops": {
+        "description": "Número de paradas en el trayecto de vuelta",
+        "ngsiType": "Number",
+        "dbType": "integer",
+        "extra": "-",
+        "unit": "-",
+        "flows": [
+          "historic",
+          "lastdata"
+        ],
+        "example": 5,
+        "range": "-"
+      },
       "forwardTrips": {
         "description": "Número de trayectos de ida",
         "ngsiType": "Number",
@@ -115,30 +142,6 @@
           "historic"
         ],
         "example": 5.0,
-        "range": "-"
-      },
-      "forwardStops": {
-        "description": "Número de paradas en el trayecto de ida",
-        "ngsiType": "Number",
-        "dbType": "int",
-        "extra": "-",
-        "unit": "-",
-        "flows": [
-          "historic"
-        ],
-        "example": 5,
-        "range": "-"
-      },
-      "returnStops": {
-        "description": "Número de paradas en el trayecto de vuelta",
-        "ngsiType": "Number",
-        "dbType": "int",
-        "extra": "-",
-        "unit": "-",
-        "flows": [
-          "historic"
-        ],
-        "example": 5,
         "range": "-"
       },
       "location": {
@@ -245,10 +248,10 @@
             "sceneref",
             "trend",
             "daytype",
-            "forwardtrips",
-            "returntrips",
             "forwardstops",
             "returnstops",
+            "forwardtrips",
+            "returntrips",
             "intensity"
           ],
           "attrJoinOn": [
@@ -315,10 +318,10 @@
               "name",
               "location",
               "zonelist",
-              "forwardtrips",
-              "returntrips",
               "forwardstops",
               "returnstops",
+              "forwardtrips",
+              "returntrips",
               "intensity"
             ],
             "attrJoinOn": [

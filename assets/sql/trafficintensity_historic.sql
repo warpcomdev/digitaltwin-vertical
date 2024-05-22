@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_trafficintensity (
   sceneref text,
   trend text,
   daytype text,
-  hour int,
+  hour integer,
   intensity double precision,
   -- Common model attributes
   entityid text,

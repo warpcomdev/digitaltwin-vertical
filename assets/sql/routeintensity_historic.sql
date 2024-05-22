@@ -4,10 +4,10 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_routeintensity (
   sceneref text,
   trend text,
   daytype text,
+  forwardstops integer,
+  returnstops integer,
   forwardtrips double precision,
   returntrips double precision,
-  forwardstops int,
-  returnstops int,
   intensity double precision,
   -- Common model attributes
   entityid text,

@@ -50,10 +50,10 @@
               "sceneRef",
               "trend",
               "dayType",
-              "forwardTrips",
-              "returnTrips",
               "forwardStops",
               "returnStops",
+              "forwardTrips",
+              "returnTrips",
               "intensity"
             ],
             "httpCustom": {
@@ -113,8 +113,11 @@
             "attrs": [
               "TimeInstant",
               "sourceRef",
+              "sceneRef",
               "name",
               "zoneList",
+              "forwardStops",
+              "returnStops",
               "location",
               "alterationType"
             ],

@@ -113,8 +113,10 @@
             "attrs": [
               "TimeInstant",
               "sourceRef",
+              "sceneRef",
               "name",
               "zone",
+              "capacity",
               "location",
               "alterationType"
             ],

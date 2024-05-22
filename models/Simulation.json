@@ -2,7 +2,7 @@
     "Simulation": {
         "description": "Instancia de simulación. Recopila la última fecha en la que se ha ejecutado\nuna simulación, o cálculo de vista identidad.",
         "namespace": "dtwin",
-        "exampleId": "NA",
+        "exampleId": "N/A",
         "model": {
             "TimeInstant": {
                 "description": "Fecha / Hora del cálculo de vista identidad o simulación",
@@ -14,6 +14,18 @@
                     "lastdata"
                 ],
                 "example": "2018-12-10T20:40:23",
+                "range": "-"
+            },
+            "sceneref": {
+                "description": "Escenario de simulación que ha creado la entidad",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
+                "extra": "-",
+                "unit": "-",
+                "flows": [
+                    "lastdata"
+                ],
+                "example": "example text",
                 "range": "-"
             },
             "description": {

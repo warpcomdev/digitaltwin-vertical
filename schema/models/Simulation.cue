@@ -11,7 +11,7 @@ Simulation: {
 		una simulación, o cálculo de vista identidad.
 		"""
 	namespace: "dtwin"
-	exampleId: "NA"
+	exampleId: "N/A"
 
 	model: [string]: {types.#ModelAttribute}
 	model: {
@@ -19,6 +19,12 @@ Simulation: {
 		TimeInstant: {
 			types.#DateTime
 			description: "Fecha / Hora del cálculo de vista identidad o simulación"
+			flows: ["lastdata"]
+		}
+
+		sceneref: {
+			types.#Text
+			description: "Escenario de simulación que ha creado la entidad"
 			flows: ["lastdata"]
 		}
 

@@ -22,7 +22,7 @@ OffStreetParking: templates.#Twin & {
 		capacity: {
 			types.#Double
 			description: "Número de plazas totales en el parking"
-			flows: ["historic"]
+			flows: ["historic", "lastdata"]
 		}
 
 		occupationPercent: {
@@ -32,13 +32,14 @@ OffStreetParking: templates.#Twin & {
 			example:     23.45
 			flows: ["historic"]
 			#metric: true
-			#probability: true
+			#scale: 100
 		}
 
 		occupation: {
 			types.#Double
 			description: "Número de plazas ocupadas"
 			flows: ["historic"]
+			#calc: "capacity * occupationPercent / 100.0"
 		}
 	}
 
