@@ -12,5 +12,5 @@
             "coordinates": [ -0.378034, 39.455219 ]
         }
     },
-    "impact": { "type": "Text", "value": "5" }
+    "bias": { "type": "Text", "value": "5" }
 }

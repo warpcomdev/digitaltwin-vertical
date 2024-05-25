@@ -1,15 +1,11 @@
 {
-    "type": "SimulationTraffic",
-    "id": "traffic_test",
+    "type": "SimulationRoute",
+    "id": "route_test",
     "TimeInstant": { "type": "DateTime", "value": "2024-05-21T00:00:00Z" },
     "name": { "type": "Text", "value": "Simulated Parking 01" },
     "description": { "type": "Text", "value": "Fallback simulation" },
     "category": { "type": "Text", "value": "pedestrian" },
-    "location": {
-        "type": "json",
-        "value": [
-            [-0.370395, 39.465291], [-0.355031, 39.454424]
-        ]
-    },
+    "trips": {"type":"Number", "value": 100},
+    "intensity": {"type":"Number", "value": 1000},
     "bias": { "type": "Text", "value": "5" }
 }

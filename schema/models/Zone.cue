@@ -41,7 +41,7 @@ Zone: {
 		}
 
 		location: {
-			types.#Geometry.Polygon
+			types.#Geometry.Geometry
 			description: "Polígono que delimita la zona"
 			flows: ["lastdata"]
 		}

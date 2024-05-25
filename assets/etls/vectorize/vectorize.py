@@ -16,7 +16,7 @@ import logging
 from datetime import datetime
 from dataclasses import dataclass
 from contextlib import contextmanager, ExitStack
-from collections import defaultdict
+from collections import defaultdict, Counter
 from sqlalchemy import create_engine, event, text, URL, Engine, TextClause
 import pandas as pd
 import numpy as np
@@ -119,11 +119,14 @@ class Broker:
         )
         return Broker(auth=auth, cb=cb)
 
-    def fetch(self, entitytype: str, entityid: typing.Optional[str], q: typing.Optional[str]) -> typing.Iterable[typing.Any]:
+    def fetch(self, entitytype: str, entityid: typing.Optional[str]=None, q: typing.Optional[str]=None) -> typing.Sequence[typing.Any]:
         """Fetch general entity info"""
         if self.cb is None:
             return tuple()
-        return self.cb.get_entities(auth=self.auth, type=entitytype, id=entityid, q=q)
+        result = self.cb.get_entities(auth=self.auth, type=entitytype, id=entityid, q=q)
+        if result:
+            return result
+        return tuple()
 
     def fetch_one(self, entitytype: str, entityid: typing.Optional[str]) -> typing.Any:
         """Fetch general entity info"""
@@ -139,6 +142,12 @@ class Broker:
         if not self.cb:
             return
         self.cb.send_batch(auth=self.auth, entities=entities)
+
+    def delete(self, entitytype: str, q: str):
+        """Remove entities from CB"""
+        if not self.cb:
+            return
+        self.cb.delete_entities(auth=self.auth, type=entitytype, q=q)
 
 @contextmanager
 def orion_engine() -> typing.Iterator[Broker]:
@@ -1196,9 +1205,6 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
     sim_handlers = list(create_simulators(reference=reference, sim_props=sim_props))
     start = datetime.now()
 
-    # Update the simulation table from the ETL
-    sim_props.to_sql(engine=engine, dryrun=dryrun)
-
     # Get the latest identity we are working with
     identityref = os.getenv("ETL_VECTORIZE_IDENTITYREF", "N/A")
     last_identity_date = Reference.last_simulation(engine=engine, sceneref=identityref)
@@ -1225,7 +1231,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
             )
             scene_by_type[(scene_data.trend, scene_data.daytype)][entityType] = scene_data
 
-    # Prepare the engine for all the dims
+    # Handle adding entities to the scene
     logging.info("Creating simulation entities for %s", sim_props.signature())
     for handler in sim_handlers:
         handler.add_entities(engine=engine, broker=broker, dims_df_map=dims_df_map, dryrun=dryrun)
@@ -1237,10 +1243,13 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
         distance_df_path = "distance_df.csv"
         reference.distance_df.to_csv(distance_df_path)
 
-    # Calculate distances across all points.
+    # Handle removing entities from the scene
     logging.info("Removing simulation entities for %s", sim_props.signature())
     for handler in sim_handlers:
         handler.drop_entities(engine=engine, broker=broker, dims_df_map=dims_df_map, dryrun=dryrun)
+
+    # Update the simulation table from the ETL
+    sim_props.to_sql(engine=engine, dryrun=dryrun)
 
     # Create the decoder. Apply all simulation modifications.
     logging.info("Preparing decoder for %s", sim_props.signature())
@@ -1482,26 +1491,128 @@ class SimRoute:
 
     def __init__(self, reference: Reference, sim_props: SimulationProperties, sim: typing.Any):
         self.reference = reference
+        self.sim_props = sim_props
         self.sceneref = sim_props.sceneref
         self.sim_date = sim_props.sim_date
-        self.sim = sim
+        self.trips = sim.get('trips', {}).get('value', 100)
+        self.intensity = sim.get('intensity', {}).get('value', 1000)
+        self.bias = int(sim.get('bias', {}).get('value', 5))
+        self.sim_id = sim['id']
+        self.sim_type = sim['type']
         self.sourceref = f"{self.sceneref}_{self.sim_date.strftime('%Y_%m_%d')}"
 
     def add_entities(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
-        # Create a parking for the sim
-        pass
+        # Rename stops and associate to the proper sourceref
+        stops = broker.fetch(entitytype='Stop', q="refSimulation:none")
+        if not stops:
+            raise ValueError("No stops found for %s", self.sceneref)
+        # Sort the stops in order of creation
+        sorted_stops = sorted(stops, key=lambda s: s['TimeInstant']['value'])
+        sorted_ids = [stop['id'] for stop in sorted_stops]
+        logging.info("SimRoute: sorted stops = %s", sorted_ids)
+        # Get the zone of each stop
+        coords: typing.List[typing.Any] = []
+        zones: typing.List[str] = []
+        for stop in sorted_stops:
+            stop['id'] = f"{self.sourceref}_{stop['id']}"
+            stop['refSimulation'] = {
+                'type': 'Text',
+                'value': self.sim_id
+            }
+            coord = stop['location']['value']
+            coords.append(coord)
+            zones.append(self.reference.match_zone(point=geometry.shape(coord), default="1"))
+        location = {
+            'type': 'MultiLineString',
+            'coordinates': [[c['coordinates'] for c in coords]]
+        }
+        self.sim_props.location = location
+        # Update the simulation entity with the line
+        if not dryrun:
+            logging.info("SimRoute: Updating geometry in entity %s of type %s", self.sim_id, self.sim_type)
+            broker.push(entities=[{
+                'id': self.sim_id,
+                'type': self.sim_type,
+                'location': {
+                    'type': 'geo:json',
+                    'value': location
+                }
+            }])
+            # Remove stops
+            logging.info("SimRoute: pushing %d stops", len(stops))
+            broker.push(stops)
+            logging.info("SimRoute: removing stops with refSimulation: none")
+            broker.delete("Stop", q="refSimulation:none")
+        # Count zones and get most repeated
+        zone_count = sorted(((count, zone) for zone, count in Counter(zones).items()), reverse=True)
+        zone = zone_count[0][1]
+        zonelist = list(frozenset(zones))
+        # Add new Routes to the dims_df_map
+        forwardstops = len(coords)
+        returnstops = len(coords)
+        new_route = {
+            'sourceref': self.sourceref,
+            'zone': zone,
+            'zonelist': zonelist,
+            'location': geometry.shape(location),
+            'forwardstops': forwardstops,
+            'returnstops': returnstops,
+        }
+        logging.info("SimRoute: new route = %s", new_route)
+        with engine.begin() as conn:
+            for entitytype in ('RouteSchedule', 'RouteIntensity'):
+                dims_df = dims_df_map[entitytype]
+                assert(frozenset(dims_df.columns).issuperset(new_route.keys()))
+                dims_df_map[entitytype] = pd.concat([
+                    dims_df,
+                    pd.DataFrame([tuple(new_route.values())], columns=tuple(new_route.keys()))
+                ], axis=0)
+                # Save the new parking to the database
+                metadata = self.reference.metadata[entitytype]
+                statement = text(f"DELETE FROM {metadata.dimsTableName} WHERE sourceref = :sourceref")
+                with conn.execute(statement.bindparams(sourceref=self.sourceref)) as cursor:
+                    cursor.close()
+                statement = text(f"""
+                    INSERT INTO {metadata.dimsTableName} (
+                        timeinstant, entityid, entitytype, recvtime, fiwareservicepath,
+                        sourceref, sceneref, zone, zonelist, location,
+                        name, forwardstops, returnstops
+                    ) VALUES (
+                        :timeinstant, :entityid, :entitytype, :recvtime,  :fiwareservicepath,
+                        :sourceref, :sceneref, :zone, CAST(:zonelist AS jsonb), ST_GeomFromGeoJSON(:location),
+                        :name, :forwardstops, :returnstops
+                    )
+                    """)
+                bound = statement.bindparams(
+                    timeinstant=self.sim_date,
+                    entityid=self.sourceref,
+                    entitytype=entitytype,
+                    recvtime=self.sim_date,
+                    fiwareservicepath="/digitaltwin",
+                    sourceref=self.sourceref,
+                    sceneref=self.sceneref,
+                    zone=zone,
+                    zonelist=json.dumps(zonelist),
+                    location=json.dumps(location),
+                    name=self.sourceref,
+                    forwardstops=forwardstops,
+                    returnstops=returnstops,
+                )
+                with conn.execute(bound) as cursor:
+                    cursor.close()
+            if dryrun:
+                conn.rollback()
 
     def drop_entities(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
-        # Create a parking for the sim
         pass
 
     def prepare_decoder(self, decoder: Decoder):
         # Add a new layer for the new parking, averaging the
         # values of the other parkings
-        pass
+        decoder.add_layer(decoder.averaged_layer("RouteIntensity", self.sourceref))
+        decoder.add_layer(decoder.averaged_layer("RouteSchedule", self.sourceref))
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
-        # Produce an impact on other things close to the parking
         return hidden
 
     def vet_output(self, result: pd.Series) -> pd.Series:
