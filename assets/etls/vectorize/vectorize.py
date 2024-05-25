@@ -281,7 +281,7 @@ class Metadata:
             kw[metric_cols] = { k.lower(): props[k] for k in sorted(props.keys()) }
         return Metadata(**kw)
 
-    def dim_df(self, sceneref: str) -> TextClause:
+    def dim_query(self, sceneref: str) -> TextClause:
         """Build SQL query to determine all entity IDs in the model"""
         if self.multiZone:
             columns = ["sourceref", "zone", "zonelist", "ST_AsGeoJSON(location) AS location"]
@@ -300,7 +300,7 @@ class Metadata:
             ORDER BY sourceref ASC
             """)
 
-    def dim_data(self, engine: Engine, sceneref: str) -> pd.DataFrame:
+    def get_dim_df(self, engine: Engine, sceneref: str) -> pd.DataFrame:
         """
         Builds a dataframe of all entity IDs in the model.
     
@@ -311,7 +311,7 @@ class Metadata:
         The location is converted to shapely geometry
         before returning.
         """
-        query = self.dim_df(sceneref).bindparams(sceneref=sceneref)
+        query = self.dim_query(sceneref).bindparams(sceneref=sceneref)
         df = pd.read_sql(query, engine)
         df['entitytype'] = self.entityType
         # Make sure to sort by entity id. The order of columns
@@ -343,21 +343,13 @@ class Metadata:
         AND timeinstant = :timeinstant
         """)
 
-    def scene_data(self, engine: Engine, sceneref: str, timeinstant: datetime) -> typing.Iterable[Dataset]:
-        """Retrieves datasets for all trends and daytypes of the scene"""
+    def get_scene_df(self, engine: Engine, sceneref: str, timeinstant: datetime) -> pd.DataFrame:
+        """Retrieves a DataFrame with all data for the scene and timeinstant"""
         query = self.scene_query()
         df = pd.read_sql(query.bindparams(sceneref=sceneref, timeinstant=timeinstant), engine)
-        # Separate by trend and dayType
-        for group, data in df.groupby(['trend', 'daytype']):
-            yield Dataset(
-                timeinstant=timeinstant,
-                trend=group[0],
-                daytype=group[1],
-                entityType=self.entityType,
-                df=data
-            )
+        return df
 
-    def fixed_df(self, dims_df: pd.DataFrame) -> pd.DataFrame:
+    def get_fixed_df(self, dims_df: pd.DataFrame) -> pd.DataFrame:
         """
         Generate a placeholder dataset with a fixed size. The generated
         dataset will have the columns:
@@ -611,6 +603,22 @@ class Reference:
     # Distance between each pair of entities in the
     # simulation.
     distance_df: typing.Optional[pd.DataFrame] = None
+
+    # Data for the dimensionse. Maps each entitytype
+    # to all the information available for that entitytype
+    # in the lastdata tables for the identity simulation
+    #
+    # The columns in the dataframe are those
+    # returned by Metadata.dims_df
+    dims_df_map: typing.Optional[typing.Dict[str, pd.DataFrame]] = None
+
+    # Data for the scene. Maps each entitytype
+    # to all the information available for that entitytype
+    # in the identity simulation.
+    #
+    # The columns in the dataframe are those
+    # returned by Metadata.scene_data
+    data_df_map: typing.Optional[typing.Mapping[str, pd.DataFrame]] = None
 
     @staticmethod
     def create(meta_path: pathlib.Path, engine: Engine) -> 'Reference':
@@ -962,7 +970,10 @@ class Decoder:
 
     def decode(self, props: DatasetProperties, hidden: HiddenLayer) -> pd.Series:
         """
-        Run the decoder over the given hidden state tensor, and return the corresponding vector
+        Run the decoder over the given hidden state tensor, and return the corresponding vector.
+        The index of the returned series has thefollowing levels:
+
+        ('entitytype', 'metric', 'sourceref', 'hour', 'minute')
         """
         private = torch.nan_to_num(hidden.private)
         layers = [self.main_layer]
@@ -1013,7 +1024,7 @@ class Decoder:
         # Build a typed vector for the entitytype and sourceref
         dims_df = pd.DataFrame([sourceref], columns=['sourceref'])
         meta = self.meta_map[entitytype]
-        typed_vector = meta.normalize(fixed_df=meta.fixed_df(dims_df), dataset=None)
+        typed_vector = meta.normalize(fixed_df=meta.get_fixed_df(dims_df), dataset=None)
         added_vector = meta.unpivot(typed_vector=typed_vector)
         assert(added_vector.index.names == ["entitytype", "metric", "sourceref", "hour", "minute"])
         # Index of rows in the bias and wights
@@ -1044,6 +1055,10 @@ class SimulationProperties:
     Contains properties related to the simulation:
     sceneref, timestamp, name, etc.
     """
+    # ID y Fecha de la vista identidad en la que se basa esta simulacion
+    identityref: str
+    identity_date: datetime
+    # Datos de la simulacion
     sceneref: str
     entitytype: str
     sim_date: datetime
@@ -1053,7 +1068,7 @@ class SimulationProperties:
     settings: typing.Sequence[typing.Any]
 
     @staticmethod
-    def create(broker: Broker, fallback: typing.Any=None) -> typing.Optional['SimulationProperties']:
+    def create(broker: Broker, identityref: str, identity_date: datetime, fallback: typing.Any=None, ) -> typing.Optional['SimulationProperties']:
         """Fetch simulation data from context broker"""
         sim_type = os.getenv("ETL_VECTORIZE_SIMULATION_TYPE")
         sim_id = os.getenv("ETL_VECTORIZE_SIMULATION_ID")
@@ -1066,6 +1081,8 @@ class SimulationProperties:
             return None
         sceneref = entity['id']
         return SimulationProperties(
+            identityref=identityref,
+            identity_date=identity_date,
             sceneref=sceneref,
             entitytype=entity['type'],
             sim_date=datetime.fromisoformat(entity.get('timestamp', datetime.now().isoformat())),
@@ -1144,7 +1161,7 @@ class Simulation(typing.Protocol):
     Protocol to represent the simulation API
     """
 
-    def add_entities(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         """
         Add any entities created by the simulation to the dims_df_map and,
         if needed, to the database or broker.
@@ -1153,7 +1170,7 @@ class Simulation(typing.Protocol):
         the dimension table if needed for the simulation.
         """
 
-    def drop_entities(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         """
         Remove any entities destroyed by the simulation from the dims_df_map and,
         if needed, from the database or broker.
@@ -1195,46 +1212,48 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
         logging.info("using fallback simulation %s", fallback)
         with pathlib.Path(fallback).open(encoding='utf-8') as f:
             fallback_sim = json.load(f)
-    sim_props = SimulationProperties.create(broker=broker, fallback=fallback_sim)
-    if not sim_props:
-        logging.warning("No simulation found")
-        return
-    sim_props.feedback(broker, "initiating simulation")
-
-    # Create handlers for all the sims
-    sim_handlers = list(create_simulators(reference=reference, sim_props=sim_props))
     start = datetime.now()
 
     # Get the latest identity we are working with
     identityref = os.getenv("ETL_VECTORIZE_IDENTITYREF", "N/A")
     last_identity_date = Reference.last_simulation(engine=engine, sceneref=identityref)
-    logging.info("Latest simulation for identity %s: %s", identityref, last_identity_date)
-    sim_props.feedback(broker, "latest simulation is %s", last_identity_date)
+    logging.info("Latest identity data %s: %s", identityref, last_identity_date)
 
-    # Group all data by combinations of trend and daytype, and then by entityType
-    scene_by_type: typing.Dict[typing.Tuple[str, str], typing.Dict[str, Dataset]] = defaultdict(dict)
+    # Get the simulation properties
+    sim_props = SimulationProperties.create(broker=broker, identityref=identityref, identity_date=last_identity_date, fallback=fallback_sim)
+    if not sim_props:
+        logging.warning("No simulation found")
+        return
+    sim_props.feedback(broker, "initiating simulation")
+    sim_handlers = list(create_simulators(reference=reference, sim_props=sim_props, engine=engine))
+
+    # Collect data for all the combinations of trend and daytype
+    scene_variations: typing.Dict[typing.Tuple[str, str], typing.List[str]] = defaultdict(list)
     dims_df_map: typing.Dict[str, pd.DataFrame] = {}
     fixed_df_map: typing.Dict[str, pd.DataFrame] = {}
-    for entityType, meta in reference.metadata.items():
-        entity_dims = meta.dim_data(engine=engine, sceneref=identityref)
-        logging.info("Dims shape for scene %s, timeinstant %s, entity type %s: %s", identityref, last_identity_date, entityType, entity_dims.shape)
-        dims_df_map[entityType] = entity_dims
-        fixed_df_map[entityType] = meta.fixed_df(entity_dims)
-        for scene_data in meta.scene_data(engine=engine, sceneref=identityref, timeinstant=last_identity_date):
-            logging.info("Dataset shape for scene %s, timeinstant %s, trend %s, daytype %s, entity type %s: %s",
-                identityref,
-                last_identity_date,
-                scene_data.trend,
-                scene_data.daytype,
-                entityType,
-                scene_data.df.shape
-            )
-            scene_by_type[(scene_data.trend, scene_data.daytype)][entityType] = scene_data
+    data_df_map: typing.Dict[str, pd.DataFrame] = {}
+    for entitytype, meta in reference.metadata.items():
+        dims_df = meta.get_dim_df(engine=engine, sceneref=identityref)
+        logging.info("Dims shape for scene %s, timeinstant %s, entity type %s: %s", identityref, last_identity_date, entitytype, dims_df.shape)
+        dims_df_map[entitytype] = dims_df
+        fixed_df = meta.get_fixed_df(dims_df)
+        logging.info("Fixed shape for scene %s, timeinstant %s, entity type %s: %s", identityref, last_identity_date, entitytype, fixed_df.shape)
+        fixed_df_map[entitytype] = fixed_df
+        scene_df = meta.get_scene_df(engine=engine, sceneref=identityref, timeinstant=last_identity_date)
+        for _, cols in scene_df[['trend', 'daytype']].drop_duplicates().iterrows():
+            scene_variations[(cols['trend'], cols['daytype'])].append(entitytype)
+        logging.info("Data shape for scene %s, timeinstant %s, entity type %s: %s", identityref, last_identity_date, entitytype, scene_df.shape)
+        data_df_map[entitytype] = scene_df
+    logging.info("scene variations for scene %s, timeinstant %s: %s", identityref, last_identity_date, scene_variations)
+
+    # Save references to dimulation dims and facts
+    reference.dims_df_map = dims_df_map
+    reference.data_df_map = data_df_map
 
     # Handle adding entities to the scene
     logging.info("Creating simulation entities for %s", sim_props.signature())
     for handler in sim_handlers:
-        handler.add_entities(engine=engine, broker=broker, dims_df_map=dims_df_map, dryrun=dryrun)
+        handler.add_entities(engine=engine, broker=broker, reference=reference, dryrun=dryrun)
 
     # Calculate distances across all points.
     logging.info("Calculating distances for %s", sim_props.signature())
@@ -1246,7 +1265,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
     # Handle removing entities from the scene
     logging.info("Removing simulation entities for %s", sim_props.signature())
     for handler in sim_handlers:
-        handler.drop_entities(engine=engine, broker=broker, dims_df_map=dims_df_map, dryrun=dryrun)
+        handler.drop_entities(engine=engine, broker=broker, reference=reference, dryrun=dryrun)
 
     # Update the simulation table from the ETL
     sim_props.to_sql(engine=engine, dryrun=dryrun)
@@ -1259,12 +1278,23 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
         handler.prepare_decoder(decoder=decoder)
 
     # Iterate over all combinations of trend and daytype
-    for scene_index, entities in scene_by_type.items():
-        logging.info("Iterating on scene %s", sim_props.signature())
+    for scene_index, entitytypes in scene_variations.items():
         trend, daytype = scene_index
-
+        logging.info("Iterating on scene %s, trend %s, daytype %s", sim_props.signature(), trend, daytype)
+        # Separate data by trend and daytype
+        data_map: typing.Dict[str, Dataset] = {}
+        for entitytype in entitytypes:
+            scene_df = data_df_map[entitytype]
+            scene_df = scene_df[(scene_df['trend'] == trend) & (scene_df['daytype'] == daytype)]
+            data_map[entitytype] = Dataset(
+                timeinstant=last_identity_date,
+                trend=trend,
+                daytype=daytype,
+                entityType=entitytype,
+                df=scene_df.copy()
+            )
         # Collect all simulation data into a vector
-        vector = Vector.create(meta_map=reference.metadata, fixed_df_map=fixed_df_map, data_map=entities)
+        vector = Vector.create(meta_map=reference.metadata, fixed_df_map=fixed_df_map, data_map=data_map)
         logging.info("Vector shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
             sim_props.sceneref,
             last_identity_date,
@@ -1278,9 +1308,14 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
         # input_vector_path = f"input_vector_{trend}_{daytype}.csv"
         # logging.info("Saving input vector to %s", input_vector_path)
         # vector.df.to_csv(input_vector_path)
-        
+
         # Encode and update hidden state
-        hidden = encode_vector(metadata=meta, props=scene_data, vector=vector)
+        dataset_props = DatasetProperties(
+            timeinstant=sim_props.sim_date,
+            trend=trend,
+            daytype=daytype
+        )
+        hidden = encode_vector(metadata=meta, props=dataset_props, vector=vector)
         logging.info("Hidden shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
             sim_props.sceneref,
             last_identity_date,
@@ -1290,11 +1325,6 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
         )
         sim_props.feedback(broker, "hidden shape %s", hidden.private.shape)
 
-        dataset_props = DatasetProperties(
-            timeinstant=sim_props.sim_date,
-            trend=trend,
-            daytype=daytype
-        )
         for handler in sim_handlers:
             hidden = handler.perturb_hidden(props=dataset_props, hidden=hidden)
         logging.info("Simulated state shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
@@ -1307,7 +1337,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
         sim_props.feedback(broker, "simulated state shape %s", hidden.private.shape)
 
         # Decode the hidden status and vet the results
-        result = decoder.decode(props=scene_data, hidden=hidden)
+        result = decoder.decode(props=dataset_props, hidden=hidden)
         for handler in sim_handlers:
             result = handler.vet_output(result)
         logging.info("Simulated result shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
@@ -1322,7 +1352,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
         # Write output vector for debugging purposes
         # output_vector_path = f"output_vector_{trend}_{daytype}.csv"
         # logging.info("Saving output vector to %s", output_vector_path)
-        # simulated_result.to_csv(output_vector_path)
+        # result.to_csv(output_vector_path)
 
         # Split into Datasets to save back to the database
         for entityType, meta in reference.metadata.items():
@@ -1343,7 +1373,7 @@ def encode_vector(metadata: Metadata, props: DatasetProperties, vector: Vector) 
         index=typing.cast(pd.MultiIndex, vector.df.index)
     )
 
-def create_simulators(reference: Reference, sim_props: SimulationProperties) -> typing.Iterable[Simulation]:
+def create_simulators(reference: Reference, sim_props: SimulationProperties, engine: Engine) -> typing.Iterable[Simulation]:
     for sim in sim_props.settings:
         if sim['type'] == 'SimulationParking':
             logging.info("SimulationParking")
@@ -1353,7 +1383,7 @@ def create_simulators(reference: Reference, sim_props: SimulationProperties) -> 
             yield SimTraffic(reference=reference, sim_props=sim_props, sim=sim)
         elif sim['type'] == 'SimulationRoute':
             logging.info("SimulationParking")
-            yield SimRoute(reference=reference, sim_props=sim_props, sim=sim)
+            yield SimRoute(reference=reference, sim_props=sim_props, sim=sim, engine=engine)
         else:
             logging.warn("unrecognized simulation info: %s", sim)
         return None
@@ -1362,7 +1392,6 @@ class SimParking:
     """Simulation for parking creation"""
 
     def __init__(self, reference: Reference, sim_props: SimulationProperties, sim: typing.Any):
-        self.reference = reference
         self.sim_date = sim_props.sim_date
         self.entitytype = "OffStreetParking"
         self.sceneref = sim_props.sceneref
@@ -1372,11 +1401,12 @@ class SimParking:
         self.capacity = int(sim.get('capacity', {}).get('value', '1000'))
         self.bias = int(sim.get('bias', {}).get('value', 5))
 
-    def add_entities(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         # Add a new parking to the dims_df_map
-        metadata = self.reference.metadata[self.entitytype]
-        dims_df = dims_df_map[self.entitytype]
-        zone = self.reference.match_zone(geometry.shape(self.location), "1")
+        assert(reference.dims_df_map is not None)
+        metadata = reference.metadata[self.entitytype]
+        dims_df = reference.dims_df_map[self.entitytype]
+        zone = reference.match_zone(geometry.shape(self.location), "1")
         new_parking = {
             'sourceref': self.sourceref,
             'zone': zone,
@@ -1385,7 +1415,7 @@ class SimParking:
             'capacity': self.capacity,
         }
         assert(frozenset(dims_df.columns).issuperset(new_parking.keys()))
-        dims_df_map[self.entitytype] = pd.concat([
+        reference.dims_df_map[self.entitytype] = pd.concat([
             dims_df,
             pd.DataFrame([tuple(new_parking.values())], columns=tuple(new_parking.keys()))
         ], axis=0)
@@ -1424,7 +1454,7 @@ class SimParking:
             if dryrun:
                 conn.rollback()
 
-    def drop_entities(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         pass
 
     def prepare_decoder(self, decoder: Decoder):
@@ -1443,7 +1473,6 @@ class SimTraffic:
     """Simulation for traffic affectation"""
 
     def __init__(self, reference: Reference, sim_props: SimulationProperties, sim: typing.Any):
-        self.reference = reference
         self.sim_date = sim_props.sim_date
         self.sceneref = sim_props.sceneref
         self.name = sim.get('name', {}).get('value', '')
@@ -1455,15 +1484,15 @@ class SimTraffic:
         # in the database.
         sim_props.location = json.loads(shapely.to_geojson(self.bbox))
 
-    def add_entities(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         pass
 
-    def drop_entities(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         identityref = 'N/A'
-        self.affected_places = self.reference.metadata['TrafficCongestion'].in_bbox(engine=engine, sceneref=identityref, bbox=self.bbox)
+        self.affected_places = reference.metadata['TrafficCongestion'].in_bbox(engine=engine, sceneref=identityref, bbox=self.bbox)
         logging.info("Affected TrafficCongestion entities: %s", ", ".join(self.affected_places))
         # Locate all TrafficIntensity entities close enough to any of the affected entities
-        self.related_places = self.reference.get_closest(
+        self.related_places = reference.get_closest(
             from_type='TrafficCongestion',
             from_sourceref=self.affected_places,
             to_type='TrafficIntensity',
@@ -1489,8 +1518,7 @@ class SimTraffic:
 class SimRoute:
     """Simulation for route affectation"""
 
-    def __init__(self, reference: Reference, sim_props: SimulationProperties, sim: typing.Any):
-        self.reference = reference
+    def __init__(self, reference: Reference, sim_props: SimulationProperties, sim: typing.Any, engine: Engine):
         self.sim_props = sim_props
         self.sceneref = sim_props.sceneref
         self.sim_date = sim_props.sim_date
@@ -1501,7 +1529,8 @@ class SimRoute:
         self.sim_type = sim['type']
         self.sourceref = f"{self.sceneref}_{self.sim_date.strftime('%Y_%m_%d')}"
 
-    def add_entities(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
+        assert(reference.dims_df_map is not None)
         # Rename stops and associate to the proper sourceref
         stops = broker.fetch(entitytype='Stop', q="refSimulation:none")
         if not stops:
@@ -1521,7 +1550,7 @@ class SimRoute:
             }
             coord = stop['location']['value']
             coords.append(coord)
-            zones.append(self.reference.match_zone(point=geometry.shape(coord), default="1"))
+            zones.append(reference.match_zone(point=geometry.shape(coord), default="1"))
         location = {
             'type': 'MultiLineString',
             'coordinates': [[c['coordinates'] for c in coords]]
@@ -1561,14 +1590,14 @@ class SimRoute:
         logging.info("SimRoute: new route = %s", new_route)
         with engine.begin() as conn:
             for entitytype in ('RouteSchedule', 'RouteIntensity'):
-                dims_df = dims_df_map[entitytype]
+                dims_df = reference.dims_df_map[entitytype]
                 assert(frozenset(dims_df.columns).issuperset(new_route.keys()))
-                dims_df_map[entitytype] = pd.concat([
+                reference.dims_df_map[entitytype] = pd.concat([
                     dims_df,
                     pd.DataFrame([tuple(new_route.values())], columns=tuple(new_route.keys()))
                 ], axis=0)
                 # Save the new parking to the database
-                metadata = self.reference.metadata[entitytype]
+                metadata = reference.metadata[entitytype]
                 statement = text(f"DELETE FROM {metadata.dimsTableName} WHERE sourceref = :sourceref")
                 with conn.execute(statement.bindparams(sourceref=self.sourceref)) as cursor:
                     cursor.close()
@@ -1603,7 +1632,7 @@ class SimRoute:
             if dryrun:
                 conn.rollback()
 
-    def drop_entities(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
+    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         pass
 
     def prepare_decoder(self, decoder: Decoder):
