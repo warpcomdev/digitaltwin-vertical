@@ -12,6 +12,7 @@ Simulation: {
 		"""
 	namespace: "dtwin"
 	exampleId: "N/A"
+	#geometryType: "Geometry"
 
 	model: [string]: {types.#ModelAttribute}
 	model: {
@@ -31,6 +32,12 @@ Simulation: {
 		name: {
 			types.#TextUnrestricted
 			description: "Nombre de la simulación"
+			flows: ["lastdata"]
+		}
+
+		location: {
+			types.#Geometry[#geometryType]
+			description: "Geometría de la simulación"
 			flows: ["lastdata"]
 		}
 

@@ -124,3 +124,15 @@ import (
 		}
 	}
 }
+
+#Geometry: Geometry: #ModelAttribute & {
+	ngsiType: "geo:json"
+	dbType:   "geometry"
+	example: {
+		type: "geo:json"
+		value: {
+			type: "Polygon"
+			coordinates: [[[3.5, 24.6], [33, 44]]]
+		}
+	}
+}
