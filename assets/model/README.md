@@ -1,20 +1,103 @@
 El vertical utiliza los siguientes modelos:
 
-1. [DayType](#DayType)
-2. [OffStreetParking](#OffStreetParking)
-3. [RouteIntensity](#RouteIntensity)
-4. [RouteSchedule](#RouteSchedule)
-5. [Simulation](#Simulation)
-6. [SimulationParking](#SimulationParking)
-7. [SimulationRoute](#SimulationRoute)
-8. [SimulationTraffic](#SimulationTraffic)
-9. [Stop](#Stop)
-10. [TrafficCongestion](#TrafficCongestion)
-11. [TrafficIntensity](#TrafficIntensity)
-12. [Trend](#Trend)
-13. [Zone](#Zone)
+1. [AirQualityObserved](#AirQualityObserved)
+2. [DayType](#DayType)
+3. [OffStreetParking](#OffStreetParking)
+4. [RouteIntensity](#RouteIntensity)
+5. [RouteSchedule](#RouteSchedule)
+6. [Simulation](#Simulation)
+7. [SimulationParking](#SimulationParking)
+8. [SimulationRoute](#SimulationRoute)
+9. [SimulationTraffic](#SimulationTraffic)
+10. [Stop](#Stop)
+11. [TrafficCongestion](#TrafficCongestion)
+12. [TrafficIntensity](#TrafficIntensity)
+13. [Trend](#Trend)
+14. [Zone](#Zone)
 
 # Entidades Principales
+
+## AirQualityObserved
+
+Calidad del aire observada.
+
+| Atributo    | ngsiType         | dbType                            | description                                                                                                                                                                               | example                                                                        | extra | unit  | range                         |
+| ----------- | ---------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----- | ----- | ----------------------------- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación                                                                                                                                  | `"2018-12-10T20:40:23"`                                                        | -     | -     | -                             |
+| sourceRef   | TextUnrestricted | text                              | ID de entidad original. Reemplaza al entityId en a base de datos, ya que esta entidad es *singleton* y su ID en base de datos se ve sobrescrito por una composición de los campos únicos. | `"Parking-01"`                                                                 | -     | -     | -                             |
+| sceneRef    | TextUnrestricted | text                              | ID del escenario de simulación. Identifica la simulación realizada. El valor "N/A" indica que se trata de una vista identidad.                                                            | `"example text"`                                                               | -     | -     | -                             |
+| trend       | TextUnrestricted | text                              | Estacionalidad o tendencia para la que se ha calculado el escenario                                                                                                                       | `"Verano"`                                                                     | -     | -     | Verano, Fallas, Otros         |
+| dayType     | TextUnrestricted | text                              | Tipo de día al que corresponde la medida                                                                                                                                                  | `"L-J"`                                                                        | -     | -     | L-J, Viernes, Sábado, Domingo |
+| name        | TextUnrestricted | text                              | Nombre descriptivo de la entidad                                                                                                                                                          | `"example text"`                                                               | -     | -     | -                             |
+| zone        | TextUnrestricted | text                              | Identificador de la zona o distrito a la que pertenece la entidad                                                                                                                         | `"Distrito 1"`                                                                 | -     | -     | -                             |
+| NO2         | Number           | double precision                  | Dióxido de Nitrógeno                                                                                                                                                                      | `5.0`                                                                          | -     | µg/m3 | -                             |
+| PM25        | Number           | double precision                  | Partículas en suspensión inferiores a 2,5 micras                                                                                                                                          | `5.0`                                                                          | -     | µg/m3 | -                             |
+| PM10        | Number           | double precision                  | Dióxido de Nitrógeno                                                                                                                                                                      | `5.0`                                                                          | -     | µg/m3 | -                             |
+| location    | geo:json         | geometry(Point)                   | Ubicación de la entidad                                                                                                                                                                   | `{"type": "geo:json", "value": {"type": "Point", "coordinates": [3.5, 24.6]}}` | -     | -     | -                             |
+| O3          | Number           | double precision                  | Ozono                                                                                                                                                                                     | `5.0`                                                                          | -     | µg/m3 | -                             |
+
+Ejemplo de `AirQualityObserved` (en NGSIv2):
+
+```json
+{
+    "id": "C1",
+    "type": "AirQualityObserved",
+    "TimeInstant": {
+        "type": "DateTime",
+        "value": "2018-12-10T20:40:23"
+    },
+    "sourceRef": {
+        "type": "TextUnrestricted",
+        "value": "Parking-01"
+    },
+    "sceneRef": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "trend": {
+        "type": "TextUnrestricted",
+        "value": "Verano"
+    },
+    "dayType": {
+        "type": "TextUnrestricted",
+        "value": "L-J"
+    },
+    "name": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "zone": {
+        "type": "TextUnrestricted",
+        "value": "Distrito 1"
+    },
+    "NO2": {
+        "type": "Number",
+        "value": 5.0
+    },
+    "PM25": {
+        "type": "Number",
+        "value": 5.0
+    },
+    "PM10": {
+        "type": "Number",
+        "value": 5.0
+    },
+    "location": {
+        "type": "geo:json",
+        "value": {
+            "type": "Point",
+            "coordinates": [
+                3.5,
+                24.6
+            ]
+        }
+    },
+    "O3": {
+        "type": "Number",
+        "value": 5.0
+    }
+}
+```
 
 ## DayType
 

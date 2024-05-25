@@ -8,10 +8,9 @@ daily: {
 
 	// Parámetros de entrada de la vista:
 	input: {
-		hourFrom: int // Inicio del periodo de agregación
-		hourTo:   int // Fin del periodo de agregación
 		columns: [...string] // Lista de columnas a agrupar
 		aggregations: [string]: string // Diccionario alias => expresión SQL
+		where: string | *"" // "Where" clause to apply
 
 		namespace:  string // Prefijo de las tablas
 		entityType: string // Tipo de entidad
@@ -34,7 +33,9 @@ daily: {
 		{{- end }}
 		  t.entityid
 		FROM :target_schema.{{ .tableName }} AS t
-		WHERE t.hour >= {{ .hourFrom }} AND t.hour <= {{ .hourTo }}
+		{{- if .filter }}
+		WHERE {{ .filter }}
+		{{- end }}
 		GROUP BY {{ range .columns }} t.{{.}},{{end}} t.entityid;
 		"""
 

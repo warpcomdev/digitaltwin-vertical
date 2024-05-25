@@ -1,5 +1,41 @@
 Los parámetros con formato `${...}` no han de ser interpretados literalmente, sino que indican un parámetro variable que ha de ser sustituido con aquel que aplique al despliegue concreto cuando se creen las subscripciones indicadas en esta documentación.
 
+# Suscripción a AirQualityObserved HISTORIC
+
+Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo AirQualityObserved
+
+- **Estado** : Activa
+- **Descripción**: AirQualityObserved:HISTORIC:dtwin:historic
+- **Fecha y hora de expiración**: en blanco
+- **Segundos entre notificaciones**: en blanco
+- **Protocolo**: HTTP
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-HISTORIC en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}"}}`
+- **Formato de atributos**: normalized
+- **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, trend, dayType, NO2, PM25, PM10, O3
+- **Condición**: sourceRef, TimeInstant, sceneRef, trend, dayType
+  - **Y se cumpla una expresion compuesta por q, mq, georel, geometry y coords**: `{"q": "sceneRef"}`
+- **Entidades**:
+  - ID: `.*` (con checkbox de patrón de búsqueda marcado)
+  - Type: AirQualityObserved
+
+# Suscripción a AirQualityObserved LASTDATA
+
+Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo AirQualityObserved
+
+- **Estado** : Activa
+- **Descripción**: AirQualityObserved:LASTDATA:dtwin:lastdata
+- **Fecha y hora de expiración**: en blanco
+- **Segundos entre notificaciones**: en blanco
+- **Protocolo**: HTTP
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}, "ngsi": {"id": "${sourceRef}"}}`
+- **Formato de atributos**: normalized
+- **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, name, zone, location, alterationType
+- **Condición**: TimeInstant, sourceRef
+  - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
+- **Entidades**:
+  - ID: `.*` (con checkbox de patrón de búsqueda marcado)
+  - Type: AirQualityObserved
+
 # Suscripción a DayType LASTDATA
 
 Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo DayType

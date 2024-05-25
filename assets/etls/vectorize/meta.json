@@ -4,6 +4,24 @@
       "sourceRef",
       "sceneRef",
       "trend",
+      "dayType"
+    ],
+    "fixedProps": {},
+    "metrics": {},
+    "calcs": {},
+    "hasHour": false,
+    "hasMinute": false,
+    "multiZone": false,
+    "namespace": "dtwin",
+    "entityType": "AirQualityObserved",
+    "dataTableName": "dtwin_airqualityobserved",
+    "dimsTableName": "dtwin_airqualityobserved_lastdata"
+  },
+  {
+    "dimensions": [
+      "sourceRef",
+      "sceneRef",
+      "trend",
       "dayType",
       "hour"
     ],

@@ -162,7 +162,10 @@
               "custom_RouteSchedule.sql"
             ],
             "weight": 10,
-            "relations": []
+            "relations": [
+              "dtwin_routeschedule_yesterday",
+              "dtwin_routeschedule_peak"
+            ]
           }
         }
       }

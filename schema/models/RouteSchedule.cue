@@ -46,4 +46,35 @@ RouteSchedule: templates.#Twin & {
 			#metric: true
 		}
 	}
+
+	#sql: yesterday: {
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+			"forwardtrips",
+			"returntrips",
+		]
+	}
+
+	#sql: peak: {
+		hourFrom:   6
+		hourTo:     24
+		morningEnd: 14
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+		]
+		metric: "forwardtrips+returntrips"
+	}
+
 }

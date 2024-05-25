@@ -284,7 +284,9 @@
                                 "custom_RouteIntensity.sql"
                             ],
                             "weight": 10,
-                            "relations": []
+                            "relations": [
+                                "dtwin_routeintensity_daily"
+                            ]
                         }
                     }
                 }

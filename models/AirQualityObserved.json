@@ -1,6 +1,6 @@
 {
-    "RouteSchedule": {
-        "description": "Programación de ruta. Describe el número de paradas de una ruta\ndada una estacionalidad, tipo de día y hora.",
+    "AirQualityObserved": {
+        "description": "Calidad del aire observada.",
         "namespace": "dtwin",
         "exampleId": "C1",
         "model": {
@@ -79,65 +79,48 @@
                 "example": "example text",
                 "range": "-"
             },
-            "hour": {
-                "description": "Hora del día a la que corresponde la medida",
-                "ngsiType": "Number",
-                "dbType": "integer",
+            "zone": {
+                "description": "Identificador de la zona o distrito a la que pertenece la entidad",
+                "ngsiType": "TextUnrestricted",
+                "dbType": "text",
                 "extra": "-",
                 "unit": "-",
-                "flows": [
-                    "historic"
-                ],
-                "range": "0-23",
-                "example": 15
-            },
-            "zoneList": {
-                "description": "Lista de identificadores de la zona o distrito a la que pertenece la entidad",
-                "ngsiType": "Json",
-                "dbType": "json",
-                "extra": "-",
-                "unit": "-",
-                "example": [
-                    "Distrito 1",
-                    "Distrito 4"
-                ],
+                "example": "Distrito 1",
                 "flows": [
                     "lastdata"
                 ],
                 "range": "-"
             },
-            "forwardStops": {
-                "description": "Número de paradas en el trayecto de ida",
-                "ngsiType": "Number",
-                "dbType": "integer",
-                "extra": "-",
-                "unit": "-",
-                "flows": [
-                    "historic",
-                    "lastdata"
-                ],
-                "example": 5,
-                "range": "-"
-            },
-            "returnStops": {
-                "description": "Número de paradas en el trayecto de vuelta",
-                "ngsiType": "Number",
-                "dbType": "integer",
-                "extra": "-",
-                "unit": "-",
-                "flows": [
-                    "historic",
-                    "lastdata"
-                ],
-                "example": 5,
-                "range": "-"
-            },
-            "forwardTrips": {
-                "description": "Número de trayectos de ida",
+            "NO2": {
+                "description": "Dióxido de Nitrógeno",
                 "ngsiType": "Number",
                 "dbType": "double precision",
                 "extra": "-",
-                "unit": "-",
+                "unit": "µg/m3",
+                "flows": [
+                    "historic"
+                ],
+                "example": 5.0,
+                "range": "-"
+            },
+            "PM25": {
+                "description": "Partículas en suspensión inferiores a 2,5 micras",
+                "ngsiType": "Number",
+                "dbType": "double precision",
+                "extra": "-",
+                "unit": "µg/m3",
+                "flows": [
+                    "historic"
+                ],
+                "example": 5.0,
+                "range": "-"
+            },
+            "PM10": {
+                "description": "Dióxido de Nitrógeno",
+                "ngsiType": "Number",
+                "dbType": "double precision",
+                "extra": "-",
+                "unit": "µg/m3",
                 "flows": [
                     "historic"
                 ],
@@ -147,7 +130,7 @@
             "location": {
                 "description": "Ubicación de la entidad",
                 "ngsiType": "geo:json",
-                "dbType": "geometry(MultiLineString)",
+                "dbType": "geometry(Point)",
                 "extra": "-",
                 "unit": "-",
                 "flows": [
@@ -156,29 +139,21 @@
                 "example": {
                     "type": "geo:json",
                     "value": {
-                        "type": "Line",
+                        "type": "Point",
                         "coordinates": [
-                            [
-                                [
-                                    3.5,
-                                    24.6
-                                ],
-                                [
-                                    33,
-                                    44
-                                ]
-                            ]
+                            3.5,
+                            24.6
                         ]
                     }
                 },
                 "range": "-"
             },
-            "returnTrips": {
-                "description": "Número de trayectos de vuelta",
+            "O3": {
+                "description": "Ozono",
                 "ngsiType": "Number",
                 "dbType": "double precision",
                 "extra": "-",
-                "unit": "-",
+                "unit": "µg/m3",
                 "flows": [
                     "historic"
                 ],
@@ -195,8 +170,7 @@
                     "timeinstant",
                     "sceneRef",
                     "trend",
-                    "dayType",
-                    "hour"
+                    "dayType"
                 ],
                 "dbIndexes": {
                     "scene": "(timeinstant, sceneRef)"
@@ -207,8 +181,7 @@
                         "TimeInstant",
                         "sceneRef",
                         "trend",
-                        "dayType",
-                        "hour"
+                        "dayType"
                     ],
                     "expression": {
                         "q": "sceneRef"
@@ -238,7 +211,7 @@
             "join": {
                 "class": "FLOW_JOIN_VIEW",
                 "leftModel": {
-                    "name": "routeschedule",
+                    "name": "airqualityobserved",
                     "entityNamespace": "dtwin",
                     "attrs": [
                         "entityid",
@@ -250,11 +223,10 @@
                         "sceneref",
                         "trend",
                         "daytype",
-                        "hour",
-                        "forwardstops",
-                        "returnstops",
-                        "forwardtrips",
-                        "returntrips"
+                        "no2",
+                        "pm25",
+                        "pm10",
+                        "o3"
                     ],
                     "attrJoinOn": [
                         "entityid"
@@ -262,12 +234,12 @@
                 },
                 "rightModel": [
                     {
-                        "name": "routeschedule_lastdata",
+                        "name": "airqualityobserved_lastdata",
                         "entityNamespace": "dtwin",
                         "attrs": [
                             "name",
                             "location",
-                            "zonelist"
+                            "zone"
                         ],
                         "attrJoinOn": [
                             "entityid"
@@ -283,13 +255,10 @@
                             "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
                             "path": "./sql",
                             "files": [
-                                "custom_RouteSchedule.sql"
+                                "custom_AirQualityObserved.sql"
                             ],
                             "weight": 10,
-                            "relations": [
-                                "dtwin_routeschedule_yesterday",
-                                "dtwin_routeschedule_peak"
-                            ]
+                            "relations": []
                         }
                     }
                 }
@@ -309,7 +278,7 @@
                 },
                 "rightModel": [
                     {
-                        "name": "routeschedule_join",
+                        "name": "airqualityobserved_join",
                         "entityNamespace": "dtwin",
                         "attrs": [
                             "entityid",
@@ -320,14 +289,13 @@
                             "sceneref",
                             "trend",
                             "daytype",
-                            "hour",
                             "name",
                             "location",
-                            "zonelist",
-                            "forwardstops",
-                            "returnstops",
-                            "forwardtrips",
-                            "returntrips"
+                            "zone",
+                            "no2",
+                            "pm25",
+                            "pm10",
+                            "o3"
                         ],
                         "attrJoinOn": [
                             "sceneRef",

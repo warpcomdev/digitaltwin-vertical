@@ -1,0 +1,16 @@
+{
+    "type": "SimulationParking",
+    "id": "parking_test",
+    "TimeInstant": { "type": "DateTime", "value": "2024-05-21T00:00:00Z" },
+    "name": { "type": "Text", "value": "Simulated Parking 01" },
+    "description": { "type": "Text", "value": "Fallback simulation" },
+    "capacity": { "type": "Number", "value": 1000 },
+    "location": {
+        "type": "geo:json",
+        "value": {
+            "type": "Point",
+            "coordinates": [ -0.378034, 39.455219 ]
+        }
+    },
+    "impact": { "type": "Text", "value": "5" }
+}

@@ -21,7 +21,7 @@ freq: {
 		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_freq"
 	}
 
-	_rangeColumn: len(input.columns) + 1
+	_rangeColumn: len(input.columns) + 2
 	template:     """
 		-- CREATE VIEW {{ .viewName }}
 		-- Vista que calcula la frecuencia con la que una métrica
@@ -29,6 +29,7 @@ freq: {
 		-- -------------------------------------------------------------
 		CREATE OR REPLACE VIEW :target_schema.{{ .viewName }} AS
 		SELECT
+		  t.entityid,
 		  {{- range .columns }}
 		  t.{{.}},
 		  {{- end }}
@@ -41,7 +42,7 @@ freq: {
 		  END AS range,
 		  COUNT(t.hour) AS hours
 		FROM :target_schema.{{ .tableName }} AS t
-		GROUP BY {{ range .columns }} t.{{.}},{{ end }} \(_rangeColumn);
+		GROUP BY t.entityid, {{ range .columns }} t.{{.}},{{ end }} \(_rangeColumn);
 		"""
 
 	// Nombres de las relaciones creadas

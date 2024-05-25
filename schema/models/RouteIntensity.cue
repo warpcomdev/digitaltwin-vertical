@@ -54,4 +54,29 @@ RouteIntensity: templates.#Twin & {
 			#metric: true
 		}
 	}
+
+	#sql: daily: {
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+		]
+		aggregations: {
+			intensity_per_trip: "sum(t.intensity) / sum(t.forwardtrips + t.returntrips)::double precision",
+			intensity_per_stop: "sum(t.intensity) / sum(t.forwardtrips * t.forwardstops + t.returntrips * t.returnstops)"
+		}
+		where: """
+			intensity IS NOT NULL AND
+			forwardtrips IS NOT NULL AND
+			returntrips IS NOT NULL AND
+			forwardstops IS NOT NULL AND
+			returnstops IS NOR NULL AND
+			(forwardtrips + returntrips) > 0 AND
+			(forwardstops + returnstops) > 0
+			"""
+	}
 }

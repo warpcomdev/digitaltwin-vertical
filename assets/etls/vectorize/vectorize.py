@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 
+# Make sure we can find all of our submodules
 import sys
 import os
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+    'lib'
+))
+
 import pathlib
 import argparse
 import json
@@ -16,6 +22,8 @@ import pandas as pd
 import numpy as np
 import torch
 import psutil
+import shapely
+from shapely import geometry
 import tc_etl_lib as tc
 
 # -------------------------------------
@@ -69,6 +77,17 @@ def psql_engine() -> typing.Iterator[Engine]:
     finally:
         engine.dispose()
 
+def geojson_to_shape(df: pd.DataFrame, colname: str) -> pd.DataFrame:
+    """Convert a column containing geojson strings to shapes"""
+    def convert(x, colname=colname):
+        geojson = x[colname]
+        if not geojson:
+            return None
+        geom = geometry.shape(json.loads(geojson))
+        return geom
+    df[colname] = df.apply(convert, axis=1)
+    return df
+
 @dataclass
 class Broker:
     """
@@ -113,7 +132,7 @@ class Broker:
         return (result[0]['id'], (result[0],))
 
     def fetch(self, entitytype: str, entityid: typing.Optional[str], q: typing.Optional[str]) -> typing.Iterable[typing.Any]:
-        """Fetch simulation info"""
+        """Fetch general entity info"""
         if self.cb is None:
             return tuple()
         return self.cb.get_entities(auth=self.auth, type=entitytype, id=entityid, q=q)
@@ -290,6 +309,8 @@ class Metadata:
         # in the vector is important.
         df.sort_values(by=['sourceref'], inplace=True)
         df.reset_index(drop=True, inplace=True)
+        # Convert locations from string to shape
+        df = geojson_to_shape(df, 'location')
         return df
 
     def scene_query(self) -> TextClause:
@@ -447,12 +468,22 @@ class Metadata:
         # Turn the dataframe into a series with a
         # multilevel index. The index will have the following keys:
         # (entitytype, metric, sourceref, hour, minute)
+        index_names = ['entitytype', 'metric', 'sourceref', 'hour', 'minute']
         for metric in metric_keys:
             slim_df = typed_vector.df[['entitytype', 'sourceref', 'hour', 'minute', metric]].copy()
             slim_df['metric'] = metric
-            slim_df = slim_df.set_index(['entitytype', 'metric', 'sourceref', 'hour', 'minute'])
-            vector_list.append(slim_df.squeeze())
-        return pd.concat(vector_list, axis=0)
+            slim_df = slim_df.set_index(index_names)
+            # squeeze() deprecated because it might turn a dataframe
+            # into a scalar instead of a series
+            # slim_series = slim_df.squeeze()
+            slim_series = slim_df[metric]
+            # Make sure we have squeezed correctly
+            assert(isinstance(slim_series, pd.Series))
+            assert(slim_series.index.names == index_names)
+            assert(len(slim_df) == len(slim_series))
+            vector_list.append(slim_series)
+        series = pd.concat(vector_list, axis=0)
+        return series
 
     def to_sql(self, engine: Engine, sceneref: str, dataset: Dataset, dims_df:typing.Optional[pd.DataFrame]=None, dryrun:bool=False):
                 # if we get a dims_df, try to join the
@@ -516,7 +547,125 @@ class Metadata:
                     curr.close()
             if dryrun:
                 conn.rollback()
-                
+
+    def in_bbox(self, engine: Engine, sceneref: str, bbox: geometry.MultiPoint) -> typing.Iterable[str]:
+        """Get sourceref for all entities enclosed in the given bounding box"""
+        with engine.connect() as conn:
+            bounds = bbox.bounds
+            affected = text(f"""
+                SELECT sourceref FROM {self.dimsTableName}
+                WHERE sceneref = :sceneref AND
+                location && ST_MakeEnvelope(
+                    :bbox_0,
+                    :bbox_1,
+                    :bbox_2,
+                    :bbox_3,
+                    4326
+                )
+                """).bindparams(
+                    sceneref=sceneref,
+                    bbox_0=bounds[0],
+                    bbox_1=bounds[1],
+                    bbox_2=bounds[2],
+                    bbox_3=bounds[3],
+                )
+            with conn.execute(affected) as cursor:
+                affected_places = cursor.fetchall()
+                return [place[0] for place in affected_places]
+
+@dataclass
+class Reference:
+    """
+    Reference contains basic information about the layout
+    of the city and the entities that belong to the simulation
+    """
+
+    # Metadata for all the entity types
+    # that can be affected by the simulation
+    metadata: typing.Mapping[str, Metadata]
+
+    # Location of all the zones
+    zones_df: pd.DataFrame
+
+    @staticmethod
+    def create(meta_path: pathlib.Path, engine: Engine) -> 'Reference':
+        """Create reference from metadata path and database"""
+        # Begin with metadata
+        with meta_path.open(encoding='utf-8') as f:
+            items = (Metadata.fromdict(params) for params in json.load(f))
+            meta = {item.entityType: item for item in items}
+            meta = {k: meta[k] for k in sorted(meta.keys())}
+        # zones next
+        with engine.connect() as con:
+            zones_df = pd.read_sql(text(f"""
+                SELECT
+                    entityid, zoneid, name, label,
+                    ST_AsGeoJSON(location) AS location
+                FROM dtwin_zone_lastdata
+                """),
+                con=con
+            )
+            logging.debug("** ZONES DF:\n%s", zones_df)
+            zones_df = geojson_to_shape(zones_df, 'location')
+        return Reference(
+            metadata=meta,
+            zones_df=zones_df
+        )
+
+    def match_zone(self, point: geometry.Point, default: str) -> str:
+        """Find the zone to which a point belongs"""
+        for _, row in self.zones_df.iterrows():
+            if row.location and row.location.contains(point):
+                return row.zoneid
+        return default
+
+# Factor aproximado para convertir distancias en coordenadas
+# a distancias en metros.
+# See https://sciencing.com/convert-distances-degrees-meters-7858322.html
+GEO_SCALE_FACTOR = 111139.0
+
+def get_distance_df(meta_map: typing.Mapping[str, Metadata], dims_df_map: typing.Mapping[str, pd.DataFrame]) -> pd.DataFrame:
+    """
+    Calculate the minimum distance between each pair of entities.
+    
+    Returns a dataframe with a multiindex
+    (from_entitytype, from_sourceeref, to_entitytype, to_sourceref)
+    -> ['distance']
+    """
+    def distance(x, y) -> float:
+        if x is None or y is None:
+            return np.NaN
+        d = shapely.distance(x, y) * GEO_SCALE_FACTOR
+        return d
+
+    distances: typing.List[pd.DataFrame] = []
+    for from_type, _ in meta_map.items():
+        from_df = dims_df_map[from_type]
+        from_entities = from_df[["sourceref", "location"]].rename(columns={
+            "entityid": "from_entityid",
+            "sourceref": "from_sourceref",
+            "location": "from_location"
+        })
+        from_entities['from_entitytype'] = from_type
+        for to_type, _ in meta_map.items():
+            to_df = dims_df_map[to_type]
+            to_entities = to_df[["sourceref", "location"]].rename(columns={
+                "entityid": "to_entityid",
+                "sourceref": "to_sourceref",
+                "location": "to_location"
+            })
+            to_entities['to_entitytype'] = to_type
+            cross_distances = from_entities.merge(to_entities, how="cross")
+            cross_distances['distance'] = cross_distances.apply(
+                lambda x: distance(x["from_location"], x["to_location"]),
+                axis=1,
+                result_type='reduce'
+            )
+            cross_distances = cross_distances.drop(columns=["from_location", "to_location"])
+            distances.append(cross_distances)
+    df = pd.concat(distances, axis=0)
+    df = df.set_index(["from_entitytype", "from_sourceref", "to_entitytype", "to_sourceref"])
+    return df
 
 # -------------------------------------
 # Schemaless types
@@ -669,6 +818,7 @@ class DecoderLayer:
         provided entitytype and sourceref
         """
         # Assign to each index the numerical position in the vector
+        logging.debug("index_matching: %s, %s, %s", entitytype, sourceref, self.index)
         vector_offsets = pd.Series(range(0, len(self.index)), index=self.index, dtype=np.int32)
         # Filter out only those rows that match the filter
         matches = vector_offsets.loc[entitytype, :, sourceref, :, :]
@@ -815,6 +965,7 @@ class Decoder:
         meta = self.meta_map[entitytype]
         typed_vector = meta.normalize(fixed_df=meta.fixed_df(dims_df), dataset=None)
         added_vector = meta.unpivot(typed_vector=typed_vector)
+        assert(added_vector.index.names == ["entitytype", "metric", "sourceref", "hour", "minute"])
         # Index of rows in the bias and wights
         vector_offsets = pd.Series(
             range(0, len(self.main_layer.index)),
@@ -825,6 +976,7 @@ class Decoder:
         biases = []
         for idx, _ in added_vector.items():
             # Find other rows for the same sourceref, hour and minute
+            logging.debug("** INDEX: %s", idx)
             entitytype, metric, sourceref, hour, minute = typing.cast(tuple, idx)
             related = vector_offsets.loc[entitytype, metric, :, hour, minute]
             reductor = self.main_layer.reductor_matrix(related)
@@ -836,13 +988,6 @@ class Decoder:
             weights=torch.cat(weights, dim=0),
             biases=torch.cat(biases)
         )
-
-def read_meta(path: pathlib.Path) -> typing.Dict[str, Metadata]:
-    """Reads metadata from json file"""
-    with open(path) as f:
-        items = (Metadata.fromdict(params) for params in json.load(f))
-        meta = {item.entityType: item for item in items}
-    return {k: meta[k] for k in sorted(meta.keys())}
 
 def last_simulation(engine: Engine, sceneref: str) -> datetime:
     """Retrieve the date of the latest simulation for the given sceneref"""
@@ -894,34 +1039,23 @@ class Simulation(typing.Protocol):
         """
         return result
 
-def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker, dryrun: bool=False):
+def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.Optional[str]=None, dryrun: bool=False):
     """
     Vectorizes the data in the database
     """
     broker.feedback("initiating simulation")
-    fallback_sim = {
-        'type': 'SimulationParking',
-        'id': 'test',
-        'TimeInstant': { 'type': 'DateTime', 'value': '2024-05-21T00:00:00Z' },
-        'name': { 'type': 'Text', 'value': 'Simulated Parking 01' },
-        'description': { 'type': 'Text', 'value': 'Fallback simulation' },
-        'capacity': { 'type': 'Number', 'value': 1000 },
-        'location': {
-            'type': 'geo:json',
-            'value': {
-                'type': 'Point',
-                'coordinates': [ -122.4194, 37.7749 ]
-            }
-        },
-        'impact': { 'type': 'Text', 'value': '5' },
-    }
+    fallback_sim: typing.Any = None
+    if fallback:
+        logging.info("using fallback simulation %s", fallback)
+        with pathlib.Path(fallback).open() as f:
+            fallback_sim = json.load(f)
     sceneref, sim_entities = broker.fetch_sim(fallback_sim)
     if not sceneref:
         broker.feedback("No simulation found")
         return
     # Create handlers for all the sims
     sim_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    sim_handlers = list(create_simulators(meta_map=metadata, sceneref=sceneref, sim_date=sim_date, sims=sim_entities))
+    sim_handlers = list(create_simulators(reference=reference, sceneref=sceneref, sim_date=sim_date, sims=sim_entities))
     start = datetime.now()
 
     # Get the latest identity we are working with
@@ -934,7 +1068,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
     scene_by_type: typing.Dict[typing.Tuple[str, str], typing.Dict[str, Dataset]] = defaultdict(dict)
     dims_df_map: typing.Dict[str, pd.DataFrame] = {}
     fixed_df_map: typing.Dict[str, pd.DataFrame] = {}
-    for entityType, meta in metadata.items():
+    for entityType, meta in reference.metadata.items():
         entity_dims = meta.dim_data(engine=engine, sceneref=identityref)
         logging.info("Dims shape for scene %s, timeinstant %s, entity type %s: %s", identityref, last_identity_date, entityType, entity_dims.shape)
         dims_df_map[entityType] = entity_dims
@@ -955,10 +1089,19 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
     for handler in sim_handlers:
         handler.prepare_platform(engine=engine, broker=broker, dims_df_map=dims_df_map, dryrun=dryrun)
 
+    # Calculate distances across all points.
+    # Only entities that span a signle district are useful
+    distance_df = get_distance_df(meta_map={
+        k: v for k, v in reference.metadata.items()
+        if not v.multiZone
+    }, dims_df_map=dims_df_map)
+    distance_df_path = "distance_df.csv"
+    distance_df.to_csv(distance_df_path)
+
     # Create the decoder. Apply all simulation modifications.
     logging.info("Preparing decoder for %s, %s", sceneref, sim_date)
-    empty_vector = Vector.create(meta_map=metadata, fixed_df_map=fixed_df_map, data_map={})
-    decoder = Decoder(meta_map=metadata, index=typing.cast(pd.MultiIndex, empty_vector.df.index))
+    empty_vector = Vector.create(meta_map=reference.metadata, fixed_df_map=fixed_df_map, data_map={})
+    decoder = Decoder(meta_map=reference.metadata, index=typing.cast(pd.MultiIndex, empty_vector.df.index))
     for handler in sim_handlers:
         handler.prepare_decoder(decoder=decoder)
 
@@ -968,7 +1111,7 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
         trend, daytype = scene_index
 
         # Collect all simulation data into a vector
-        vector = Vector.create(meta_map=metadata, fixed_df_map=fixed_df_map, data_map=entities)
+        vector = Vector.create(meta_map=reference.metadata, fixed_df_map=fixed_df_map, data_map=entities)
         logging.info("Vector shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
             sceneref,
             last_identity_date,
@@ -1029,8 +1172,8 @@ def main(metadata: typing.Mapping[str, Metadata], engine: Engine, broker: Broker
         # simulated_result.to_csv(output_vector_path)
 
         # Split into Datasets to save back to the database
-        for entityType, meta in metadata.items():
-            dataset = vector.pivot(meta=metadata[entityType], props=dataset_props, series=result)
+        for entityType, meta in reference.metadata.items():
+            dataset = vector.pivot(meta=meta, props=dataset_props, series=result)
             dims_df = dims_df_map[entityType]
             meta.to_sql(engine=engine, sceneref=sceneref, dataset=dataset, dims_df=dims_df, dryrun=dryrun)
 
@@ -1047,17 +1190,17 @@ def encode_vector(metadata: Metadata, props: DatasetProperties, vector: Vector) 
         index=typing.cast(pd.MultiIndex, vector.df.index)
     )
 
-def create_simulators(meta_map: typing.Mapping[str, Metadata], sceneref: str, sim_date: datetime, sims: typing.Iterable[typing.Any]) -> typing.Iterable[Simulation]:
+def create_simulators(reference: Reference, sceneref: str, sim_date: datetime, sims: typing.Iterable[typing.Any]) -> typing.Iterable[Simulation]:
     for sim in sims:
         if sim['type'] == 'SimulationParking':
             logging.info("SimulationParking")
-            yield SimParking(meta_map=meta_map, sceneref=sceneref, sim_date=sim_date, sim=sim)
+            yield SimParking(reference=reference, sceneref=sceneref, sim_date=sim_date, sim=sim)
         elif sim['type'] == 'SimulationTraffic':
             logging.info("SimulationParking")
-            yield SimTraffic(meta_map=meta_map, sceneref=sceneref, sim_date=sim_date, sim=sim)
+            yield SimTraffic(reference=reference, sceneref=sceneref, sim_date=sim_date, sim=sim)
         elif sim['type'] == 'SimulationRoute':
             logging.info("SimulationParking")
-            yield SimRoute(meta_map=meta_map, sceneref=sceneref, sim_date=sim_date, sim=sim)
+            yield SimRoute(reference=reference, sceneref=sceneref, sim_date=sim_date, sim=sim)
         else:
             logging.warn("unrecognized simulation info: %s", sim)
         return None
@@ -1065,25 +1208,28 @@ def create_simulators(meta_map: typing.Mapping[str, Metadata], sceneref: str, si
 class SimParking:
     """Simulation for parking creation"""
 
-    def __init__(self, meta_map: typing.Mapping[str, Metadata], sceneref: str, sim_date: datetime, sim: typing.Any):
-        self.meta_map = meta_map
-        self.sceneref = sceneref
+    def __init__(self, reference: Reference, sceneref: str, sim_date: datetime, sim: typing.Any):
+        self.reference = reference
         self.sim_date = sim_date
-        self.sim = sim
         self.entitytype = "OffStreetParking"
         self.sourceref = f"{sceneref}_{datetime.now().strftime('%Y_%m_%d')}"
+        self.sceneref = sceneref
+        self.name = sim.get('name', {}).get('value', {})
+        self.location = sim.get('location', {}).get('value', {})
+        self.capacity = int(sim.get('capacity', {}).get('value', '1000'))
+        self.bias = int(sim.get('bias', {}).get('value', 5))
 
     def prepare_platform(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
         # Create a parking for the sim
-        metadata = self.meta_map[self.entitytype]
-        sim = self.sim
+        metadata = self.reference.metadata[self.entitytype]
         dims_df = dims_df_map[self.entitytype]
         # Add fixedProps to dims_df_map, so that saving
         # to sql will work
         assert(tuple(sorted(metadata.fixedProps.keys())) == ("capacity",))
         new_parking = {
             'sourceref': self.sourceref,
-            'capacity': int(sim.get('capacity', {}).get('value', '1000'))
+            'capacity': self.capacity,
+            'location': geometry.shape(self.location),
         }
         dims_df_map[self.entitytype] = pd.concat([
             dims_df,
@@ -1130,10 +1276,10 @@ class SimParking:
                 fiwareservicepath="/digitaltwin",
                 sourceref=self.sourceref,
                 sceneref=self.sceneref,
-                zone=5,
-                location=json.dumps(sim.get('location', {}).get('value', {})),
-                name=sim.get('name', {}).get('value', self.sourceref),
-                capacity=int(sim.get('capacity', {}).get('value', 100)),
+                zone=self.reference.match_zone(geometry.shape(self.location), "1"),
+                location=json.dumps(self.location),
+                name=self.name,
+                capacity=self.capacity,
             )
             with conn.execute(bound) as cursor:
                 cursor.close()
@@ -1155,22 +1301,24 @@ class SimParking:
 class SimTraffic:
     """Simulation for traffic affectation"""
 
-    def __init__(self, meta_map: typing.Mapping[str, Metadata], sceneref: str, sim_date: datetime, sim: typing.Any):
-        self.meta_map = meta_map
-        self.sceneref = sceneref
+    def __init__(self, reference: Reference, sceneref: str, sim_date: datetime, sim: typing.Any):
+        self.reference = reference
         self.sim_date = sim_date
+        self.sceneref = sceneref
+        self.name = sim.get('name', {}).get('value', {})
+        self.capacity = int(sim.get('capacity', {}).get('value', '1000'))
+        self.bias = int(sim.get('bias', {}).get('value', 5))
         self.category = sim.get('category', {}).get('value', 'pedestrian').lower().strip()
-        self.bbox = sim.get('location').get('value', [[0,0],[0,0]])
-        self.sim = sim
-        self.sourceref = f"{sceneref}_{datetime.now().strftime('%Y_%m_%d')}"
+        self.bbox = geometry.MultiPoint(sim.get('location').get('value', [[0,0],[0,0]]))
 
     def prepare_platform(self, engine: Engine, broker: Broker, dims_df_map: typing.Dict[str, pd.DataFrame], dryrun:bool=False):
-        # Create a parking for the sim
-        pass
+        identityref = 'N/A'
+        self.affected_places = self.reference.metadata['TrafficCongestion'].in_bbox(engine=engine, sceneref=identityref, bbox=self.bbox)
+        logging.info("Affected TrafficCongestion entities: %s", ", ".join(self.affected_places))
 
     def prepare_decoder(self, decoder: Decoder):
-        # Add a new layer for the new parking, averaging the
-        # values of the other parkings
+        for place in self.affected_places:
+            decoder.drop_sourceref('TrafficCongestion', place)
         pass
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
@@ -1183,8 +1331,8 @@ class SimTraffic:
 class SimRoute:
     """Simulation for route affectation"""
 
-    def __init__(self, meta_map: typing.Mapping[str, Metadata], sceneref: str, sim_date: datetime, sim: typing.Any):
-        self.meta_map = meta_map
+    def __init__(self, reference: Reference, sceneref: str, sim_date: datetime, sim: typing.Any):
+        self.reference = reference
         self.sceneref = sceneref
         self.sim_date = sim_date
         self.sim = sim
@@ -1219,21 +1367,21 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", action="append", nargs=1)
     parser.add_argument("-m", "--meta", default="meta.json")
     parser.add_argument("-d", "--dryrun", action="store_true", default=False)
+    parser.add_argument("-f", "--fallback")
     args = parser.parse_args()
 
     for config in args.config:
         logging.debug("loading config file %s", config)
         loadConfig(pathlib.Path(config[0]))
-
-    meta = read_meta(pathlib.Path(args.meta))
     logging.info("Configuration:\n%s", json.dumps(dumpConfig(), indent=2))
-    logging.info("Metadata order:\n%s", ", ".join(meta.keys()))
 
     try:
         with ExitStack() as stack:
             engine = stack.enter_context(psql_engine())
             broker = stack.enter_context(orion_engine())
-            main(meta, engine, broker, args.dryrun)
+            reference = Reference.create(meta_path=pathlib.Path(args.meta), engine=engine)
+            logging.info("Metadata order:\n%s", ", ".join(reference.metadata.keys()))
+            main(reference, engine, broker, args.fallback, args.dryrun)
         logging.info("ETL OK")
     except Exception as err:
         logging.exception(msg="Error during vectorization", stack_info=True)

@@ -30,8 +30,6 @@ TrafficCongestion: templates.#Twin & {
 	}
 
 	#sql: daily: {
-		hourFrom: 7
-		hourTo:   22
 		columns: [
 			"timeinstant",
 			"sourceref",
@@ -45,6 +43,7 @@ TrafficCongestion: templates.#Twin & {
 			avg_congestion: "AVG(congestion)"
 			max_congestion: "MAX(congestion)"
 		}
+		where: "hour >= 7 AND hour <= 22"
 	}
 
 	#sql: hourly: {

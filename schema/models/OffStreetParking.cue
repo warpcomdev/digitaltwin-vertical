@@ -44,8 +44,6 @@ OffStreetParking: templates.#Twin & {
 	}
 
 	#sql: daily: {
-		hourFrom: 8
-		hourTo:   22
 		columns: [
 			"timeinstant",
 			"sourceref",
@@ -60,6 +58,7 @@ OffStreetParking: templates.#Twin & {
 			occupation:        "AVG(occupation)"
 			occupationPercent: "SUM(occupation) / SUM(capacity)::double precision"
 		}
+		where: "hour >= 8 AND hour <= 22"
 	}
 
 	#sql: yesterday: {

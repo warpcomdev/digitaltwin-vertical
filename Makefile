@@ -14,6 +14,7 @@ all: \
 	models/TrafficIntensity.json \
 	models/RouteSchedule.json \
 	models/RouteIntensity.json \
+	models/AirQualityObserved.json \
 	assets/sql/custom_OffStreetParking.sql \
 	assets/sql/custom_RouteIntensity.sql \
 	assets/sql/custom_RouteSchedule.sql \

@@ -16,7 +16,6 @@ SELECT
   SUM(occupation) / SUM(capacity)::double precision AS occupationPercent,
   t.entityid
 FROM :target_schema.dtwin_offstreetparking_sim AS t
-WHERE t.hour >= 8 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
 -- CREATE VIEW dtwin_offstreetparking_yesterday
 -- Vista que reemplaza el timeinstant de la tabla "lastdata"
@@ -44,6 +43,7 @@ FROM :target_schema.dtwin_offstreetparking_sim AS t;
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 -- una métrica dada.
 -- -------------------------------------------------------------
+CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_peak AS
 SELECT
   numeradas.timeinstant,
   numeradas.sourceref,
@@ -102,6 +102,7 @@ GROUP BY  numeradas.timeinstant, numeradas.sourceref, numeradas.sceneref, numera
 -- -------------------------------------------------------------
 CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_freq AS
 SELECT
+  t.entityid,
   t.timeinstant,
   t.sourceref,
   t.sceneref,
@@ -118,4 +119,4 @@ SELECT
   END AS range,
   COUNT(t.hour) AS hours
 FROM :target_schema.dtwin_offstreetparking_sim AS t
-GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8;
+GROUP BY t.entityid,  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 9;

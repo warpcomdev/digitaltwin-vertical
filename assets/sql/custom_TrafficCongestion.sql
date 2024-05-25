@@ -15,7 +15,6 @@ SELECT
   MAX(congestion) AS max_congestion,
   t.entityid
 FROM :target_schema.dtwin_trafficcongestion_sim AS t
-WHERE t.hour >= 7 AND t.hour <= 22
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
 -- CREATE VIEW dtwin_trafficcongestion_hourly
 -- Vista que agrega todos los resultados de una tabla de gemelo,
@@ -60,6 +59,7 @@ FROM :target_schema.dtwin_trafficcongestion_sim AS t;
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 -- una métrica dada.
 -- -------------------------------------------------------------
+CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_peak AS
 SELECT
   numeradas.timeinstant,
   numeradas.sourceref,

@@ -1,33 +1,33 @@
 {
-  "RouteIntensity": {
+  "AirQualityObserved": {
     "historic": {
       "sql": {
         "sources": {
-          "routeintensity_historic.sql": {
-            "documentation": "Fichero SQL del flujo historic (tipo FLOW_HISTORIC) en modelo RouteIntensity",
+          "airqualityobserved_historic.sql": {
+            "documentation": "Fichero SQL del flujo historic (tipo FLOW_HISTORIC) en modelo AirQualityObserved",
             "path": "./sql",
             "files": [
-              "routeintensity_historic.sql"
+              "airqualityobserved_historic.sql"
             ],
             "weight": 0,
             "relations": [
-              "dtwin_routeintensity",
-              "dtwin_routeintensity_idx_scene",
-              "dtwin_routeintensity_pkey"
+              "dtwin_airqualityobserved",
+              "dtwin_airqualityobserved_idx_scene",
+              "dtwin_airqualityobserved_pkey"
             ]
           }
         }
       },
       "subscriptions": {
-        "RouteIntensity_historic": {
-          "documentation": "Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo RouteIntensity",
-          "description": "RouteIntensity:HISTORIC:dtwin:historic",
+        "AirQualityObserved_historic": {
+          "documentation": "Subscripción del flujo historic (tipo FLOW_HISTORIC) en modelo AirQualityObserved",
+          "description": "AirQualityObserved:HISTORIC:dtwin:historic",
           "status": "active",
           "subject": {
             "entities": [
               {
                 "idPattern": ".*",
-                "type": "RouteIntensity"
+                "type": "AirQualityObserved"
               }
             ],
             "condition": {
@@ -50,11 +50,10 @@
               "sceneRef",
               "trend",
               "dayType",
-              "forwardStops",
-              "returnStops",
-              "forwardTrips",
-              "returnTrips",
-              "intensity"
+              "NO2",
+              "PM25",
+              "PM10",
+              "O3"
             ],
             "httpCustom": {
               "url": "HISTORIC",
@@ -72,30 +71,30 @@
     "lastdata": {
       "sql": {
         "sources": {
-          "routeintensity_lastdata.sql": {
-            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteIntensity",
+          "airqualityobserved_lastdata.sql": {
+            "documentation": "Fichero SQL del flujo lastdata (tipo FLOW_LASTDATA) en modelo AirQualityObserved",
             "path": "./sql",
             "files": [
-              "routeintensity_lastdata.sql"
+              "airqualityobserved_lastdata.sql"
             ],
             "weight": 0,
             "relations": [
-              "dtwin_routeintensity_lastdata",
-              "dtwin_routeintensity_lastdata_pkey"
+              "dtwin_airqualityobserved_lastdata",
+              "dtwin_airqualityobserved_lastdata_pkey"
             ]
           }
         }
       },
       "subscriptions": {
-        "RouteIntensity_lastdata": {
-          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteIntensity",
-          "description": "RouteIntensity:LASTDATA:dtwin:lastdata",
+        "AirQualityObserved_lastdata": {
+          "documentation": "Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo AirQualityObserved",
+          "description": "AirQualityObserved:LASTDATA:dtwin:lastdata",
           "status": "active",
           "subject": {
             "entities": [
               {
                 "idPattern": ".*",
-                "type": "RouteIntensity"
+                "type": "AirQualityObserved"
               }
             ],
             "condition": {
@@ -115,9 +114,7 @@
               "sourceRef",
               "sceneRef",
               "name",
-              "zoneList",
-              "forwardStops",
-              "returnStops",
+              "zone",
               "location",
               "alterationType"
             ],
@@ -137,15 +134,15 @@
     "join": {
       "sql": {
         "sources": {
-          "routeintensity_join.sql": {
+          "airqualityobserved_join.sql": {
             "documentation": "Fichero SQL del flujo join (tipo FLOW_JOIN_VIEW)",
             "path": "./sql",
             "files": [
-              "routeintensity_join.sql"
+              "airqualityobserved_join.sql"
             ],
             "weight": 1,
             "relations": [
-              "dtwin_routeintensity_join"
+              "dtwin_airqualityobserved_join"
             ]
           }
         }
@@ -158,12 +155,10 @@
             "documentation": "Conjunto de vistas utilitarias para la presentación de\ndatos de escenarios identidad y simulaciones.",
             "path": "./sql",
             "files": [
-              "custom_RouteIntensity.sql"
+              "custom_AirQualityObserved.sql"
             ],
             "weight": 10,
-            "relations": [
-              "dtwin_routeintensity_daily"
-            ]
+            "relations": []
           }
         }
       }
@@ -171,15 +166,15 @@
     "sim": {
       "sql": {
         "sources": {
-          "routeintensity_sim.sql": {
+          "airqualityobserved_sim.sql": {
             "documentation": "Fichero SQL del flujo sim (tipo FLOW_JOIN_VIEW)",
             "path": "./sql",
             "files": [
-              "routeintensity_sim.sql"
+              "airqualityobserved_sim.sql"
             ],
             "weight": 1,
             "relations": [
-              "dtwin_routeintensity_sim"
+              "dtwin_airqualityobserved_sim"
             ]
           }
         }
