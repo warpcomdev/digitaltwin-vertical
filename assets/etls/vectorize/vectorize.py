@@ -1231,14 +1231,14 @@ class SimulationProperties:
     settings: typing.Sequence[typing.Any]
 
     @staticmethod
-    def create(broker: Broker, identityref: str, identity_date: datetime, fallback: typing.Any=None, ) -> typing.Optional['SimulationProperties']:
+    def create(broker: Broker, identityref: str, identity_date: datetime, fallback: typing.Any=None) -> typing.Optional['SimulationProperties']:
         """Fetch simulation data from context broker"""
         sim_type = os.getenv("ETL_VECTORIZE_SIMULATION_TYPE")
         sim_id = os.getenv("ETL_VECTORIZE_SIMULATION_ID")
         entity = fallback
         if broker.cb is not None and sim_type and sim_id:
             result = broker.fetch_one(entitytype=sim_type, entityid=sim_id)
-            if result:
+            if result and len(result) > 0:
                 entity = result[0]
         if not entity:
             return None
