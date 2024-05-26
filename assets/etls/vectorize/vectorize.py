@@ -1237,9 +1237,7 @@ class SimulationProperties:
         sim_id = os.getenv("ETL_VECTORIZE_SIMULATION_ID")
         entity = fallback
         if broker.cb is not None and sim_type and sim_id:
-            result = broker.fetch_one(entitytype=sim_type, entityid=sim_id)
-            if result and len(result) > 0:
-                entity = result[0]
+            entity = broker.fetch_one(entitytype=sim_type, entityid=sim_id)
         if not entity:
             return None
         sceneref = entity['id']
