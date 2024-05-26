@@ -1652,9 +1652,10 @@ class SimParking:
                 weights[metric] = weights.apply(lambda x: x[scale] * x['weight'], axis=1)
                 weights = weights.set_index(['entitytype', 'metric', 'sourceref'])
                 weights_series = weights[metric]
-                decoder.add_layer(decoder.weighted_layer(entitytype, metric, self.sourceref, weights_series))
+                layer = decoder.weighted_layer(entitytype, metric, self.sourceref, weights_series)
+                decoder.add_layer(layer)
 
-    def build_similarity_df(self, reference: Reference):
+    def build_similarity_df(self, reference: Reference) -> pd.DataFrame:
         """
         Build a DataFrame that contains similarity weights
         from the new parking to be added, to any other parking.
@@ -1676,50 +1677,29 @@ class SimParking:
         parkings_df = reference.dims_df_map['OffStreetParking']
         parkings_df = parkings_df[parkings_df['sourceref'] != self.sourceref]
         parkings = parkings_df.set_index('sourceref')['capacity']
-        avg_capacity = parkings.mean()
-        max_capacity = parkings.max()
         parking_capacities = pd.merge(distance_parkings, parkings, how='left', left_index=True, right_index=True, sort=False)
         assert(parking_capacities.index.names == ['to_sourceref'])
         assert(parking_capacities.columns.to_list() == ['weight', 'capacity'])
         parking_capacities = parking_capacities.reset_index()
         parking_capacities['entitytype'] = 'OffStreetParking'
-        measure_capacity: float = self.capacity
-        if self.capacity > max(max_capacity, 1.5 * avg_capacity):
-            # If capacity is much higher than the average, a weighted
-            # average of other parkings by capacity won't do.
-            # To account for the excess in capacity, we calculate
-            # a reference capacity that is reduced by the bias and
-            # the intensity of traffic in the zone.
-            logging.info("** Increasing parking usage in proportion to traffic intensity")
-            closest_intensity = self.find_close_intensity(reference)
-            logging.debug("** Closest intensity points:\n%s", closest_intensity)
-            assert(reference.data_df_map is not None)
-            intensities_df = reference.data_df_map['TrafficIntensity']
-            logging.debug("** Intensity df (intensities_df.csv):\n%s", intensities_df)
-            intensities_df.to_csv("intensities_df.csv")
-            intensities_df = intensities_df[intensities_df['sourceref'].isin(closest_intensity)]
-            logging.debug("** Intensity df after isin (intensities_df_after.csv):\n%s", intensities_df)
-            intensities_df.to_csv("intensities_df_after.csv")
-            # Calculate biased intensity (how much of the intensity
-            # goes against the capacity)
-            max_intensity = intensities_df['intensity'].max()
-            biased_intensity = max_intensity * ((1 + self.bias) / 10.0)
-            # Calculate the scale factor to increase the capacity
-            excess_capacity = max_capacity * self.capacity / biased_intensity
-            measure_capacity = min(self.capacity, avg_capacity + excess_capacity)
-        parking_capacities['capacity_scale'] = parking_capacities.apply(lambda x: x['capacity'] / measure_capacity, axis=1)
+        # Add a prevision of how many new people will try to
+        # use the new parking, based on the zone intensity.
+        intensities = self.find_close_intensity(reference)
+        max_intensity = intensities['intensity'].max()
+        biased_intensity = max_intensity * (1 + self.bias) / 10
+        parking_capacities['capacity_scale'] = parking_capacities.apply(lambda x: (x['capacity'] + biased_intensity) / self.capacity, axis=1)
         return parking_capacities
-        # Otherwise, increase the parking usage in proportion to the
-        # intensity of traffic in the district.
-        # We will increase the scales above, to increase the overall usage
-        # while preserving the shape of the curve.
-        # Get the daily intensity of the district.
-        logging.info("** Increasing parking usage in proportion to traffic intensity")
-        closest_intensity = self.find_close_intensity(reference)
+
+    def find_close_intensity(self, reference: Reference) -> pd.DataFrame:
+        """
+        Find the TrafficIntensity entities in the same zone,
+        and return a pd.DataFrame with the intensity measurements.
+        """
+        assert(reference.dims_df_map is not None)
+        zones_df = reference.dims_df_map['TrafficIntensity']
+        zones_df = zones_df[zones_df['zone'] == self.zone]
+        closest_intensity = zones_df['sourceref']
         logging.debug("** Closest intensity points:\n%s", closest_intensity)
-        distance_traffic = reference.similarity_by_distance('OffStreetParking', self.sourceref, 'TrafficIntensity', closest_intensity)
-        distance_traffic.name = 'weight'
-        # Get the average daily intensity
         assert(reference.data_df_map is not None)
         intensities_df = reference.data_df_map['TrafficIntensity']
         logging.debug("** Intensity df (intensities_df.csv):\n%s", intensities_df)
@@ -1727,35 +1707,7 @@ class SimParking:
         intensities_df = intensities_df[intensities_df['sourceref'].isin(closest_intensity)]
         logging.debug("** Intensity df after isin (intensities_df_after.csv):\n%s", intensities_df)
         intensities_df.to_csv("intensities_df_after.csv")
-        intensities_df = intensities_df[['sourceref', 'trend', 'daytype', 'intensity']].groupby(['sourceref', 'trend', 'daytype']).sum()
-        intensities_agg = intensities_df.groupby(level=0).mean()
-
-        logging.debug("** Intensity aggs (intensities_agg.csv):\n%s", intensities_agg)
-        intensities_agg.to_csv("intensities_agg.csv")
-        max_intensity = typing.cast(float, intensities_agg.max())
-        traffic_capacities = pd.merge(distance_traffic, intensities_agg, how='left', left_index=True, right_index=True, sort=False)
-        assert(traffic_capacities.index.names == ['to_sourceref'])
-        assert(traffic_capacities.columns.to_list() == ['weight', 'intensity'])
-        traffic_capacities = traffic_capacities.reset_index()
-        traffic_capacities['entitytype'] = 'TrafficIntensity'
-        logging.debug("** traffic capacities (traffic_capacities.csv):\n%s", traffic_capacities)
-        traffic_capacities.to_csv("traffic_capacities.csv")
-        traffic_capacities['capacity_scale'] = traffic_capacities.apply(lambda x: (x['intensity'] * self.bias) / (max_intensity * self.capacity))
-        capacities = pd.concat([
-            parking_capacities[['entitytype', 'to_sourceref', 'weight', 'capacity_scale']],
-            traffic_capacities[['entitytype', 'to_sourceref', 'weight', 'capacity_scale']],
-        ], axis=0)
-        return capacities
-
-    def find_close_intensity(self, reference: Reference) -> pd.Series:
-        """
-        Find the TrafficIntensity entities in the same zone,
-        and return a pd.Series with the sourcerefs.
-        """
-        assert(reference.dims_df_map is not None)
-        zones_df = reference.dims_df_map['TrafficIntensity']
-        zones_df = zones_df[zones_df['zone'] == self.zone]
-        return zones_df['sourceref']
+        return intensities_df
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
         # Produce an impact on other things close to the parking
