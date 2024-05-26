@@ -1683,11 +1683,9 @@ class SimParking:
         assert(parking_capacities.columns.to_list() == ['weight', 'capacity'])
         parking_capacities = parking_capacities.reset_index()
         parking_capacities['entitytype'] = 'OffStreetParking'
-        # if the parking capacity is similar to other parkings, then
-        # do not consider the traffic in the district.
         measure_capacity: float = self.capacity
-        if self.capacity > 1.5 * avg_capacity:
-            # If capacity is higher than the average, a weighted
+        if self.capacity > max(max_capacity, 1.5 * avg_capacity):
+            # If capacity is much higher than the average, a weighted
             # average of other parkings by capacity won't do.
             # To account for the excess in capacity, we calculate
             # a reference capacity that is reduced by the bias and
@@ -1707,9 +1705,8 @@ class SimParking:
             max_intensity = intensities_df['intensity'].max()
             biased_intensity = max_intensity * ((1 + self.bias) / 10.0)
             # Calculate the scale factor to increase the capacity
-            scale_factor = self.capacity / biased_intensity
-            excess_capacity = max_capacity * scale_factor
-            measure_capacity = avg_capacity + excess_capacity
+            excess_capacity = max_capacity * self.capacity / biased_intensity
+            measure_capacity = min(self.capacity, avg_capacity + excess_capacity)
         parking_capacities['capacity_scale'] = parking_capacities.apply(lambda x: x['capacity'] / measure_capacity, axis=1)
         return parking_capacities
         # Otherwise, increase the parking usage in proportion to the
