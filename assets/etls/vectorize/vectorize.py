@@ -1694,7 +1694,7 @@ class SimParking:
         # Now let's scale the capacity of each parking so when
         # they are at 100%, they would add biased_intensity to
         # my parking.
-        parking_capacities['capacity_scale'] = parking_capacities.apply(lambda x: (x['capacity'] + biased_intensity) / x['capacity'], axis=1)
+        parking_capacities['capacity_scale'] = parking_capacities.apply(lambda x: (x['capacity'] + biased_intensity) / self.capacity, axis=1)
         return parking_capacities
 
     def find_close_intensity(self, reference: Reference) -> pd.DataFrame:
