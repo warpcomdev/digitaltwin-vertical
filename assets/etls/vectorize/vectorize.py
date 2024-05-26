@@ -1569,17 +1569,17 @@ class SimParking:
         self.location = sim.get('location', {}).get('value', {})
         self.capacity = int(sim.get('capacity', {}).get('value', '1000'))
         self.bias = int(sim.get('bias', {}).get('value', 5))
+        self.zone = reference.match_zone(geometry.shape(self.location), "1")
 
     def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         # Add a new parking to the dims_df_map
         assert(reference.dims_df_map is not None)
         metadata = reference.metadata[self.entitytype]
         dims_df = reference.dims_df_map[self.entitytype]
-        zone = reference.match_zone(geometry.shape(self.location), "1")
         new_parking = {
             'sourceref': self.sourceref,
-            'zone': zone,
-            'zonelist': [zone],
+            'zone': self.zone,
+            'zonelist': [self.zone],
             'location': geometry.shape(self.location),
             'capacity': self.capacity,
         }
@@ -1613,7 +1613,7 @@ class SimParking:
                 fiwareservicepath="/digitaltwin",
                 sourceref=self.sourceref,
                 sceneref=self.sceneref,
-                zone=zone,
+                zone=self.zone,
                 location=json.dumps(self.location),
                 name=self.name,
                 capacity=self.capacity,
@@ -1648,6 +1648,7 @@ class SimParking:
                 weights = weights.set_index(['entitytype', 'metric', 'sourceref'])
                 weights_series = weights[metric]
                 decoder.add_layer(decoder.weighted_layer(entitytype, metric, self.sourceref, weights_series))
+        intensity = self.find_intensity(reference=reference)
 
     def build_similarity_df(self, reference: Reference):
         """
@@ -1674,6 +1675,18 @@ class SimParking:
         capacities = capacities.reset_index()
         capacities['capacity_scale'] = capacities.apply(lambda x: x['capacity'] / self.capacity, axis=1)
         return capacities
+
+    def find_intensity(self, reference: Reference) -> float:
+        """
+        Find the intensity of traffic in the zone
+        """
+        intensity_df = reference.dims_df_map['RouteIntensity']
+        intensity_df = intensity_df[intensity_df['zone'] == self.zone]
+        intensity_by_ref = intensity_df.groupby('sourceref').mean()
+        intensity_series = intensity_by_ref['intensity']
+        logging.debug("Calculating intensity in the zone")
+        intensity_series.to_csv("intensity_series.csv", index=True)
+        return intensity_series.sum()
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
         # Produce an impact on other things close to the parking
