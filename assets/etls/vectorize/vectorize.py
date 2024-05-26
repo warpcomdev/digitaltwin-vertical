@@ -481,7 +481,7 @@ class Metadata:
                 on=['sourceref']
             )
         with engine.begin() as conn:
-            kw = {
+            kw: typing.Dict[str, typing.Any] = {
                 "sceneref": sceneref,
                 "trend": dataset.trend,
                 "daytype": dataset.daytype,
@@ -879,8 +879,6 @@ class DecoderLayer:
     biases: torch.Tensor
     # This is the activation function to be applied
     activation: typing.Callable[[torch.Tensor], torch.Tensor]
-    # true to output debug data
-    debug: bool = False
 
     def index_matching(self, entitytype: str, sourceref: str) -> pd.Series:
         """
@@ -944,14 +942,8 @@ class DecoderLayer:
         """
         result = torch.matmul(self.weights, hidden)
         result = result + self.biases
-        if self.debug:
-            logging.debug("results before activation in results_before_activation.csv")
-            pd.Series(result.numpy(), index=self.index).to_csv("results_before_activation.csv")
         result = self.activation(result)
         series = pd.Series(result.numpy(), index=self.index)
-        if self.debug:
-            logging.debug("results after activation in results_after_activation.csv")
-            series.to_csv("results_after_activation.csv")
         return series
 
     @staticmethod
@@ -1638,39 +1630,50 @@ class SimParking:
         # Get weights to calculate the ocupation of the new
         # parking as a weighted average of the occupations of the
         # existing parkings, weighted by distance
+        capacities = self.build_similarity_df(reference).reset_index()
+        capacities['sourceref'] = capacities['to_sourceref']
+        layers = {
+            'OffStreetParking': {
+                # use the capacity_scale to scale
+                # the average for the occupationpercent metric
+                'occupationpercent': 'capacity_scale'
+            }
+        }
+        for entitytype, metrics in layers.items():
+            for metric, scale in metrics.items():
+                weights = capacities
+                weights['entitytype'] = entitytype
+                weights['metric'] = metric
+                weights[metric] = weights.apply(lambda x: x[scale] * x['weight'], axis=1)
+                weights = weights.set_index(['entitytype', 'metric', 'sourceref'])
+                weights_series = weights[metric]
+                decoder.add_layer(decoder.weighted_layer(entitytype, metric, self.sourceref, weights_series))
+
+    def build_similarity_df(self, reference: Reference):
+        """
+        Build a DataFrame that contains similarity weights
+        from the new parking to be added, to any other parking.
+
+        The dataframe has the columns:
+        ['to_sourceref', 'weight', 'capacity_scale'], where:
+
+        - `weight` is the similarity between the new parking,
+          and the `to_sourceref`.
+        - `capacity_scale` is the ratio of the capacity
+          of the `to_sourceref` and the new parking.
+        """
         distance_averages = reference.similarity_by_distance('OffStreetParking', self.sourceref, 'OffStreetParking')
         assert(distance_averages.index.names == ['to_sourceref'])
         distance_averages.name = 'weight'
-        logging.debug("dumping parking distance averages to distance_averages.csv")
-        distance_averages.to_csv("distance_averages.csv", index=True)
-        # Scale the weights by the relative capacities
-        # of the parkings
+        # Find the relative capacities between this parking and the others
         assert(reference.dims_df_map is not None)
         parkings = reference.dims_df_map['OffStreetParking'].set_index('sourceref')['capacity']
         capacities = pd.merge(distance_averages, parkings, how='left', left_index=True, right_index=True, sort=False)
         assert(capacities.index.names == ['to_sourceref'])
         assert(capacities.columns.to_list() == ['weight', 'capacity'])
-        capacities['weight'] = capacities.apply(lambda x: x['weight'] * x['capacity'] / self.capacity, axis=1)
-        logging.debug("dumping relative weights to parking_capacities.csv")
-        capacities.to_csv("relative_capacities.csv", index=True)
-        # Generate the weights series
-        weights = capacities.reset_index()
-        weights['entitytype'] = 'OffStreetParking'
-        weights['sourceref'] = weights['to_sourceref']
-        weights['metric'] = 'occupationpercent'
-        weights = weights.set_index(['entitytype', 'metric', 'sourceref'])
-        weights_series = weights['weight']
-        logging.debug("dumping parking weights series to weights_series.csv")
-        weights_series.to_csv("weights_series.csv", index=True)
-        # Apply the weights series to the "occupationpercent"
-        # metric of the entitytype
-        layer = decoder.weighted_layer(self.entitytype, 'occupationpercent', self.sourceref, weights_series)
-        layer.debug = True
-        logging.debug("Dumping parking decoder weights to decoder_weights.csv")
-        pd.DataFrame(layer.weights.numpy()).to_csv("parking_weights.csv")
-        logging.debug("Dumping parking decoer biases to decoder_biases.csv")
-        pd.DataFrame(layer.biases.numpy()).to_csv("parking_biases.csv")
-        decoder.add_layer(layer)
+        capacities = capacities.reset_index()
+        capacities['capacity_scale'] = capacities.apply(lambda x: x['capacity'] / self.capacity, axis=1)
+        return capacities
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
         # Produce an impact on other things close to the parking
@@ -1846,9 +1849,45 @@ class SimRoute:
         pass
 
     def prepare_decoder(self, reference: Reference, decoder: Decoder):
-        # Add a new layer for the new route, averaging the
-        # values of the other parkings
-        # get the average intensity, forwardtrips and returntrips per route
+        capacities = self.build_similarity_df(reference).reset_index()
+        capacities['sourceref'] = capacities['to_sourceref']
+        # We need to add a layer per entity type and metric
+        layers = {
+            'RouteSchedule': {
+                'forwardtrips': 'trips_scale',
+                'returntrips': 'trips_scale'
+            },
+            'RouteIntensity': {
+                'forwardtrips': 'trips_scale',
+                'returntrips': 'trips_scale',
+                'intensity': 'intensity_scale'
+            }
+        }
+        for entitytype, metrics in layers.items():
+            for metric, scale in metrics.items():
+                weights = capacities
+                weights['entitytype'] = entitytype
+                weights['metric'] = metric
+                weights[metric] = weights.apply(lambda x: x[scale] * x['weight'], axis=1)
+                weights = weights.set_index(['entitytype', 'metric', 'sourceref'])
+                weights_series = weights[metric]
+                decoder.add_layer(decoder.weighted_layer(entitytype, metric, self.sourceref, weights_series))
+
+    def build_similarity_df(self, reference: Reference):
+        """
+        Build a DataFrame that contains similarity weights
+        from the new Route to be added, to any other route
+
+        The dataframe has the columns:
+        ['to_sourceref', 'weight', 'intensity_scale', 'trips_scale'], where:
+
+        - `weight` is the similarity between the new route,
+          and the `to_sourceref`.
+        - `intensity_scale` is the ratio of the intensity
+          of the `to_sourceref` RouteIntensity, and the new route.
+        - `trips_scale` is the ratio of the number of trips
+          of the `to_sourceref` RouteIntensity, and the new route.
+        """
         assert(reference.data_df_map is not None)
         entities = reference.data_df_map['RouteIntensity'][['sourceref', 'intensity', 'forwardtrips', 'returntrips']].groupby('sourceref').mean()
         assert(entities.index.names == ['sourceref'])
@@ -1861,32 +1900,9 @@ class SimRoute:
         assert(capacities.index.names == ['to_sourceref'])
         assert(capacities.columns.to_list() == ['weight', 'intensity', 'forwardtrips', 'returntrips'])
         capacities = capacities.reset_index()
-        capacities['sourceref'] = capacities['to_sourceref']
         capacities['intensity_scale'] = capacities.apply(lambda x: self.intensity / x['intensity'], axis=1)
         capacities['trips_scale'] = capacities.apply(lambda x: self.trips / (x['forwardtrips'] + x['returntrips']), axis=1)
-        # Prepare weights for each metric
-        capacities['intensity_weight'] = capacities.apply(lambda x: x['intensity_scale'] * x['weight'], axis=1)
-        capacities['trips_weight'] = capacities.apply(lambda x: x['trips_scale'] * x['weight'], axis=1)
-        # We need to add a layer per entity type and metric
-        layers = {
-            'RouteSchedule': {
-                'forwardtrips': 'trips_weight',
-                'returntrips': 'trips_weight'
-            },
-            'RouteIntensity': {
-                'forwardtrips': 'trips_weight',
-                'returntrips': 'trips_weight',
-                'intensity': 'intensity_weight'
-            }
-        }
-        for entitytype, metrics in layers.items():
-            for metric, weight in metrics.items():
-                metric_cap = capacities
-                metric_cap['entitytype'] = entitytype
-                metric_cap['metric'] = metric
-                metric_cap = metric_cap.set_index(['entitytype', 'metric', 'sourceref'])
-                metric_weights = metric_cap[weight]
-                decoder.add_layer(decoder.weighted_layer(entitytype, metric, self.sourceref, metric_weights))
+        return capacities
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
         return hidden
