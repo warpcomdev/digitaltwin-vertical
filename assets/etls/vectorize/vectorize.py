@@ -492,7 +492,6 @@ class Metadata:
                 f"""
                 DELETE FROM {self.dataTableName}
                 WHERE sceneref=:sceneref
-                AND timeinstant=:timeinstant
                 AND trend=:trend
                 AND daytype=:daytype
                 """).bindparams(**kw)
