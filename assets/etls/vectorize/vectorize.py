@@ -706,7 +706,7 @@ class Reference:
     def softmax_by_distance(self, from_type: str, from_sourceref: str, to_type: str) -> pd.Series:
         """
         Calculates the distance between the (from_type, from_sourceref)
-        enity, and every other entity of type `to_type` (except itself,
+        entity, and every other entity of type `to_type` (except itself,
         if the from_type and to_type are the same).
 
         Then uses softmax to generate a series with the
@@ -872,6 +872,8 @@ class DecoderLayer:
     biases: torch.Tensor
     # This is the activation function to be applied
     activation: typing.Callable[[torch.Tensor], torch.Tensor]
+    # true to output debug data
+    debug: bool = False
 
     def index_matching(self, entitytype: str, sourceref: str) -> pd.Series:
         """
@@ -935,8 +937,15 @@ class DecoderLayer:
         """
         result = torch.matmul(self.weights, hidden)
         result = result + self.biases
+        if self.debug:
+            logging.debug("results before activation in results_before_activation.csv")
+            pd.Series(result.numpy(), index=self.index).to_csv("results_before_activation.csv")
         result = self.activation(result)
-        return pd.Series(result.numpy(), index=self.index)
+        series = pd.Series(result.numpy(), index=self.index)
+        if self.debug:
+            logging.debug("results after activation in results_after_activation.csv")
+            series.to_csv("results_after_activation.csv")
+        return series
 
     @staticmethod
     def linear(x: torch.Tensor) -> torch.Tensor:
@@ -1625,7 +1634,7 @@ class SimParking:
         distance_averages = reference.softmax_by_distance('OffStreetParking', self.sourceref, 'OffStreetParking')
         assert(distance_averages.index.names == ['to_sourceref'])
         distance_averages.name = 'weight'
-        logging.debug("dumping parking distance averages")
+        logging.debug("dumping parking distance averages to distance_averages.csv")
         distance_averages.to_csv("distance_averages.csv", index=True)
         # Scale the weights by the relative capacities
         # of the parkings
@@ -1635,8 +1644,8 @@ class SimParking:
         assert(capacities.index.names == ['to_sourceref'])
         assert(capacities.columns.to_list() == ['weight', 'capacity'])
         capacities['weight'] = capacities.apply(lambda x: x['weight'] * x['capacity'] / self.capacity, axis=1)
-        logging.debug("dumping parking capacities")
-        capacities.to_csv("capacities.csv", index=True)
+        logging.debug("dumping relative weights to parking_capacities.csv")
+        capacities.to_csv("relative_capacities.csv", index=True)
         # Generate the weights series
         weights = capacities.reset_index()
         weights['entitytype'] = 'OffStreetParking'
@@ -1644,14 +1653,15 @@ class SimParking:
         weights['metric'] = 'occupationpercent'
         weights = weights.set_index(['entitytype', 'metric', 'sourceref'])
         weights_series = weights['weight']
-        logging.debug("dumping weights series")
+        logging.debug("dumping parking weights series to weights_series.csv")
         weights_series.to_csv("weights_series.csv", index=True)
         # Apply the weights series to the "occupationpercent"
         # metric of the entitytype
         layer = decoder.weighted_layer(self.entitytype, 'occupationpercent', self.sourceref, weights_series)
-        logging.debug("Dumping parking weights")
+        layer.debug = True
+        logging.debug("Dumping parking decoder weights to decoder_weights.csv")
         pd.DataFrame(layer.weights.numpy()).to_csv("parking_weights.csv")
-        logging.debug("Dumping parking biases")
+        logging.debug("Dumping parking decoer biases to decoder_biases.csv")
         pd.DataFrame(layer.biases.numpy()).to_csv("parking_biases.csv")
         decoder.add_layer(layer)
 
