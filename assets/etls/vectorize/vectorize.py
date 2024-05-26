@@ -1625,6 +1625,8 @@ class SimParking:
         distance_averages = reference.softmax_by_distance('OffStreetParking', self.sourceref, 'OffStreetParking')
         assert(distance_averages.index.names == ['to_sourceref'])
         distance_averages.name = 'weight'
+        logging.debug("dumping parking distance averages")
+        distance_averages.to_csv("distance_averages.csv", index=True)
         # Scale the weights by the relative capacities
         # of the parkings
         assert(reference.dims_df_map is not None)
@@ -1633,6 +1635,8 @@ class SimParking:
         assert(capacities.index.names == ['to_sourceref'])
         assert(capacities.columns.to_list() == ['weight', 'capacity'])
         capacities['weight'] = capacities.apply(lambda x: x['weight'] * x['capacity'] / self.capacity, axis=1)
+        logging.debug("dumping parking capacities")
+        capacities.to_csv("capacities.csv", index=True)
         # Generate the weights series
         weights = capacities.reset_index()
         weights['entitytype'] = 'OffStreetParking'
@@ -1640,9 +1644,16 @@ class SimParking:
         weights['metric'] = 'occupationpercent'
         weights = weights.set_index(['entitytype', 'metric', 'sourceref'])
         weights_series = weights['weight']
+        logging.debug("dumping weights series")
+        weights_series.to_csv("weights_series.csv", index=True)
         # Apply the weights series to the "occupationpercent"
         # metric of the entitytype
-        decoder.add_layer(decoder.weighted_layer(self.entitytype, 'occupationpercent', self.sourceref, weights_series))
+        layer = decoder.weighted_layer(self.entitytype, 'occupationpercent', self.sourceref, weights_series)
+        logging.debug("Dumping parking weights")
+        pd.DataFrame(layer.weights.numpy()).to_csv("parking_weights.csv")
+        logging.debug("Dumping parking biases")
+        pd.DataFrame(layer.biases.numpy()).to_csv("parking_biases.csv")
+        decoder.add_layer(layer)
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
         # Produce an impact on other things close to the parking
@@ -1818,7 +1829,7 @@ class SimRoute:
         pass
 
     def prepare_decoder(self, reference: Reference, decoder: Decoder):
-        # Add a new layer for the new parking, averaging the
+        # Add a new layer for the new route, averaging the
         # values of the other parkings
         # get the average intensity, forwardtrips and returntrips per route
         assert(reference.data_df_map is not None)
