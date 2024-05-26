@@ -13,6 +13,7 @@ import argparse
 import json
 import typing
 import logging
+import math
 from datetime import datetime
 from dataclasses import dataclass
 from contextlib import contextmanager, ExitStack
@@ -613,7 +614,7 @@ class Reference:
             zones_df = pd.read_sql(text(f"""
                 SELECT
                     entityid, zoneid, name, label,
-                    ST_AsGeoJSON(location) AS location
+                    ST_AsGeoJSON(ST_ConvexHull(location)) AS location
                 FROM dtwin_zone_lastdata
                 """),
                 con=con
@@ -725,7 +726,7 @@ class Reference:
         assert(isinstance(candidates, pd.Series))
         if from_type == to_type:
             # remove the entity itself from the candidates
-            candidates = candidates[candidates > 0]
+            candidates = candidates[typing.cast(pd.Series, candidates) > 0]
         max_distance = typing.cast(float, candidates.max())
         assert(isinstance(max_distance, float))
         # We want to give more weight to the closest entities,
@@ -958,8 +959,9 @@ class DecoderLayer:
 
         The output will never be over scale or below 0.
         """
-        def inverse_sigmoid(y: float):
-            return torch.log(torch.Tensor(y))
+        def inverse_sigmoid(y: float) -> float:
+            # See https://stackoverflow.com/questions/66116840/inverse-sigmoid-function-in-python-for-neural-networks
+            return -math.log((1 / (y + 1e-8)) - 1)
         # we want to implement a function based on a sigmoid,
         # but that crosses the points:
         # (x = 0, y = 0)
@@ -982,12 +984,12 @@ class DecoderLayer:
         # B = -2 * C / (threshold * scale)
         #
         # Then the conditions are satisifed by these numbers:
-        C = inverse_sigmoid((1- threshold) / (2-threshold))
-        A = (2 - threshold) * scale
-        D = 1 - A
-        B = -2 * C / (threshold * scale)
+        C = inverse_sigmoid((1.0 - threshold) / (2.0 - threshold))
+        A = (2.0 - threshold) * scale
+        D = 1.0 - A
+        B = (-2.0 * C) / (threshold * scale)
         def scaled_func(x: torch.Tensor, A=A, B=B, C=C, D=D):
-            return D + A * torch.sigmoid(B * x + C)
+            return A * torch.sigmoid(B * x + C) + D
         return scaled_func
 
 class Decoder:
@@ -1137,8 +1139,15 @@ class Decoder:
             dtype=np.int32
         )
         vector_offsets.name = 'offset'
-        weighted_offsets = pd.merge(vector_offsets, weights, how='inner', on=['entitytype', 'metric', 'sourceref'], sort=False)
-        assert(weighted_offsets.index.names == ["entitytype", "metric", "sourceref", "hour", "minute"])
+        weighted_offsets = pd.merge(
+            vector_offsets.reset_index(['hour', 'minute'], drop=False),
+            weights,
+            how='inner',
+            left_index=True,
+            right_index=True,
+            sort=False
+        ).set_index(['hour', 'minute'], append=True)
+        assert(weighted_offsets.index.names == ['entitytype', 'metric', 'sourceref', 'hour', 'minute'])
         # Now get a reductor matrix for these rows only
         reductor = self.main_layer.reductor_matrix(weighted_offsets['offset'])
         assert(reductor.shape[0] == len(weighted_offsets))
@@ -1173,10 +1182,10 @@ class Decoder:
         hasHour = meta.hasHour
         hasMinute = meta.hasMinute
         rows = []
-        for row_idx, _ in added_vector.index:
+        for row_idx in added_vector.index:
             _, _, _, row_hour, row_minute = typing.cast(tuple, row_idx)
             row = []
-            for col_idx, _ in weighted_offsets.index:
+            for col_idx in weighted_offsets.index:
                 _, _, _, col_hour, col_minute = typing.cast(tuple, col_idx)
                 match = (
                     (not hasHour) or
@@ -1190,10 +1199,10 @@ class Decoder:
         assert(agg_tensor.shape[1] == len(weighted_offsets))
         agg_reductor = torch.matmul(agg_tensor, scaled_reductor)
         agg_tensor = torch.matmul(agg_reductor, self.main_layer.weights)
-        agg_bias = torch.matmul(agg_reductor, self.main_layer.bias)
+        agg_bias = torch.matmul(agg_reductor, self.main_layer.biases)
         # If the target metric is scaled, use a compression
         # activation function so it does not excede the scale
-        activation = DecoderLayer.linear
+        activation: typing.Callable[[torch.Tensor], torch.Tensor] = DecoderLayer.linear
         scale = self.meta_map[entitytype].metrics[metric].scale
         if scale:
             activation = DecoderLayer.scaled_sigmoid(scale, 0.9)
@@ -1617,23 +1626,26 @@ class SimParking:
         # parking as a weighted average of the occupations of the
         # existing parkings, weighted by distance
         distance_averages = reference.softmax_by_distance('OffStreetParking', self.sourceref, 'OffStreetParking')
-        assert(distance_averages.index.levels == ['to_sourceref'])
+        assert(distance_averages.index.names == ['to_sourceref'])
         distance_averages.name = 'weight'
         # Scale the weights by the relative capacities
         # of the parkings
+        assert(reference.dims_df_map is not None)
         parkings = reference.dims_df_map['OffStreetParking'].set_index('sourceref')['capacity']
-        capacities = pd.concat(distance_averages, parkings, axis=1, how='left')
-        assert(capacities.index.levels == ['to_sourceref'])
-        assert(capacities.columns == ['weight', 'capacity'])
+        capacities = pd.merge(distance_averages, parkings, how='left', left_index=True, right_index=True, sort=False)
+        assert(capacities.index.names == ['to_sourceref'])
+        assert(capacities.columns.to_list() == ['weight', 'capacity'])
         capacities['weight'] = capacities.apply(lambda x: x['weight'] * x['capacity'] / self.capacity, axis=1)
         # Generate the weights series
         weights = capacities.reset_index()
         weights['entitytype'] = 'OffStreetParking'
         weights['sourceref'] = weights['to_sourceref']
-        weights = weights.set_index(['entitytpe', 'sourceref'])['weight']
+        weights['metric'] = 'occupationpercent'
+        weights = weights.set_index(['entitytype', 'metric', 'sourceref'])
+        weights_series = weights['weight']
         # Apply the weights series to the "occupationpercent"
         # metric of the entitytype
-        decoder.add_layer(decoder.weighted_layer(self.entitytype, 'occupationpercent', self.sourceref, weights))
+        decoder.add_layer(decoder.weighted_layer(self.entitytype, 'occupationpercent', self.sourceref, weights_series))
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
         # Produce an impact on other things close to the parking
@@ -1695,8 +1707,8 @@ class SimRoute:
         self.sim_props = sim_props
         self.sceneref = sim_props.sceneref
         self.sim_date = sim_props.sim_date
-        self.trips = sim.get('trips', {}).get('value', 100)
-        self.intensity = sim.get('intensity', {}).get('value', 1000)
+        self.trips = float(sim.get('trips', {}).get('value', 100))
+        self.intensity = float(sim.get('intensity', {}).get('value', 1000))
         self.bias = int(sim.get('bias', {}).get('value', 5))
         self.sim_id = sim['id']
         self.sim_type = sim['type']
@@ -1812,23 +1824,24 @@ class SimRoute:
         # Add a new layer for the new parking, averaging the
         # values of the other parkings
         # get the average intensity, forwardtrips and returntrips per route
+        assert(reference.data_df_map is not None)
         entities = reference.data_df_map['RouteIntensity'][['sourceref', 'intensity', 'forwardtrips', 'returntrips']].groupby('sourceref').mean()
         assert(entities.index.names == ['sourceref'])
         distance_averages = reference.softmax_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity')
-        assert(distance_averages.index.levels == ['to_sourceref'])
+        assert(distance_averages.index.names == ['to_sourceref'])
         distance_averages.name = 'weight'
         # Prepare dataframe with the scale of each route, both
         # intensity and number of trips
-        capacities = pd.concat(distance_averages, entities, axis=1, how='left')
-        assert(capacities.index.levels == ['to_sourceref'])
-        assert(capacities.columns == ['weight', 'intensity', 'forwardtrips', 'returntrips'])
+        capacities = pd.merge(distance_averages.to_frame(), entities, how='left', left_index=True, right_index=True, sort=False)
+        assert(capacities.index.names == ['to_sourceref'])
+        assert(capacities.columns.to_list() == ['weight', 'intensity', 'forwardtrips', 'returntrips'])
         capacities = capacities.reset_index()
         capacities['sourceref'] = capacities['to_sourceref']
-        capacities['intensity_scale'] = capacities.apply(lambda x: x['intensity'] / self.intensity, axis=1)
-        capacities['trips_scale'] = capacities.apply(lambda x: (x['forwardtrips'] + x['returntrips']) / self.trips, axis=1)
+        capacities['intensity_scale'] = capacities.apply(lambda x: self.intensity / x['intensity'], axis=1)
+        capacities['trips_scale'] = capacities.apply(lambda x: self.trips / (x['forwardtrips'] + x['returntrips']), axis=1)
         # Prepare weights for each metric
-        capacities['intensity_weight'].apply(lambda x: x['intensity_scale'] * x['weight'])
-        capacities['trips_weight'].apply(lambda x: x['trips_scale'] * x['weight'])
+        capacities['intensity_weight'] = capacities.apply(lambda x: x['intensity_scale'] * x['weight'], axis=1)
+        capacities['trips_weight'] = capacities.apply(lambda x: x['trips_scale'] * x['weight'], axis=1)
         # We need to add a layer per entity type and metric
         layers = {
             'RouteSchedule': {
@@ -1844,7 +1857,7 @@ class SimRoute:
         for entitytype, metrics in layers.items():
             for metric, weight in metrics.items():
                 metric_cap = capacities
-                metric_cap['entititype'] = entitytype
+                metric_cap['entitytype'] = entitytype
                 metric_cap['metric'] = metric
                 metric_cap = metric_cap.set_index(['entitytype', 'metric', 'sourceref'])
                 metric_weights = metric_cap[weight]
