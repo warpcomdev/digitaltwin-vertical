@@ -660,7 +660,7 @@ class Reference:
             # Only allow 0 distance for objects with the
             # same entity id
             if d <= 0 and s1 != s2:
-                return 1
+                return 10
             return d
 
         distances: typing.List[pd.DataFrame] = []
@@ -703,20 +703,23 @@ class Reference:
             closest.update(candidates.index.get_level_values(0).values)
         return tuple(closest)
 
-    def softmax_by_distance(self, from_type: str, from_sourceref: str, to_type: str) -> pd.Series:
+    def similarity_by_distance(self, from_type: str, from_sourceref: str, to_type: str) -> pd.Series:
         """
-        Calculates the distance between the (from_type, from_sourceref)
+        Calculates the similarity between the (from_type, from_sourceref)
         entity, and every other entity of type `to_type` (except itself,
         if the from_type and to_type are the same).
 
-        Then uses softmax to generate a series with the
-        normalized weights between each pair of entities.
-        the returned series has a row for each `to_sourceref`
+        Then generates a series with scaled weights between each pair
+        of entities. the returned series has a row for each `to_sourceref`
         of the given `to_type`, and is indexed by `to_sourceref`.
 
-        This can be used to calculate a weighted average of
-        some metric from other entitites, using the distance
-        as the weight.
+        The weights in this series add up to one, and can be used to
+        calculate a weighted average of some metric from other entitites
+
+        Currently the similarity criteria is just the distance
+        between the entities. The distances are scaled so they
+        are in a range between 1 and 10, and then a softmax
+        is applied to turn them into a probability distribution.
         """
         assert(self.distance_df is not None)
         distance_series = self.distance_df['distance']
@@ -726,13 +729,17 @@ class Reference:
         if from_type == to_type:
             # remove the entity itself from the candidates
             candidates = candidates[typing.cast(pd.Series, candidates) > 0]
-        max_distance = typing.cast(float, candidates.max())
+        # Distances have a wildly large range (from tens of meters to kilometers),
+        # and applying a softmax directly yields terrible results.
+        # We will convert them to logarithmic scale first.
+        log_candidates = candidates.apply(lambda x: np.log(x))
+        max_distance = typing.cast(float, log_candidates.max())
         assert(isinstance(max_distance, float))
         # We want to give more weight to the closest entities,
         # so we invert the distance
-        inverted_distance = torch.Tensor(candidates.apply(lambda x: max_distance / x).to_numpy())
+        inverted_distance = torch.Tensor(log_candidates.apply(lambda x: max_distance / x).to_numpy())
         softmax = inverted_distance.softmax(dim=0)
-        return pd.Series(softmax.numpy(), index=candidates.index)
+        return pd.Series(softmax.numpy(), index=log_candidates.index)
 
 # -------------------------------------
 # Schemaless types
@@ -1631,7 +1638,7 @@ class SimParking:
         # Get weights to calculate the ocupation of the new
         # parking as a weighted average of the occupations of the
         # existing parkings, weighted by distance
-        distance_averages = reference.softmax_by_distance('OffStreetParking', self.sourceref, 'OffStreetParking')
+        distance_averages = reference.similarity_by_distance('OffStreetParking', self.sourceref, 'OffStreetParking')
         assert(distance_averages.index.names == ['to_sourceref'])
         distance_averages.name = 'weight'
         logging.debug("dumping parking distance averages to distance_averages.csv")
@@ -1699,7 +1706,7 @@ class SimTraffic:
             from_type='TrafficCongestion',
             from_sourceref=self.affected_places,
             to_type='TrafficIntensity',
-            distance=10 # meters
+            distance=25 # meters
         )
         logging.info("Related TrafficIntensity entities: %s", ", ".join(self.related_places))
 
@@ -1845,7 +1852,7 @@ class SimRoute:
         assert(reference.data_df_map is not None)
         entities = reference.data_df_map['RouteIntensity'][['sourceref', 'intensity', 'forwardtrips', 'returntrips']].groupby('sourceref').mean()
         assert(entities.index.names == ['sourceref'])
-        distance_averages = reference.softmax_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity')
+        distance_averages = reference.similarity_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity')
         assert(distance_averages.index.names == ['to_sourceref'])
         distance_averages.name = 'weight'
         # Prepare dataframe with the scale of each route, both
