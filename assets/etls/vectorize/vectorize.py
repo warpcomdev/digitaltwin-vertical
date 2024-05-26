@@ -151,7 +151,7 @@ class Broker:
 
 @contextmanager
 def orion_engine() -> typing.Iterator[Broker]:
-    """Yields a postgres connection to the database"""
+    """Yields a connection to the context broker"""
     yield Broker.create()
 
 # -------------------------------------
@@ -172,7 +172,7 @@ class DatasetProperties:
 @dataclass
 class Dataset(DatasetProperties):
     """
-    Contains data for a particular set of aeasures
+    Contains data for a particular set of measures
     of all the entities of the given entitytype in the
     database.
 
@@ -193,33 +193,16 @@ class Dataset(DatasetProperties):
 @dataclass
 class VectorProperties:
     """
-    Holds the properties of a regularized dataset for a given
-    entity type.
-
-    A regularized dataset must be scaled prior to analysis, so
-    that all values are comparable and the encoder does not
-    get too much issues with the scale.
-    
-    So in this implementation, all vales are scaled between
-    0 and 1:
-      - metrics that contain probabilites are left as is.
-      - metrics that do not contain probabilities are scaled
-        to be between 0 and 1.
-        If metrics could be negative, an offset would be applied
-        before scaling. IT is currently not the case for any
-        metric.
-
-    In order to de-scale a metric, first you should multiply
-    by the scale factor and then add the offset value.
+    Holds the properties of a vectorized dataset for a given
+    entity type. See type `TypedVector` for a description
+    of a vectorized dataset.
     """
     entityType: str
-    offset: typing.Dict[str, float]
-    scale: typing.Dict[str, float]
 
 @dataclass
 class TypedVector(VectorProperties):
     """
-    Holds the data of a regularized dataset for a given entity type.
+    Holds the data of a vectorized dataset for a given entity type.
     This data is fixed length: There is a row per entity id,
     hour (if hasHour) and 10-minute interval (if hasMinute).
 
@@ -385,12 +368,11 @@ class Metadata:
 
     def normalize(self, fixed_df: pd.DataFrame, dataset: typing.Optional[pd.DataFrame]) -> TypedVector:
         """
-        Turns a regularized dataset into a typed vector, i.e.:
+        Turns a regularized dataset into a vectorized dataset, i.e.:
 
         - Sorts entries so that they match the order in fixed_df.
         - Makes sure the dataset has a column per dimension.
         - Fills in missing metrics for hours or minutes, with NaN.
-        - Scales metrics so that the vector information is within range [0, 1]
         
         The dataset must be regularized in time, i.e. there must be only
         one entry per "sourceref" and set of dimensions:
@@ -405,12 +387,6 @@ class Metadata:
         """
         typed_vector = TypedVector(
             entityType=self.entityType,
-            offset={
-                k: 0 for k in self.metrics.keys()
-            },
-            scale={
-                k: 1 for k in self.metrics.keys()
-            },
             # Even if there there are no metrics, we still need
             # rows in the index to be able to add or remove entities
             # from the simulation.
@@ -431,20 +407,7 @@ class Metadata:
             # any dataset, generate an empty one.
             if dataset is None:
                 dataset = pd.DataFrame(columns=on_columns + list(self.metrics.keys()))
-            # All our measures are either probabilities or intensities,
-            # larger than 0 in any case.
-            # We will normalize intensities to [0, 1] so that
-            # they are within the range of the vector.
-            for metric, props in self.metrics.items():
-                if props.scale:
-                    max_val = float(props.scale)
-                else:
-                    max_val = float(dataset[metric].max())
-                if max_val > 0:
-                    # Keep track of the scale factor to be able to de-scale later.
-                    typed_vector.scale[metric] = max_val
-                    dataset[metric] = dataset[metric] / max_val
-            # Finally, do the merge of the fixed_df to the scaled metrics
+            # Finally, do the merge of the fixed_df to the metrics
             typed_vector.df = pd.merge(
                 typed_vector.df,
                 dataset,
@@ -488,7 +451,7 @@ class Metadata:
         return series
 
     def to_sql(self, engine: Engine, sceneref: str, dataset: Dataset, dims_df:typing.Optional[pd.DataFrame]=None, dryrun:bool=False):
-                # if we get a dims_df, try to join the
+        # if we get a dims_df, try to join the
         # resulting dataframe to the dim_df to pick
         # up the staticProps
         df = dataset.df
@@ -766,11 +729,7 @@ class Vector:
                 entity_df = entity_data.df
             typed_vector = meta.normalize(fixed_df=fixed_df_map[entityType], dataset=entity_df)
             # Copy the properties for de-escalation
-            props[entityType] = VectorProperties(
-                entityType=typed_vector.entityType,
-                offset=typed_vector.offset,
-                scale=typed_vector.scale
-            )
+            props[entityType] = VectorProperties(entityType=typed_vector.entityType)
             vector_list.append(meta.unpivot(typed_vector=typed_vector))
         vector = pd.concat(vector_list, axis=0)
         return Vector(properties=props, df=vector.astype(np.float64))
@@ -792,10 +751,6 @@ class Vector:
             for metric in meta.metrics.keys():
                 # Get measures for the metric
                 metric_series = typed_series.loc[metric]
-                metric_offset = typed_props.offset[metric]
-                metric_scale = typed_props.scale[metric]
-                metric_series = metric_series * metric_scale + metric_offset
-                # Rename the value column to the metric
                 metric_series.name = metric
                 metrics.append(metric_series)
         else:
@@ -865,7 +820,7 @@ class DecoderLayer:
     Represents the decoder layer of the autoencoder
     """
     # This series contains the index for the output vector.
-    # The series is indexed by (entityType, metric, sourceRef, hour, minute)
+    # The series is indexed by (entityType, metric, sourceref, hour, minute)
     index: pd.MultiIndex
     # This is the decoding weights and biases
     weights: torch.Tensor
