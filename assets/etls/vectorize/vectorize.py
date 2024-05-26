@@ -1686,8 +1686,15 @@ class SimParking:
         # use the new parking, based on the zone intensity.
         intensities = self.find_close_intensity(reference)
         max_intensity = intensities['intensity'].max()
-        biased_intensity = max_intensity * (1 + self.bias) / 10
-        parking_capacities['capacity_scale'] = parking_capacities.apply(lambda x: (x['capacity'] + biased_intensity) / self.capacity, axis=1)
+        # This is the capacity I have over the typical parking
+        extra_capacity = max(self.capacity - parking_capacities['capacity'].mean(), 0)
+        # This is how much from the zone traffic intensity I expect
+        # to be able to use the parking
+        biased_intensity = min(extra_capacity, max_intensity) * (1 + self.bias) / 10
+        # Now let's scale the capacity of each parking so when
+        # they are at 100%, they would add biased_intensity to
+        # my parking.
+        parking_capacities['capacity_scale'] = parking_capacities.apply(lambda x: (x['capacity'] + biased_intensity) / x['capacity'], axis=1)
         return parking_capacities
 
     def find_close_intensity(self, reference: Reference) -> pd.DataFrame:
