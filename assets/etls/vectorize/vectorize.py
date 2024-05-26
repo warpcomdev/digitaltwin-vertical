@@ -994,7 +994,7 @@ class DecoderLayer:
         # Then the conditions are satisifed by these numbers:
         C = inverse_sigmoid((1.0 - threshold) / (2.0 - threshold))
         A = (2.0 - threshold) * scale
-        D = 1.0 - A
+        D = (1.0 - A) * scale
         B = (-2.0 * C) / (threshold * scale)
         def scaled_func(x: torch.Tensor, A=A, B=B, C=C, D=D):
             return A * torch.sigmoid(B * x + C) + D
