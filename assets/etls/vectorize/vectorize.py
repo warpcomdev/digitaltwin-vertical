@@ -1673,8 +1673,11 @@ class SimParking:
         distance_parkings.name = 'weight'
         # Find the relative capacities between this parking and the others
         assert(reference.dims_df_map is not None)
-        parkings = reference.dims_df_map['OffStreetParking'].set_index('sourceref')['capacity']
+        parkings_df = reference.dims_df_map['OffStreetParking']
+        parkings_df = parkings_df[parkings_df['sourceref'] != self.sourceref]
+        parkings = parkings_df.set_index('sourceref')['capacity']
         avg_capacity = parkings.mean()
+        max_capacity = parkings.max()
         parking_capacities = pd.merge(distance_parkings, parkings, how='left', left_index=True, right_index=True, sort=False)
         assert(parking_capacities.index.names == ['to_sourceref'])
         assert(parking_capacities.columns.to_list() == ['weight', 'capacity'])
@@ -1684,10 +1687,11 @@ class SimParking:
         # do not consider the traffic in the district.
         measure_capacity: float = self.capacity
         if self.capacity > 1.5 * avg_capacity:
-            # Otherwise, use a "measurement capacity" that is reduced
-            # with respect to the actual capacity of the parking.
-            # this is to consider the effect of the traffic intensity
-            # in the district.
+            # If capacity is higher than the average, a weighted
+            # average of other parkings by capacity won't do.
+            # To account for the excess in capacity, we calculate
+            # a reference capacity that is reduced by the bias and
+            # the intensity of traffic in the zone.
             logging.info("** Increasing parking usage in proportion to traffic intensity")
             closest_intensity = self.find_close_intensity(reference)
             logging.debug("** Closest intensity points:\n%s", closest_intensity)
@@ -1698,11 +1702,14 @@ class SimParking:
             intensities_df = intensities_df[intensities_df['sourceref'].isin(closest_intensity)]
             logging.debug("** Intensity df after isin (intensities_df_after.csv):\n%s", intensities_df)
             intensities_df.to_csv("intensities_df_after.csv")
-            # Calculate mean hourly intensity
-            mean_intensity = intensities_df['intensity'].mean()
-            excess_capacity = self.capacity * 1.0 - 1.5 * avg_capacity
-            bias_factor = 1 / (10 - min(max(self.bias, 1), 9))
-            measure_capacity: float = (1.5 * avg_capacity) * (1 + (excess_capacity * bias_factor / mean_intensity))
+            # Calculate biased intensity (how much of the intensity
+            # goes against the capacity)
+            max_intensity = intensities_df['intensity'].max()
+            biased_intensity = max_intensity * ((1 + self.bias) / 10.0)
+            # Calculate the scale factor to increase the capacity
+            scale_factor = self.capacity / biased_intensity
+            excess_capacity = max_capacity * scale_factor
+            measure_capacity = avg_capacity + excess_capacity
         parking_capacities['capacity_scale'] = parking_capacities.apply(lambda x: x['capacity'] / measure_capacity, axis=1)
         return parking_capacities
         # Otherwise, increase the parking usage in proportion to the
