@@ -483,7 +483,6 @@ class Metadata:
         with engine.begin() as conn:
             kw = {
                 "sceneref": sceneref,
-                "timeinstant": dataset.timeinstant,
                 "trend": dataset.trend,
                 "daytype": dataset.daytype,
             }
@@ -511,6 +510,7 @@ class Metadata:
                 for col, expr in self.calcs.items():
                     expressions.append(f"{col} = {expr}")
             if expressions:
+                kw["timeinstant"] = dataset.timeinstant
                 statement = text(f"""
                     UPDATE {self.dataTableName} SET {','.join(expressions)} 
                     WHERE sceneref=:sceneref
