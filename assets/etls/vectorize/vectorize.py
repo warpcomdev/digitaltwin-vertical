@@ -374,8 +374,8 @@ class Metadata:
         - Makes sure the dataset has a column per dimension.
         - Fills in missing metrics for hours or minutes, with NaN.
         
-        The dataset must be regularized in time, i.e. there must be only
-        one entry per "sourceref" and set of dimensions:
+        The input dataset must be regularized in time, i.e. there must
+        be only one entry per "sourceref" and set of dimensions:
 
         - if "hasHour" is true, there must be only one entry per sourceref
           and hour
@@ -416,11 +416,15 @@ class Metadata:
             )
         return typed_vector
 
-    def unpivot(self, typed_vector: TypedVector) -> pd.Series:
+    def unpivot(self, typed_vector: TypedVector, requested_metrics: typing.Optional[typing.Sequence[str]]=None) -> pd.Series:
         """
         Unpivots a typed vector into a pd.Series that has a multi-index
         with the following values:
         (entitytype, metric, sourceref, hour, minute)
+
+        By default, it will create rows for all the metrics supported
+        by the entity type. If the parameter `metrics` is specified,
+        it will ony output rows for those metrics.
         """
         vector_list = []
         # Add entityType to the dataframe. If the entity type has
@@ -430,6 +434,12 @@ class Metadata:
         if not self.metrics:
             typed_vector.df['_none_'] = np.NaN
             metric_keys = ['_none_']
+        elif requested_metrics:
+            # Filter metric keys, but preserve order
+            metric_keys = [
+                m for m in metric_keys
+                if m in requested_metrics
+            ]
         # Turn the dataframe into a series with a
         # multilevel index. The index will have the following keys:
         # (entitytype, metric, sourceref, hour, minute)
@@ -643,10 +653,14 @@ class Reference:
         that has a multiindex with 4 levels:
         (from_entitytype, from_sourceref, to_entitytype, to_sourceref)
         """
-        def distance(x, y) -> float:
+        def distance(s1, x, s2, y) -> float:
             if x is None or y is None:
                 return np.NaN
             d = shapely.distance(x, y) * GEO_SCALE_FACTOR
+            # Only allow 0 distance for objects with the
+            # same entity id
+            if d <= 0 and s1 != s2:
+                return 1
             return d
 
         distances: typing.List[pd.DataFrame] = []
@@ -668,7 +682,7 @@ class Reference:
                 to_entities['to_entitytype'] = to_type
                 cross_distances = from_entities.merge(to_entities, how="cross")
                 cross_distances['distance'] = cross_distances.apply(
-                    lambda x: distance(x["from_location"], x["to_location"]),
+                    lambda x: distance(x["from_sourceref"], x["from_location"], x["to_sourceref"], x["to_location"]),
                     axis=1,
                     result_type='reduce'
                 )
@@ -688,6 +702,37 @@ class Reference:
             candidates = candidates[candidates < distance]
             closest.update(candidates.index.get_level_values(0).values)
         return tuple(closest)
+
+    def softmax_by_distance(self, from_type: str, from_sourceref: str, to_type: str) -> pd.Series:
+        """
+        Calculates the distance between the (from_type, from_sourceref)
+        enity, and every other entity of type `to_type` (except itself,
+        if the from_type and to_type are the same).
+
+        Then uses softmax to generate a series with the
+        normalized weights between each pair of entities.
+        the returned series has a row for each `to_sourceref`
+        of the given `to_type`, and is indexed by `to_sourceref`.
+
+        This can be used to calculate a weighted average of
+        some metric from other entitites, using the distance
+        as the weight.
+        """
+        assert(self.distance_df is not None)
+        distance_series = self.distance_df['distance']
+        candidates = typing.cast(pd.Series, distance_series.loc[from_type, from_sourceref, to_type])
+        candidates = candidates.dropna()
+        assert(isinstance(candidates, pd.Series))
+        if from_type == to_type:
+            # remove the entity itself from the candidates
+            candidates = candidates[candidates > 0]
+        max_distance = typing.cast(float, candidates.max())
+        assert(isinstance(max_distance, float))
+        # We want to give more weight to the closest entities,
+        # so we invert the distance
+        inverted_distance = torch.Tensor(candidates.apply(lambda x: max_distance / x).to_numpy())
+        softmax = inverted_distance.softmax(dim=0)
+        return pd.Series(softmax.numpy(), index=candidates.index)
 
 # -------------------------------------
 # Schemaless types
@@ -825,6 +870,8 @@ class DecoderLayer:
     # This is the decoding weights and biases
     weights: torch.Tensor
     biases: torch.Tensor
+    # This is the activation function to be applied
+    activation: typing.Callable[[torch.Tensor], torch.Tensor]
 
     def index_matching(self, entitytype: str, sourceref: str) -> pd.Series:
         """
@@ -888,7 +935,60 @@ class DecoderLayer:
         """
         result = torch.matmul(self.weights, hidden)
         result = result + self.biases
+        result = self.activation(result)
         return pd.Series(result.numpy(), index=self.index)
+
+    @staticmethod
+    def linear(x: torch.Tensor) -> torch.Tensor:
+        """Default activation function, just pass-through"""
+        return x
+
+    @staticmethod
+    def scaled_sigmoid(scale: int, threshold: float) -> typing.Callable[[torch.Tensor], torch.Tensor]:
+        """
+        Creates a scaled version of the sigmoid function that return 0 when
+        the input is 0 and `theshold * scale` when the input hits
+        `threshold * scale`.
+
+        e.g. if the result should always be between 0 and 100, and be 90
+        when the input is 90, then
+        
+        - scale must be set to 100
+        - threshold must be set to 0.95
+
+        The output will never be over scale or below 0.
+        """
+        def inverse_sigmoid(y: float):
+            return torch.log(torch.Tensor(y))
+        # we want to implement a function based on a sigmoid,
+        # but that crosses the points:
+        # (x = 0, y = 0)
+        # (x = threshold * scale, y = threshold * scale)
+        # (x = infinite, y = scale)
+        #
+        # This can be achieved by setting the function to:
+        # y(x) = A * sigmoid (B*x + C) + D
+        #
+        # And chosing A, B, C and D so that the curve passes
+        # through the intended points.
+        #
+        # We have three conditions and four degrees of freedom,
+        # and we can take advantage of this, and the fact that
+        # sigmoid(x) = 1 - sigmoid(-x).
+        #
+        # After a bit of pen and paper, it turns out that if we
+        # choose one of our degrees of freedom to be:
+        #
+        # B = -2 * C / (threshold * scale)
+        #
+        # Then the conditions are satisifed by these numbers:
+        C = inverse_sigmoid((1- threshold) / (2-threshold))
+        A = (2 - threshold) * scale
+        D = 1 - A
+        B = -2 * C / (threshold * scale)
+        def scaled_func(x: torch.Tensor, A=A, B=B, C=C, D=D):
+            return D + A * torch.sigmoid(B * x + C)
+        return scaled_func
 
 class Decoder:
     """
@@ -919,7 +1019,9 @@ class Decoder:
         self.main_layer = DecoderLayer(
             index=index,
             weights=torch.sparse_coo_tensor(diagonal, values, (ref_length, ref_length)),
-            biases=torch.zeros(ref_length)
+            biases=torch.zeros(ref_length),
+            # By default, do not modify the outputs.
+            activation=DecoderLayer.linear
         )
         self.add_layers = []
 
@@ -982,7 +1084,7 @@ class Decoder:
         typed_vector = meta.normalize(fixed_df=meta.get_fixed_df(dims_df), dataset=None)
         added_vector = meta.unpivot(typed_vector=typed_vector)
         assert(added_vector.index.names == ["entitytype", "metric", "sourceref", "hour", "minute"])
-        # Index of rows in the bias and wights
+        # Index of rows in the bias and weights
         vector_offsets = pd.Series(
             range(0, len(self.main_layer.index)),
             index=self.main_layer.index,
@@ -1001,7 +1103,105 @@ class Decoder:
         return DecoderLayer(
             index=typing.cast(pd.MultiIndex, added_vector.index),
             weights=torch.cat(weights, dim=0),
-            biases=torch.cat(biases)
+            biases=torch.cat(biases),
+            activation=DecoderLayer.linear
+        )
+
+    def weighted_layer(self, entitytype: str, metric: str, sourceref: str, weights: pd.Series) -> DecoderLayer:
+        """
+        Generates an Entity Decoder that will produce results for a new
+        entity with id `sourceref` and type `entitytype`. The new results
+        will include the metric `metric`.
+
+        The results or this decoder will be a weighhted average of
+        the metrics of other entities. The weighted average is derived
+        from the `weights` series provided, which must have multiindex:
+
+        ('entitytype', 'metric', 'sourceref')
+
+        The weights will be multiplied by the specified metrics, and
+        aggregated.
+
+        The activation function for this decoder is linear by default,
+        unless the target metric has a fixed scale. In that case, the
+        activation function is replaced by a scaled sigmoid to keep it
+        within range.
+        """
+        assert(weights.index.names == ('entitytype', 'metric', 'sourceref'))
+        weights.name = 'weight'
+        # We want the offsets in the main decoder layer that map
+        # to the entitytype, metric and sourcerefs given by the weight series
+        vector_offsets = pd.Series(
+            range(0, len(self.main_layer.index)),
+            index=self.main_layer.index,
+            dtype=np.int32
+        )
+        vector_offsets.name = 'offset'
+        weighted_offsets = pd.merge(vector_offsets, weights, how='inner', on=['entitytype', 'metric', 'sourceref'], sort=False)
+        assert(weighted_offsets.index.names == ["entitytype", "metric", "sourceref", "hour", "minute"])
+        # Now get a reductor matrix for these rows only
+        reductor = self.main_layer.reductor_matrix(weighted_offsets['offset'])
+        assert(reductor.shape[0] == len(weighted_offsets))
+        assert(reductor.shape[1] == len(self.main_layer.index))
+        # The reductor matrix must be scaled by the given weights.
+        # To do so, we expand the weight tensor which is [N]
+        # using weights_vector[:, None] to become [N, 1], and then
+        # multiply row-by-row with the reductor matrix
+        weights_vector = torch.Tensor(weighted_offsets['weight'].to_numpy())
+        scaled_reductor = weights_vector[:, None] * reductor
+        assert(scaled_reductor.shape[0] == len(weighted_offsets))
+        assert(scaled_reductor.shape[1] == len(self.main_layer.index))
+        # Build a series for the target entitytype and sourceref
+        dims_df = pd.DataFrame([sourceref], columns=['sourceref'])
+        meta = self.meta_map[entitytype]
+        typed_vector = meta.normalize(fixed_df=meta.get_fixed_df(dims_df), dataset=None)
+        added_vector = meta.unpivot(typed_vector=typed_vector, requested_metrics=[metric,])
+        assert(added_vector.index.names == ["entitytype", "metric", "sourceref", "hour", "minute"])
+        # Now, we must match the dimensionality of the weights_tensor
+        # to the dimensionalty of the added_vector.
+        #
+        # The added vector has a row per each valid combination of hour and
+        # 10-minute interval, according to the target entitytype.
+        #
+        # The weights tensor has a row per each valid combination of
+        # sourceref, hour and 10-minute interval, according to the
+        # weighted entity types
+        #
+        # To make the dimensionality match, we will add per each row
+        # of the added vector, all rows of the weights tensor that belong
+        # to the same hour and ten-minute interval.
+        hasHour = meta.hasHour
+        hasMinute = meta.hasMinute
+        rows = []
+        for row_idx, _ in added_vector.index:
+            _, _, _, row_hour, row_minute = typing.cast(tuple, row_idx)
+            row = []
+            for col_idx, _ in weighted_offsets.index:
+                _, _, _, col_hour, col_minute = typing.cast(tuple, col_idx)
+                match = (
+                    (not hasHour) or
+                    (not hasMinute and row_hour == col_hour) or
+                    (row_hour == col_hour and row_minute == col_minute)
+                )
+                row.append(1 if match else 0)
+            rows.append(row)
+        agg_tensor = torch.Tensor(rows)
+        assert(agg_tensor.shape[0] == len(added_vector))
+        assert(agg_tensor.shape[1] == len(weighted_offsets))
+        agg_reductor = torch.matmul(agg_tensor, scaled_reductor)
+        agg_tensor = torch.matmul(agg_reductor, self.main_layer.weights)
+        agg_bias = torch.matmul(agg_reductor, self.main_layer.bias)
+        # If the target metric is scaled, use a compression
+        # activation function so it does not excede the scale
+        activation = DecoderLayer.linear
+        scale = self.meta_map[entitytype].metrics[metric].scale
+        if scale:
+            activation = DecoderLayer.scaled_sigmoid(scale, 0.9)
+        return DecoderLayer(
+            index=typing.cast(pd.MultiIndex, added_vector.index),
+            weights=agg_tensor,
+            biases=agg_bias,
+            activation=activation
         )
 
 @dataclass
@@ -1134,7 +1334,7 @@ class Simulation(typing.Protocol):
         the dimension table if needed for the simulation.
         """
 
-    def prepare_decoder(self, decoder: Decoder):
+    def prepare_decoder(self, reference: Reference, decoder: Decoder):
         """
         Prepare the decoder for simulation
 
@@ -1230,7 +1430,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
     empty_vector = Vector.create(meta_map=reference.metadata, fixed_df_map=fixed_df_map, data_map={})
     decoder = Decoder(meta_map=reference.metadata, index=typing.cast(pd.MultiIndex, empty_vector.df.index))
     for handler in sim_handlers:
-        handler.prepare_decoder(decoder=decoder)
+        handler.prepare_decoder(reference=reference, decoder=decoder)
 
     # Iterate over all combinations of trend and daytype
     for scene_index, entitytypes in scene_variations.items():
@@ -1412,10 +1612,28 @@ class SimParking:
     def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         pass
 
-    def prepare_decoder(self, decoder: Decoder):
-        # Add a new layer for the new parking, averaging the
-        # values of the other parkings
-        decoder.add_layer(decoder.averaged_layer(self.entitytype, self.sourceref))
+    def prepare_decoder(self, reference: Reference, decoder: Decoder):
+        # Get weights to calculate the ocupation of the new
+        # parking as a weighted average of the occupations of the
+        # existing parkings, weighted by distance
+        distance_averages = reference.softmax_by_distance('OffStreetParking', self.sourceref, 'OffStreetParking')
+        assert(distance_averages.index.levels == ['to_sourceref'])
+        distance_averages.name = 'weight'
+        # Scale the weights by the relative capacities
+        # of the parkings
+        parkings = reference.dims_df_map['OffStreetParking'].set_index('sourceref')['capacity']
+        capacities = pd.concat(distance_averages, parkings, axis=1, how='left')
+        assert(capacities.index.levels == ['to_sourceref'])
+        assert(capacities.columns == ['weight', 'capacity'])
+        capacities['weight'] = capacities.apply(lambda x: x['weight'] * x['capacity'] / self.capacity, axis=1)
+        # Generate the weights series
+        weights = capacities.reset_index()
+        weights['entitytype'] = 'OffStreetParking'
+        weights['sourceref'] = weights['to_sourceref']
+        weights = weights.set_index(['entitytpe', 'sourceref'])['weight']
+        # Apply the weights series to the "occupationpercent"
+        # metric of the entitytype
+        decoder.add_layer(decoder.weighted_layer(self.entitytype, 'occupationpercent', self.sourceref, weights))
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
         # Produce an impact on other things close to the parking
@@ -1455,7 +1673,7 @@ class SimTraffic:
         )
         logging.info("Related TrafficIntensity entities: %s", ", ".join(self.related_places))
 
-    def prepare_decoder(self, decoder: Decoder):
+    def prepare_decoder(self, reference: Reference, decoder: Decoder):
         if self.affected_places:
             for place in self.affected_places:
                 decoder.drop_sourceref('TrafficCongestion', place)
@@ -1590,11 +1808,47 @@ class SimRoute:
     def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         pass
 
-    def prepare_decoder(self, decoder: Decoder):
+    def prepare_decoder(self, reference: Reference, decoder: Decoder):
         # Add a new layer for the new parking, averaging the
         # values of the other parkings
-        decoder.add_layer(decoder.averaged_layer("RouteIntensity", self.sourceref))
-        decoder.add_layer(decoder.averaged_layer("RouteSchedule", self.sourceref))
+        # get the average intensity, forwardtrips and returntrips per route
+        entities = reference.data_df_map['RouteIntensity'][['sourceref', 'intensity', 'forwardtrips', 'returntrips']].groupby('sourceref').mean()
+        assert(entities.index.names == ['sourceref'])
+        distance_averages = reference.softmax_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity')
+        assert(distance_averages.index.levels == ['to_sourceref'])
+        distance_averages.name = 'weight'
+        # Prepare dataframe with the scale of each route, both
+        # intensity and number of trips
+        capacities = pd.concat(distance_averages, entities, axis=1, how='left')
+        assert(capacities.index.levels == ['to_sourceref'])
+        assert(capacities.columns == ['weight', 'intensity', 'forwardtrips', 'returntrips'])
+        capacities = capacities.reset_index()
+        capacities['sourceref'] = capacities['to_sourceref']
+        capacities['intensity_scale'] = capacities.apply(lambda x: x['intensity'] / self.intensity, axis=1)
+        capacities['trips_scale'] = capacities.apply(lambda x: (x['forwardtrips'] + x['returntrips']) / self.trips, axis=1)
+        # Prepare weights for each metric
+        capacities['intensity_weight'].apply(lambda x: x['intensity_scale'] * x['weight'])
+        capacities['trips_weight'].apply(lambda x: x['trips_scale'] * x['weight'])
+        # We need to add a layer per entity type and metric
+        layers = {
+            'RouteSchedule': {
+                'forwardtrips': 'trips_weight',
+                'returntrips': 'trips_weight'
+            },
+            'RouteIntensity': {
+                'forwardtrips': 'trips_weight',
+                'returntrips': 'trips_weight',
+                'intensity': 'intensity_weight'
+            }
+        }
+        for entitytype, metrics in layers.items():
+            for metric, weight in metrics.items():
+                metric_cap = capacities
+                metric_cap['entititype'] = entitytype
+                metric_cap['metric'] = metric
+                metric_cap = metric_cap.set_index(['entitytype', 'metric', 'sourceref'])
+                metric_weights = metric_cap[weight]
+                decoder.add_layer(decoder.weighted_layer(entitytype, metric, self.sourceref, metric_weights))
 
     def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
         return hidden
