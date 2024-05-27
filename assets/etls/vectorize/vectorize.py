@@ -733,7 +733,10 @@ class Reference:
             # remove the entity itself from the candidates
             candidates = candidates[typing.cast(pd.Series, candidates) > 0]
         if to_sourceref is not None:
-            candidates = candidates.loc[to_sourceref]
+            # We have some problems with buses not having all lines
+            # in lastdata array.
+            good_keys = candidates.index.intersection(to_sourceref)
+            candidates = candidates.loc[good_keys]
         assert(candidates.index.names == ['to_sourceref'])
         # Distances have a wildly large range (from tens of meters to kilometers),
         # and applying a softmax directly yields terrible results.
