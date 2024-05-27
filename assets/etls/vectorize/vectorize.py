@@ -1717,13 +1717,10 @@ class SimParking:
         zones_df = reference.dims_df_map['TrafficIntensity']
         zones_df = zones_df[zones_df['zone'] == self.zone]
         closest_intensity = zones_df['sourceref']
-        logging.debug("** Closest intensity points:\n%s", closest_intensity)
         assert(reference.data_df_map is not None)
         intensities_df = reference.data_df_map['TrafficIntensity']
-        logging.debug("** Intensity df (intensities_df.csv):\n%s", intensities_df)
         intensities_df.to_csv("intensities_df.csv")
         intensities_df = intensities_df[intensities_df['sourceref'].isin(closest_intensity)]
-        logging.debug("** Intensity df after isin (intensities_df_after.csv):\n%s", intensities_df)
         intensities_df.to_csv("intensities_df_after.csv")
         return intensities_df
 
@@ -1936,7 +1933,6 @@ class SimRoute:
                 weights[metric] = weights.apply(lambda x: x[scale] * x['weight'], axis=1)
                 weights = weights.set_index(['entitytype', 'metric', 'sourceref'])
                 weights_series = weights[metric]
-                logging.debug("SimRoute: prepare_decoder: weights_series:\n%s", weights_series)
                 decoder.add_layer(decoder.weighted_layer(entitytype, metric, self.sourceref, weights_series))
 
     def build_similarity_df(self, reference: Reference):
@@ -1960,10 +1956,8 @@ class SimRoute:
         # Otherwise, the NaNs will crop into the output.
         entities = entities.dropna()
         assert(entities.index.names == ['sourceref'])
-        logging.debug("SimRoute: build_similarity_df: entities:\n%s", entities)
         distance_averages = reference.similarity_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity', entities.index.to_list())
         assert(distance_averages.index.names == ['to_sourceref'])
-        logging.debug("SimRoute: build_similarity_df: distance_averages:\n%s", distance_averages)
         distance_averages.name = 'weight'
         # Prepare dataframe with the scale of each route, both
         # intensity and number of trips
@@ -1973,7 +1967,6 @@ class SimRoute:
         capacities = capacities.reset_index()
         capacities['intensity_scale'] = capacities.apply(lambda x: self.intensity / x['intensity'], axis=1)
         capacities['trips_scale'] = capacities.apply(lambda x: self.trips / (x['forwardtrips'] + x['returntrips']), axis=1)
-        logging.debug("SimRoute: build_similarity_df: capacities:\n%s", capacities)
         return capacities
 
     def update_encoding(self, props: DatasetProperties, hidden: HiddenLayer, partial: typing.Optional[pd.Series]) -> HiddenLayer:
