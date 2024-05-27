@@ -1953,9 +1953,12 @@ class SimRoute:
         """
         assert(reference.data_df_map is not None)
         entities = reference.data_df_map['RouteIntensity'][['sourceref', 'intensity', 'forwardtrips', 'returntrips']].groupby('sourceref').mean()
+        # Some lines have NaN metrics, they must be removed.
+        # Otherwise, the NaNs will crop into the output.
+        entities = entities.dropna()
         assert(entities.index.names == ['sourceref'])
         logging.debug("SimRoute: build_similarity_df: entities:\n%s", entities)
-        distance_averages = reference.similarity_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity')
+        distance_averages = reference.similarity_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity', entities)
         assert(distance_averages.index.names == ['to_sourceref'])
         logging.debug("SimRoute: build_similarity_df: distance_averages:\n%s", distance_averages)
         distance_averages.name = 'weight'
