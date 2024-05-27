@@ -1494,7 +1494,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
             last_identity_date,
             trend,
             daytype,
-            partial_result.shape if partial_result else None
+            partial_result.shape if partial_result is not None else None
         )
 
         for handler in sim_handlers:
