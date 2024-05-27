@@ -872,6 +872,25 @@ class HiddenLayer:
     # (entitytype, metric, sourceref, hour, minute)
     index: pd.MultiIndex
 
+    def scale(self) -> pd.Series:
+        """
+        Returns a pandas Series with a scale value for each row
+        of the status vector.
+
+        The scale is a way to measure how relevant
+        is the encoded parameter to the output.
+        """
+        # Currently, the scale metric is a comparison to the mean
+        # for the entitytype and metric.
+        result = pd.Series(self.private.numpy(), index=self.index)
+        grouped = result.groupby(level=['entitytype', 'metric'])
+        mean = grouped.mean()
+        diff = grouped.max() - grouped.min()
+        diff = diff.replace(0, 1).abs()
+        result = result.sub(mean, level=['entitytype', 'metric'])
+        result = result.div(diff, level=['entitytype', 'metric'])
+        return result
+
 @dataclass
 class DecoderLayer:
     """
@@ -944,7 +963,9 @@ class DecoderLayer:
 
     def decode(self, hidden: torch.Tensor) -> pd.Series:
         """
-        Run the decoder over the given hidden state tensor, and return the corresponding vector
+        Run the decoder over the given status tensor, and return the corresponding
+        output tensor as a pd.Series. The series has a MultiIndex with levels
+        (entityType, metric, sourceref, hour, minute)
         """
         result = torch.matmul(self.weights, hidden)
         result = result + self.biases
@@ -1040,16 +1061,23 @@ class Decoder:
         )
         self.add_layers = []
 
-    def decode(self, props: DatasetProperties, hidden: HiddenLayer) -> pd.Series:
+    def decode(self, props: DatasetProperties, hidden: HiddenLayer, partial: bool) -> typing.Optional[pd.Series]:
         """
         Run the decoder over the given hidden state tensor, and return the corresponding vector.
         The index of the returned series has thefollowing levels:
 
         ('entitytype', 'metric', 'sourceref', 'hour', 'minute')
+
+        If partial is True, run only the additional layers. This is to generate
+        a preview of the results of the additional entities
         """
         private = torch.nan_to_num(hidden.private)
-        layers = [self.main_layer]
+        layers: typing.List[DecoderLayer] = []
+        if not partial:
+            layers.append(self.main_layer)
         layers.extend(self.add_layers)
+        if not layers:
+            return None
         return pd.concat((layer.decode(private) for layer in layers), axis=0)
 
     def drop_sourceref(self, entitytype: str, sourceref: str):
@@ -1363,10 +1391,11 @@ class Simulation(typing.Protocol):
         """
         pass
 
-    def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
+    def update_encoding(self, props: DatasetProperties, hidden: HiddenLayer, partial: typing.Optional[pd.Series]) -> HiddenLayer:
         """
-        Updates the hidden layer to reflect the impact
-        of the simulation in the city status
+        Updates the encoding to reflect the impact of the simulation in the city status.
+        `partial` is the result of calling Decoder.decode once with any new entities
+        added by the simulation.
         """
         return hidden
 
@@ -1442,9 +1471,6 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
     for handler in sim_handlers:
         handler.drop_entities(engine=engine, broker=broker, reference=reference, dryrun=dryrun)
 
-    # Update the simulation table from the ETL
-    sim_props.to_sql(engine=engine, dryrun=dryrun)
-
     # Create the decoder. Apply all simulation modifications.
     logging.info("Preparing decoder for %s", sim_props.signature())
     empty_vector = Vector.create(meta_map=reference.metadata, fixed_df_map=fixed_df_map, data_map={})
@@ -1500,8 +1526,18 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
         )
         sim_props.feedback(broker, "hidden shape %s", hidden.private.shape)
 
+        # Perform a pre-run to generate values for the new entities
+        partial_result = decoder.decode(props=dataset_props, hidden=hidden, partial=True)
+        logging.info("Simulated partial result shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
+            sim_props.sceneref,
+            last_identity_date,
+            trend,
+            daytype,
+            partial_result.shape if partial_result else None
+        )
+
         for handler in sim_handlers:
-            hidden = handler.perturb_hidden(props=dataset_props, hidden=hidden)
+            hidden = handler.update_encoding(props=dataset_props, hidden=hidden, partial=partial_result)
         logging.info("Simulated state shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
             sim_props.sceneref,
             last_identity_date,
@@ -1512,7 +1548,8 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
         sim_props.feedback(broker, "simulated state shape %s", hidden.private.shape)
 
         # Decode the hidden status and vet the results
-        result = decoder.decode(props=dataset_props, hidden=hidden)
+        result = decoder.decode(props=dataset_props, hidden=hidden, partial=False)
+        assert(result is not None)
         for handler in sim_handlers:
             result = handler.vet_output(result)
         logging.info("Simulated result shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
@@ -1534,6 +1571,9 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
             dataset = vector.pivot(meta=meta, props=dataset_props, series=result)
             dims_df = dims_df_map[entityType]
             meta.to_sql(engine=engine, sceneref=sim_props.sceneref, dataset=dataset, dims_df=dims_df, dryrun=dryrun)
+
+    # Update the simulation table from the ETL
+    sim_props.to_sql(engine=engine, dryrun=dryrun)
 
     stop = datetime.now()
     logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
@@ -1721,7 +1761,7 @@ class SimParking:
         intensities_df.to_csv("intensities_df_after.csv")
         return intensities_df
 
-    def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
+    def update_encoding(self, props: DatasetProperties, hidden: HiddenLayer, partial: typing.Optional[pd.Series]) -> HiddenLayer:
         # Produce an impact on other things close to the parking
         return hidden
 
@@ -1767,7 +1807,7 @@ class SimTraffic:
             for place in self.related_places:
                 decoder.drop_sourceref('TrafficIntensity', place)
 
-    def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
+    def update_encoding(self, props: DatasetProperties, hidden: HiddenLayer, partial: typing.Optional[pd.Series]) -> HiddenLayer:
         # Produce an impact on other things close to the parking
         return hidden
 
@@ -1961,7 +2001,7 @@ class SimRoute:
         capacities['trips_scale'] = capacities.apply(lambda x: self.trips / (x['forwardtrips'] + x['returntrips']), axis=1)
         return capacities
 
-    def perturb_hidden(self, props: DatasetProperties, hidden: HiddenLayer) -> HiddenLayer:
+    def update_encoding(self, props: DatasetProperties, hidden: HiddenLayer, partial: typing.Optional[pd.Series]) -> HiddenLayer:
         return hidden
 
     def vet_output(self, result: pd.Series) -> pd.Series:
