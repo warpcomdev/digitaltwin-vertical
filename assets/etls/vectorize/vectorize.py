@@ -1578,6 +1578,7 @@ class SimParking:
         self.capacity = int(sim.get('capacity', {}).get('value', '1000'))
         self.bias = int(sim.get('bias', {}).get('value', 5))
         self.zone = reference.match_zone(geometry.shape(self.location), "1")
+        logging.info("SimParking entity loaded: %s", self.__dict__)
 
     def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         assert(reference.dims_df_map is not None)
@@ -1744,6 +1745,7 @@ class SimTraffic:
         # Save location to sim_props, so that it can be used
         # in the database.
         sim_props.location = json.loads(shapely.to_geojson(self.bbox))
+        logging.info("SimTraffic entity loaded: %s", self.__dict__)
 
     def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         pass
@@ -1792,6 +1794,7 @@ class SimRoute:
         # Add location to the simulation properties, so it can be
         # updated to the database.
         sim_props.location = self.location
+        logging.info("SimRoute entity loaded: %s", self.__dict__)
 
     def fetch_stops(self, broker: Broker, reference: Reference, dryrun:bool=False):
         """Fetch all stops for this simulation"""
@@ -1930,6 +1933,7 @@ class SimRoute:
                 weights[metric] = weights.apply(lambda x: x[scale] * x['weight'], axis=1)
                 weights = weights.set_index(['entitytype', 'metric', 'sourceref'])
                 weights_series = weights[metric]
+                logging.debug("SimRoute: prepare_decoder: weights_series:\n%s", weights_series)
                 decoder.add_layer(decoder.weighted_layer(entitytype, metric, self.sourceref, weights_series))
 
     def build_similarity_df(self, reference: Reference):
@@ -1950,8 +1954,10 @@ class SimRoute:
         assert(reference.data_df_map is not None)
         entities = reference.data_df_map['RouteIntensity'][['sourceref', 'intensity', 'forwardtrips', 'returntrips']].groupby('sourceref').mean()
         assert(entities.index.names == ['sourceref'])
+        logging.debug("SimRoute: build_similarity_df: entities:\n%s", entities)
         distance_averages = reference.similarity_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity')
         assert(distance_averages.index.names == ['to_sourceref'])
+        logging.debug("SimRoute: build_similarity_df: distance_averages:\n%s", distance_averages)
         distance_averages.name = 'weight'
         # Prepare dataframe with the scale of each route, both
         # intensity and number of trips
@@ -1961,6 +1967,7 @@ class SimRoute:
         capacities = capacities.reset_index()
         capacities['intensity_scale'] = capacities.apply(lambda x: self.intensity / x['intensity'], axis=1)
         capacities['trips_scale'] = capacities.apply(lambda x: self.trips / (x['forwardtrips'] + x['returntrips']), axis=1)
+        logging.debug("SimRoute: build_similarity_df: capacities:\n%s", capacities)
         return capacities
 
     def update_encoding(self, props: DatasetProperties, hidden: HiddenLayer, partial: typing.Optional[pd.Series]) -> HiddenLayer:
