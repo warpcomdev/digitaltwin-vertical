@@ -1111,45 +1111,6 @@ class Decoder:
         # right to the end of the current index
         self.add_layers.append(layer)
 
-    def averaged_layer(self, entitytype: str, sourceref: str) -> DecoderLayer:
-        """
-        Generates the index, weights and biases that have to be appended
-        to the decoder for it to produce results for a new sourceref of the
-        given entitytype.
-        
-        The weights and biases for this sourceref will be averaged
-        from the weights and biases of all other sourcerefs of the same
-        entitytype.
-        """
-        # Build a typed vector for the entitytype and sourceref
-        dims_df = pd.DataFrame([sourceref], columns=['sourceref'])
-        meta = self.meta_map[entitytype]
-        typed_vector = meta.normalize(fixed_df=meta.get_fixed_df(dims_df), dataset=None)
-        added_vector = meta.unpivot(typed_vector=typed_vector)
-        assert(added_vector.index.names == ["entitytype", "metric", "sourceref", "hour", "minute"])
-        # Index of rows in the bias and weights
-        vector_offsets = pd.Series(
-            range(0, len(self.main_layer.index)),
-            index=self.main_layer.index,
-            dtype=np.int32
-        )
-        weights = []
-        biases = []
-        for idx, _ in added_vector.items():
-            # Find other rows for the same sourceref, hour and minute
-            entitytype, metric, sourceref, hour, minute = typing.cast(tuple, idx)
-            related = vector_offsets.loc[entitytype, metric, :, hour, minute]
-            reductor = self.main_layer.reductor_matrix(related)
-            # Append the mean of the reduced weigths and biases
-            weights.append(torch.mean(torch.matmul(reductor, self.main_layer.weights).to_dense(), 0, keepdim=True))
-            biases.append(torch.mean(torch.matmul(reductor , self.main_layer.biases).to_dense(), 0, keepdim=True))
-        return DecoderLayer(
-            index=typing.cast(pd.MultiIndex, added_vector.index),
-            weights=torch.cat(weights, dim=0),
-            biases=torch.cat(biases),
-            activation=DecoderLayer.linear
-        )
-
     def weighted_layer(self, entitytype: str, metric: str, sourceref: str, weights: pd.Series) -> DecoderLayer:
         """
         Generates an Entity Decoder that will produce results for a new
