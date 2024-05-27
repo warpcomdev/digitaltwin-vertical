@@ -1534,6 +1534,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
             meta.to_sql(engine=engine, sceneref=sim_props.sceneref, dataset=dataset, dims_df=dims_df, dryrun=dryrun)
 
     # Update the simulation table from the ETL
+    logging.info("Storing simultation id in database")
     sim_props.to_sql(engine=engine, dryrun=dryrun)
 
     stop = datetime.now()
