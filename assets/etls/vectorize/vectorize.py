@@ -703,7 +703,7 @@ class Reference:
             closest.update(candidates.index.get_level_values(0).values)
         return tuple(closest)
 
-    def similarity_by_distance(self, from_type: str, from_sourceref: str, to_type: str, to_sourceref: typing.Optional[pd.Series]=None) -> pd.Series:
+    def similarity_by_distance(self, from_type: str, from_sourceref: str, to_type: str, to_sourceref: typing.Optional[typing.List[str]]=None) -> pd.Series:
         """
         Calculates the similarity between the (from_type, from_sourceref)
         entity, and every other entity of type `to_type` (except itself,
@@ -733,7 +733,7 @@ class Reference:
             # remove the entity itself from the candidates
             candidates = candidates[typing.cast(pd.Series, candidates) > 0]
         if to_sourceref is not None:
-            candidates = candidates.loc[to_sourceref.to_list()]
+            candidates = candidates.loc[to_sourceref]
         assert(candidates.index.names == ['to_sourceref'])
         # Distances have a wildly large range (from tens of meters to kilometers),
         # and applying a softmax directly yields terrible results.
@@ -1958,7 +1958,7 @@ class SimRoute:
         entities = entities.dropna()
         assert(entities.index.names == ['sourceref'])
         logging.debug("SimRoute: build_similarity_df: entities:\n%s", entities)
-        distance_averages = reference.similarity_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity', entities)
+        distance_averages = reference.similarity_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity', entities.index.to_list())
         assert(distance_averages.index.names == ['to_sourceref'])
         logging.debug("SimRoute: build_similarity_df: distance_averages:\n%s", distance_averages)
         distance_averages.name = 'weight'
