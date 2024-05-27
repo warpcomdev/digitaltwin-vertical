@@ -1836,10 +1836,10 @@ class SimRoute:
                 }
             }])
             # Remove stops
-            logging.info("SimRoute: pushing %d stops", len(stops))
-            broker.push(stops)
-            logging.info("SimRoute: removing stops with refSimulation: none")
-            broker.delete("Stop", q="refSimulation:none")
+            #logging.info("SimRoute: pushing %d stops", len(stops))
+            #broker.push(stops)
+            #logging.info("SimRoute: removing stops with refSimulation: none")
+            #broker.delete("Stop", q="refSimulation:none")
 
     def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         assert(reference.dims_df_map is not None)
