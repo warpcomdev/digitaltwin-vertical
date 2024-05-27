@@ -18,7 +18,7 @@ from datetime import datetime
 from dataclasses import dataclass
 from contextlib import contextmanager, ExitStack
 from collections import defaultdict, Counter
-from sqlalchemy import create_engine, event, text, URL, Engine, TextClause
+from sqlalchemy import create_engine, event, text, URL, Engine, Connection,TextClause
 import pandas as pd
 import numpy as np
 import torch
@@ -1400,7 +1400,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
         logging.warning("No simulation found")
         return
     sim_props.feedback(broker, "initiating simulation")
-    sim_handlers = list(create_simulators(reference=reference, sim_props=sim_props, engine=engine))
+    sim_handlers = list(create_simulators(reference=reference, sim_props=sim_props, broker=broker, dryrun=dryrun))
 
     # Collect data for all the combinations of trend and daytype
     scene_variations: typing.Dict[typing.Tuple[str, str], typing.List[str]] = defaultdict(list)
@@ -1548,7 +1548,7 @@ def encode_vector(metadata: Metadata, props: DatasetProperties, vector: Vector) 
         index=typing.cast(pd.MultiIndex, vector.df.index)
     )
 
-def create_simulators(reference: Reference, sim_props: SimulationProperties, engine: Engine) -> typing.Iterable[Simulation]:
+def create_simulators(reference: Reference, sim_props: SimulationProperties, broker: Broker, dryrun: bool=False) -> typing.Iterable[Simulation]:
     for sim in sim_props.settings:
         if sim['type'] == 'SimulationParking':
             logging.info("SimulationParking")
@@ -1558,7 +1558,7 @@ def create_simulators(reference: Reference, sim_props: SimulationProperties, eng
             yield SimTraffic(reference=reference, sim_props=sim_props, sim=sim)
         elif sim['type'] == 'SimulationRoute':
             logging.info("SimulationParking")
-            yield SimRoute(reference=reference, sim_props=sim_props, sim=sim, engine=engine)
+            yield SimRoute(broker=broker, reference=reference, sim_props=sim_props, sim=sim, dryrun=dryrun)
         else:
             logging.warn("unrecognized simulation info: %s", sim)
         return None
@@ -1578,10 +1578,7 @@ class SimParking:
         self.zone = reference.match_zone(geometry.shape(self.location), "1")
 
     def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
-        # Add a new parking to the dims_df_map
         assert(reference.dims_df_map is not None)
-        metadata = reference.metadata[self.entitytype]
-        dims_df = reference.dims_df_map[self.entitytype]
         new_parking = {
             'sourceref': self.sourceref,
             'zone': self.zone,
@@ -1589,6 +1586,9 @@ class SimParking:
             'location': geometry.shape(self.location),
             'capacity': self.capacity,
         }
+        # Add simulated entity to the reference dims_df_map, so it is
+        # available for other parts of the simulation.
+        dims_df = reference.dims_df_map[self.entitytype]
         assert(frozenset(dims_df.columns).issuperset(new_parking.keys()))
         reference.dims_df_map[self.entitytype] = pd.concat([
             dims_df,
@@ -1596,38 +1596,43 @@ class SimParking:
         ], axis=0)
         # Save the new parking to the database
         with engine.begin() as conn:
-            # Remove the simulated parking, if it exists
-            statement = text(f"DELETE FROM {metadata.dimsTableName} WHERE sourceref = :sourceref")
-            with conn.execute(statement.bindparams(sourceref=self.sourceref)) as cursor:
-                cursor.close()
-            statement = text(f"""
-                INSERT INTO {metadata.dimsTableName} (
-                    timeinstant, entityid, entitytype, recvtime, fiwareservicepath,
-                    sourceref, sceneref, zone, location,
-                    name, capacity
-                ) VALUES (
-                    :timeinstant, :entityid, :entitytype, :recvtime,  :fiwareservicepath,
-                    :sourceref, :sceneref, :zone, ST_GeomFromGeoJSON(:location),
-                    :name, :capacity
-                )
-                """)
-            bound = statement.bindparams(
-                timeinstant=self.sim_date,
-                entityid=self.sourceref,
-                entitytype=self.entitytype,
-                recvtime=self.sim_date,
-                fiwareservicepath="/digitaltwin",
-                sourceref=self.sourceref,
-                sceneref=self.sceneref,
-                zone=self.zone,
-                location=json.dumps(self.location),
-                name=self.name,
-                capacity=self.capacity,
-            )
-            with conn.execute(bound) as cursor:
-                cursor.close()
+            self.save_simulation_entity(conn=conn, broker=broker, reference=reference)
             if dryrun:
                 conn.rollback()
+    
+    def save_simulation_entity(self, conn: Connection, broker: Broker, reference: Reference):
+        """generate simulated OffStreetParking entity"""
+        metadata = reference.metadata[self.entitytype]
+        # Remove the simulated parking, if it exists
+        statement = text(f"DELETE FROM {metadata.dimsTableName} WHERE sourceref = :sourceref")
+        with conn.execute(statement.bindparams(sourceref=self.sourceref)) as cursor:
+            cursor.close()
+        statement = text(f"""
+            INSERT INTO {metadata.dimsTableName} (
+                timeinstant, entityid, entitytype, recvtime, fiwareservicepath,
+                sourceref, sceneref, zone, location,
+                name, capacity
+            ) VALUES (
+                :timeinstant, :entityid, :entitytype, :recvtime,  :fiwareservicepath,
+                :sourceref, :sceneref, :zone, ST_GeomFromGeoJSON(:location),
+                :name, :capacity
+            )
+            """)
+        bound = statement.bindparams(
+            timeinstant=self.sim_date,
+            entityid=self.sourceref,
+            entitytype=self.entitytype,
+            recvtime=self.sim_date,
+            fiwareservicepath="/digitaltwin",
+            sourceref=self.sourceref,
+            sceneref=self.sceneref,
+            zone=self.zone,
+            location=json.dumps(self.location),
+            name=self.name,
+            capacity=self.capacity,
+        )
+        with conn.execute(bound) as cursor:
+            cursor.close()
 
     def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         pass
@@ -1772,8 +1777,7 @@ class SimTraffic:
 class SimRoute:
     """Simulation for route affectation"""
 
-    def __init__(self, reference: Reference, sim_props: SimulationProperties, sim: typing.Any, engine: Engine):
-        self.sim_props = sim_props
+    def __init__(self, broker: Broker, reference: Reference, sim_props: SimulationProperties, sim: typing.Any, dryrun: bool=False):
         self.sceneref = sim_props.sceneref
         self.sim_date = sim_props.sim_date
         self.trips = float(sim.get('trips', {}).get('value', 100))
@@ -1782,10 +1786,13 @@ class SimRoute:
         self.sim_id = sim['id']
         self.sim_type = sim['type']
         self.sourceref = f"{self.sceneref}_{self.sim_date.strftime('%Y_%m_%d')}"
+        self.fetch_stops(broker=broker, reference=reference, dryrun=dryrun)
+        # Add location to the simulation properties, so it can be
+        # updated to the database.
+        sim_props.location = self.location
 
-    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
-        assert(reference.dims_df_map is not None)
-        # Rename stops and associate to the proper sourceref
+    def fetch_stops(self, broker: Broker, reference: Reference, dryrun:bool=False):
+        """Fetch all stops for this simulation"""
         stops = broker.fetch(entitytype='Stop', q="refSimulation:none")
         if not stops:
             raise ValueError("No stops found for %s", self.sceneref)
@@ -1805,12 +1812,18 @@ class SimRoute:
             coord = stop['location']['value']
             coords.append(coord)
             zones.append(reference.match_zone(point=geometry.shape(coord), default="1"))
-        location = {
+        self.location = {
             'type': 'MultiLineString',
             'coordinates': [[c['coordinates'] for c in coords]]
         }
-        self.sim_props.location = location
         # Update the simulation entity with the line
+        # Count zones and get most repeated
+        zone_count = sorted(((count, zone) for zone, count in Counter(zones).items()), reverse=True)
+        self.zone = zone_count[0][1]
+        self.zonelist = list(frozenset(zones))
+        # Add new Routes to the dims_df_map
+        self.forwardstops = len(coords)
+        self.returnstops = len(coords)
         if not dryrun:
             logging.info("SimRoute: Updating geometry in entity %s of type %s", self.sim_id, self.sim_type)
             broker.push(entities=[{
@@ -1818,7 +1831,7 @@ class SimRoute:
                 'type': self.sim_type,
                 'location': {
                     'type': 'geo:json',
-                    'value': location
+                    'value': self.location
                 }
             }])
             # Remove stops
@@ -1826,65 +1839,68 @@ class SimRoute:
             broker.push(stops)
             logging.info("SimRoute: removing stops with refSimulation: none")
             broker.delete("Stop", q="refSimulation:none")
-        # Count zones and get most repeated
-        zone_count = sorted(((count, zone) for zone, count in Counter(zones).items()), reverse=True)
-        zone = zone_count[0][1]
-        zonelist = list(frozenset(zones))
-        # Add new Routes to the dims_df_map
-        forwardstops = len(coords)
-        returnstops = len(coords)
+
+    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
+        assert(reference.dims_df_map is not None)
+        # Rename stops and associate to the proper sourceref
         new_route = {
             'sourceref': self.sourceref,
-            'zone': zone,
-            'zonelist': zonelist,
-            'location': geometry.shape(location),
-            'forwardstops': forwardstops,
-            'returnstops': returnstops,
+            'zone': self.zone,
+            'zonelist': self.zonelist,
+            'location': geometry.shape(self.location),
+            'forwardstops': self.forwardstops,
+            'returnstops': self.returnstops,
         }
         logging.info("SimRoute: new route = %s", new_route)
         with engine.begin() as conn:
             for entitytype in ('RouteSchedule', 'RouteIntensity'):
+                # Save the entity to the reference dims_df_map,
+                # so it is available for other parts of the simulation
                 dims_df = reference.dims_df_map[entitytype]
                 assert(frozenset(dims_df.columns).issuperset(new_route.keys()))
                 reference.dims_df_map[entitytype] = pd.concat([
                     dims_df,
                     pd.DataFrame([tuple(new_route.values())], columns=tuple(new_route.keys()))
                 ], axis=0)
-                # Save the new parking to the database
-                metadata = reference.metadata[entitytype]
-                statement = text(f"DELETE FROM {metadata.dimsTableName} WHERE sourceref = :sourceref")
-                with conn.execute(statement.bindparams(sourceref=self.sourceref)) as cursor:
-                    cursor.close()
-                statement = text(f"""
-                    INSERT INTO {metadata.dimsTableName} (
-                        timeinstant, entityid, entitytype, recvtime, fiwareservicepath,
-                        sourceref, sceneref, zone, zonelist, location,
-                        name, forwardstops, returnstops
-                    ) VALUES (
-                        :timeinstant, :entityid, :entitytype, :recvtime,  :fiwareservicepath,
-                        :sourceref, :sceneref, :zone, CAST(:zonelist AS jsonb), ST_GeomFromGeoJSON(:location),
-                        :name, :forwardstops, :returnstops
-                    )
-                    """)
-                bound = statement.bindparams(
-                    timeinstant=self.sim_date,
-                    entityid=self.sourceref,
-                    entitytype=entitytype,
-                    recvtime=self.sim_date,
-                    fiwareservicepath="/digitaltwin",
-                    sourceref=self.sourceref,
-                    sceneref=self.sceneref,
-                    zone=zone,
-                    zonelist=json.dumps(zonelist),
-                    location=json.dumps(location),
-                    name=self.sourceref,
-                    forwardstops=forwardstops,
-                    returnstops=returnstops,
-                )
-                with conn.execute(bound) as cursor:
-                    cursor.close()
+                self.save_simulation_entity(conn, reference, entitytype)
             if dryrun:
                 conn.rollback()
+    
+    def save_simulation_entity(self, conn: Connection, reference: Reference, entitytype: str):
+        """generate simulated RouteSchedule or RouteIntensity entity"""
+        # Save the new parking to the database
+        metadata = reference.metadata[entitytype]
+        statement = text(f"DELETE FROM {metadata.dimsTableName} WHERE sourceref = :sourceref")
+        with conn.execute(statement.bindparams(sourceref=self.sourceref)) as cursor:
+            cursor.close()
+        statement = text(f"""
+            INSERT INTO {metadata.dimsTableName} (
+                timeinstant, entityid, entitytype, recvtime, fiwareservicepath,
+                sourceref, sceneref, zone, zonelist, location,
+                name, forwardstops, returnstops
+            ) VALUES (
+                :timeinstant, :entityid, :entitytype, :recvtime,  :fiwareservicepath,
+                :sourceref, :sceneref, :zone, CAST(:zonelist AS jsonb), ST_GeomFromGeoJSON(:location),
+                :name, :forwardstops, :returnstops
+            )
+            """)
+        bound = statement.bindparams(
+            timeinstant=self.sim_date,
+            entityid=self.sourceref,
+            entitytype=entitytype,
+            recvtime=self.sim_date,
+            fiwareservicepath="/digitaltwin",
+            sourceref=self.sourceref,
+            sceneref=self.sceneref,
+            zone=self.zone,
+            zonelist=json.dumps(self.zonelist),
+            location=json.dumps(self.location),
+            name=self.sourceref,
+            forwardstops=self.forwardstops,
+            returnstops=self.returnstops,
+        )
+        with conn.execute(bound) as cursor:
+            cursor.close()
 
     def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
         pass
