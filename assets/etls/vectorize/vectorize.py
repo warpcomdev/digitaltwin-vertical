@@ -461,6 +461,74 @@ class Metadata:
         series = pd.concat(vector_list, axis=0)
         return series
 
+    def pivot(self, props: DatasetProperties, series: pd.Series) -> Dataset:
+        """
+        Pivots a pd.Series that has a multi-index with
+        (entitytype, metric, sourceref, hour, minute)
+        into a dataset for the given entitytype.
+
+        It will filter the rows for this particular entitytype, and
+        then pivot the metrics so that each metric becomes a column.
+        """
+        assert(series.index.names == ['entitytype', 'metric', 'sourceref', 'hour', 'minute'])
+        typed_series: pd.Series = series.loc[self.entityType]
+        metrics: typing.List[pd.Series] = []
+        if self.metrics:
+            # Extract the rows corresponding to each metric
+            for metric in self.metrics.keys():
+                # Get measures for the metric
+                metric_series = typed_series.loc[metric]
+                metric_series.name = metric
+                metrics.append(metric_series)
+        else:
+            # If the entity type has no metrics, we still need
+            # to identify the proper sourcerefs, because
+            # the simulation might have added or removed
+            # entities.
+            # In order to do so, we remove the next level from
+            # the multiindex, which in regular conditions would
+            # be the metric name; and rename the columns
+            # to just "_none_".
+            metric_series = typed_series.loc['_none_']
+            metric_series.name = '_none_'
+            metrics.append(metric_series)
+        # concatenate all metrics as columns
+        df: pd.DataFrame = pd.concat(metrics, axis=1)
+        # Drop NaN and 0, but make sure we return at least one row per
+        # sourceref, otherwise the sourceref will not be present in
+        # the simulation dashboard.
+        groups = []
+        for sourceref, group in df.groupby(level='sourceref'):
+            # This filters out the rows where all values are 0
+            group = group.fillna(0)
+            group = group.loc[~(group == 0).all(axis=1)]
+            if group.empty:
+                original_group = typing.cast(pd.DataFrame, df.loc[typing.cast(str, sourceref)])
+                group = original_group.head(1)
+            # turn "hour" and "minute" into columns
+            group = group.reset_index()
+            # overwrite other columns
+            group['entitytype'] = self.entityType
+            group['sourceref'] = sourceref
+            groups.append(group)
+        # concatenate all groups
+        df = pd.concat(groups, axis=0).reset_index(drop=True)
+        if '_none_' in df.columns:
+            df.drop('_none_', axis=1, inplace=True)
+        # Hour and minute only belong in the dataset if the
+        # input has those dimensions
+        if not self.hasHour:
+            df = df.drop('hour', axis=1)
+        if not self.hasMinute:
+            df = df.drop('minute', axis=1)
+        return Dataset(
+            timeinstant=props.timeinstant,
+            trend=props.trend,
+            daytype=props.daytype,
+            entityType=self.entityType,
+            df=df
+        )
+
     def to_sql(self, engine: Engine, sceneref: str, dataset: Dataset, dims_df:typing.Optional[pd.DataFrame]=None, dryrun:bool=False):
         # if we get a dims_df, try to join the
         # resulting dataframe to the dim_df to pick
@@ -554,21 +622,24 @@ class Metadata:
                 affected_places = cursor.fetchall()
                 return [place[0] for place in affected_places]
 
-    def decorate(self, data_df: typing.Union[pd.Series, pd.DataFrame], dims_df: pd.DataFrame) -> pd.DataFrame:
+    def merge_fixed_props(self, data_df: typing.Union[pd.Series, pd.DataFrame], dims_df: pd.DataFrame) -> pd.DataFrame:
         """
-        Decorate a series with the fixedProps properties
+        Merge a series with the fixedProps properties
         obtained from the dims_df.
 
-        - The data_df must be indexed by sourceref
-        - The result is a dataframe indexed by sourceref, and
-          with a column per fixedProperty.
+        - The data_df must be indexed at least by sourceref.
+          It can optionally have other levels (e.g. hour, minute)
+        - The result is a dataframe eith the same index as
+          the data_df, and a column per fixedProperty.
         """
         assert(self.fixedProps)
         return pd.merge(
-            data_df,
-            dims_df[['sourceref'] + list(self.fixedProps.keys())].set_index('sourceref'),
+            left=data_df,
+            right=dims_df[['sourceref'] + list(self.fixedProps.keys())],
             how='left',
-            left_index=True, right_index=True,
+            left_index=True,
+            right_index=False,
+            on='sourceref',
             sort=False
         )
 
@@ -592,7 +663,10 @@ class Reference:
     zones_df: pd.DataFrame
 
     # Distance between each pair of entities in the
-    # simulation.
+    # simulation. It has a multiindex
+    # (from_entitytype, from_sourceref, to_entitytype, to_sourceref)
+    # and "distance", "from_zone", "to_zone",
+    # "from_zonelist" and "to_zonelist" columns.
     distance_df: typing.Optional[pd.DataFrame] = None
 
     # Data for the dimensionse. Maps each entitytype
@@ -667,7 +741,7 @@ class Reference:
         """
         Calculate the distance between each pair of entities.
 
-        The result is stored in the distance_df dataframe,
+        The result is stored in the distance_df DataFrame,
         that has a multiindex with 4 levels:
         (from_entitytype, from_sourceref, to_entitytype, to_sourceref)
         """
@@ -684,18 +758,22 @@ class Reference:
         distances: typing.List[pd.DataFrame] = []
         for from_type, _ in self.metadata.items():
             from_df = dims_df_map[from_type]
-            from_entities = from_df[["sourceref", "location"]].rename(columns={
+            from_entities = from_df[["sourceref", "location", "zone", "zonelist"]].rename(columns={
                 "entityid": "from_entityid",
                 "sourceref": "from_sourceref",
-                "location": "from_location"
+                "location": "from_location",
+                "zone": "from_zone",
+                "zonelist": "from_zonelist"
             })
             from_entities['from_entitytype'] = from_type
             for to_type, _ in self.metadata.items():
                 to_df = dims_df_map[to_type]
-                to_entities = to_df[["sourceref", "location"]].rename(columns={
+                to_entities = to_df[["sourceref", "location", "zone", "zonelist"]].rename(columns={
                     "entityid": "to_entityid",
                     "sourceref": "to_sourceref",
-                    "location": "to_location"
+                    "location": "to_location",
+                    "zone": "to_zone",
+                    "zonelist": "to_zonelist"
                 })
                 to_entities['to_entitytype'] = to_type
                 cross_distances = from_entities.merge(to_entities, how="cross")
@@ -721,7 +799,41 @@ class Reference:
             closest.update(candidates.index.get_level_values(0).values)
         return tuple(closest)
 
-    def similarity_by_distance(self, from_type: str, from_sourceref: str, to_type: str, to_sourceref: typing.Optional[typing.List[str]]=None) -> pd.Series:
+    def merge_distance(self, entities: typing.Union[pd.DataFrame, pd.Series], from_type: str, from_sourceref: str) -> pd.DataFrame:
+        """
+        Merges the given DataFrame or Series with the "distance_df"
+        dataframe, extending the input with columns "distance", "from_zone",
+        "to_zone", "from_zonelist" and "to_zonelist".
+
+        - The "from_zone" and "from_zonelist" will belong to the entityid
+          identified by parameters `from_type` and `from_sourceref`
+        - The "to_zone" and "to_zonelist" will belong to the entityid
+          identified by the `entitytype` and `sourceref` columns in the
+          input.
+
+        The returned dataframe will hae the same index
+        as the input series or dataframe.
+        """
+        assert(self.distance_df is not None)
+        assert(frozenset(self.entities.names).issuperset(('entitytype', 'sourceref')))
+        candidates = self.distance_df.loc[from_type, from_sourceref]
+        candidates = candidates[['distance', 'from_zone', 'from_zonelist', 'to_zone', 'to_zonelist']]
+        candidates = candidates.dropna()
+        candidates = candidates[candidates['distance'] > 0]
+        assert(candidates.index.names == ['to_entitytype', 'to_sourceref'])
+        merged = pd.merge(
+            left=entities,
+            right=candidates,
+            how='left',
+            left_index=True,
+            right_index=True,
+            left_on=['entitytype', 'sourceref'],
+            right_on=['to_entitytype', 'to_sourceref'],
+            sort=False
+        )
+        return merged
+
+    def weights_by_distance(self, from_type: str, from_sourceref: str, to_type: str, to_sourceref: typing.Optional[typing.List[str]]=None) -> pd.Series:
         """
         Calculates the similarity between the (from_type, from_sourceref)
         entity, and every other entity of type `to_type` (except itself,
@@ -747,9 +859,8 @@ class Reference:
         candidates = typing.cast(pd.Series, distance_series.loc[from_type, from_sourceref, to_type])
         candidates = candidates.dropna()
         assert(isinstance(candidates, pd.Series))
-        if from_type == to_type:
-            # remove the entity itself from the candidates
-            candidates = candidates[typing.cast(pd.Series, candidates) > 0]
+        # remove the entity itself from the candidates
+        candidates = candidates[typing.cast(pd.Series, candidates) > 0]
         if to_sourceref is not None:
             # We have some problems with buses not having all lines
             # in lastdata array.
@@ -813,74 +924,6 @@ class Vector:
         vector = pd.concat(vector_list, axis=0)
         return Vector(properties=props, df=vector.astype(np.float64))
 
-    def pivot(self, meta: Metadata, props: DatasetProperties, series: pd.Series) -> Dataset:
-        """
-        Pivots a pd.Series that has a multi-index with
-        (entitytype, metric, sourceref, hour, minute)
-        into a dataset for the given entitytupe.
-
-        It will filter the rows for this particular entitytype, and
-        then pivot the metrics so that each metric becomes a column.
-        """
-        typed_props = self.properties[meta.entityType]
-        typed_series: pd.Series = series.loc[meta.entityType]
-        metrics: typing.List[pd.Series] = []
-        if meta.metrics:
-            # Extract the rows corresponding to each metric
-            for metric in meta.metrics.keys():
-                # Get measures for the metric
-                metric_series = typed_series.loc[metric]
-                metric_series.name = metric
-                metrics.append(metric_series)
-        else:
-            # If the entity type has no metrics, we still need
-            # to identify the proper sourcerefs, because
-            # the simulation might have added or removed
-            # entities.
-            # In order to do so, we remove the next level from
-            # the multiindex, which in regular conditions would
-            # be the metric name; and rename the columns
-            # to just "_none_".
-            metric_series = typed_series.loc['_none_']
-            metric_series.name = '_none_'
-            metrics.append(metric_series)
-        # concatenate all metrics as columns
-        df: pd.DataFrame = pd.concat(metrics, axis=1)
-        # Drop NaN and 0, but make sure we return at least one row per
-        # sourceref, otherwise the sourceref will not be present in
-        # the simulation dashboard.
-        groups = []
-        for sourceref, group in df.groupby(level='sourceref'):
-            # This filters out the rows where all values are 0
-            group = group.fillna(0)
-            group = group.loc[~(group == 0).all(axis=1)]
-            if group.empty:
-                original_group = typing.cast(pd.DataFrame, df.loc[typing.cast(str, sourceref)])
-                group = original_group.head(1)
-            # turn "hour" and "minute" into columns
-            group = group.reset_index()
-            # overwrite other columns
-            group['entitytype'] = meta.entityType
-            group['sourceref'] = sourceref
-            groups.append(group)
-        # concatenate all groups
-        df = pd.concat(groups, axis=0).reset_index(drop=True)
-        if '_none_' in df.columns:
-            df.drop('_none_', axis=1, inplace=True)
-        # Hour and minute only belong in the dataset if the
-        # input has those dimensions
-        if not meta.hasHour:
-            df = df.drop('hour', axis=1)
-        if not meta.hasMinute:
-            df = df.drop('minute', axis=1)
-        return Dataset(
-            timeinstant=props.timeinstant,
-            trend=props.trend,
-            daytype=props.daytype,
-            entityType=meta.entityType,
-            df=df
-        )
-
 @dataclass
 class HiddenLayer:
     """
@@ -892,6 +935,88 @@ class HiddenLayer:
     # Currently, it has the following levels:
     # (entitytype, metric, sourceref, hour, minute)
     index: pd.MultiIndex
+
+    def impact(self, reference: Reference, perturbation: Dataset, target_entitytype: str, target_metric: str, func: typing.Callable[[pd.DataFrame], pd.Series]) -> pd.Series:
+        """
+        Calculates the impact of the given perturbation into the target entity types.
+
+        - The perturbation is a Dataset with information of the entities that
+          have been added or dropped from the city.
+        - The target entitytype and metric are the thing that we want to impact.
+        - The func is a function that takes a dataframe and returns a series
+          with the same index as the dataframe.
+
+        This function transforms the private Tensor into a pd.Series
+        indexed by self.index, and then locates all the rows belonging
+        to the specified target_entitytype and target_metric. Depending
+        on the metadata of the target entitytype, the resulting series
+        will have:
+         
+        - One row per target_sourceref, hour of day and ten-minute interval
+          (if metadata.hasMinute)
+        - Or, one row per target_sourceref and hour of day (if metadata.hasHour)
+        - Or, just one row per target_sourceRef, with hour = 0 and minute = 0.
+
+        This series is then turned into a DataFrame with a column called
+        `hidden`, and extended by adding the fixed properties of the
+        target_entitytype (e.g. the parking capacity). The DataFrame has a
+        MultiIndex of (sourceref, hour, minute)
+         
+        Finally, for each entitytype and sourceref in the perturbation Dataset,
+        the extended DataFrame is merged with the part of the Dataset for that
+        entitytype and sourceref, and a `distance` column is added with
+        the distance between the two sourcerefs.
+        
+        Once we have this merged DataFrame, we add a `distance` column
+        to each row with the distance in meters between the sourcerefs, and call
+        the func on the DataFrame.
+
+        The result of the func should be a pd.Series with the same index as
+        the DataFrame. All the series will be added to the private tensor
+        once the calculations are finished.
+        """
+        assert(Reference.metadata is not None)
+        assert(Reference.dims_df_map is not None)
+        assert(Reference.distance_df is not None)
+        target_series = pd.Series(self.private, index=self.index)
+        target_series = target_series.loc[target_entitytype, target_metric]
+        target_series.name = 'hidden'
+        target_meta = reference.metadata[target_entitytype]
+        target_df = target_meta.merge_fixed_props(target_series, reference.dims_df_map[target_entitytype])
+        target_df.entitytype = target_entitytype
+        # Restore the `entitytype` level that was dropped byt he `loc` above
+        target_df = target_df.set_index('entitytype', append=True).reorder_levels(['entitytype', 'sourceref', 'hour', 'minute'])
+        assert(target_df.index.names == ['entitytype', 'sourceref', 'hour', 'minute'])
+        # --
+        # Now we must match the cardinality of the target dataframe, and the
+        # perturbation dataframe. Each of them might have a different number
+        # of rows per sourceref, depending on the values of their metadata
+        # hasHour and hasMinute. The possibilities are:
+        #
+        #      perturbation_df      | hasMinute True | hasHour True | other
+        # target_with_distance      |                |              |
+        #   hasMinute True          | 1:1            | N:1          | N:1
+        #   hasHour True            | N:1            | 1:1          | 1:N
+        #   other                   | 1:N            | 1:N          | 1:1
+        #
+        # - 1:1: Per each row of target_with_distance, there is a row of perturbation.
+        # - N:1: target_with_distance will have rows for hours and minutes for wich there will
+        #        be no match in perturbation_df. Therefore we must "fill the gaps" by
+        #        duplicating rows of the perturbation_df.
+        # - 1:N: target_with_distance will ignore rows from the perturbation_df because
+        #        they refer to hours or minutes that target_with_distance does not have.
+        #        we will have to "summarize" the values of the perturbation_df.
+        #
+
+        perturb_groups = perturbation.df.groupby(level=['entitytype', 'sourceref'])
+        for key, group in perturb_groups:
+            from_entitytype, from_sourceref = key
+            target_with_distance = reference.merge_distance(target_df, from_entitytype, from_sourceref)
+
+
+
+
+        return  perturbation
 
     def scale(self) -> pd.Series:
         """
@@ -1550,7 +1675,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
 
         # Split into Datasets to save back to the database
         for entityType, meta in reference.metadata.items():
-            dataset = vector.pivot(meta=meta, props=dataset_props, series=result)
+            dataset = meta.pivot(props=dataset_props, series=result)
             dims_df = dims_df_map[entityType]
             meta.to_sql(engine=engine, sceneref=sim_props.sceneref, dataset=dataset, dims_df=dims_df, dryrun=dryrun)
 
@@ -1698,14 +1823,14 @@ class SimParking:
           of the `to_sourceref` and the new parking.
         """
         # Get the similarity_Df for other parkings
-        distance_parkings = reference.similarity_by_distance('OffStreetParking', self.sourceref, 'OffStreetParking')
+        distance_parkings = reference.weights_by_distance('OffStreetParking', self.sourceref, 'OffStreetParking')
         assert(distance_parkings.index.names == ['to_sourceref'])
         distance_parkings.name = 'weight'
         # Find the relative capacities between this parking and the others
         assert(reference.dims_df_map is not None)
         entitytype = 'OffStreetParking'
         meta = reference.metadata[entitytype]
-        parking_capacities = meta.decorate(data_df=distance_parkings, dims_df=reference.dims_df_map[entitytype])
+        parking_capacities = meta.merge_fixed_props(data_df=distance_parkings, dims_df=reference.dims_df_map[entitytype])
         assert(parking_capacities.index.names == ['to_sourceref'])
         assert(parking_capacities.columns.to_list() == ['weight', 'capacity'])
         parking_capacities = parking_capacities.reset_index()
@@ -1973,7 +2098,7 @@ class SimRoute:
         # Otherwise, the NaNs will crop into the output.
         entities = entities.dropna()
         assert(entities.index.names == ['sourceref'])
-        distance_averages = reference.similarity_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity', entities.index.to_list())
+        distance_averages = reference.weights_by_distance('RouteIntensity', self.sourceref, 'RouteIntensity', entities.index.to_list())
         assert(distance_averages.index.names == ['to_sourceref'])
         distance_averages.name = 'weight'
         # Prepare dataframe with the scale of each route, both
