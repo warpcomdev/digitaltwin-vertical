@@ -81,7 +81,7 @@ peak: {
 		  t.{{.}},
 		  {{- end }}
 		  CASE
-		    WHEN t.hour <= {{ .morningEnd }} THEN TRUE
+		    WHEN t.hour < {{ .morningEnd }} THEN TRUE
 		    ELSE FALSE
 		  END AS morning,
 		  entityid,
@@ -91,7 +91,7 @@ peak: {
 		  {{- end }}
 		  t.{{ .metric }}
 		FROM :target_schema.{{ .tableName }} AS t
-		WHERE t.hour >= {{ .hourFrom }} AND t.hour <= {{ .hourTo }}
+		WHERE t.hour >= {{ .hourFrom }} AND t.hour < {{ .hourTo }}
 		ORDER BY {{ range.columns }} t.{{.}},{{ end }} \(_morningColumn), t.{{ .metric }} DESC
 		"""
 

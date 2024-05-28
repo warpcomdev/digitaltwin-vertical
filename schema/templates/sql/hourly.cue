@@ -35,7 +35,7 @@ hourly: {
 		{{- end }}
 		  t.entityid
 		FROM :target_schema.{{ .tableName }} AS t
-		WHERE t.hour >= {{ .hourFrom }} AND t.hour <= {{ .hourTo }}
+		WHERE t.hour >= {{ .hourFrom }} AND t.hour < {{ .hourTo }}
 		GROUP BY {{ range .columns }} t.{{.}},{{end}} t.hour, t.entityid;
 		"""
 

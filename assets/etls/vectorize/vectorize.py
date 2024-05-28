@@ -554,6 +554,24 @@ class Metadata:
                 affected_places = cursor.fetchall()
                 return [place[0] for place in affected_places]
 
+    def decorate(self, data_df: typing.Union[pd.Series, pd.DataFrame], dims_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Decorate a series with the fixedProps properties
+        obtained from the dims_df.
+
+        - The data_df must be indexed by sourceref
+        - The result is a dataframe indexed by sourceref, and
+          with a column per fixedProperty.
+        """
+        assert(self.fixedProps)
+        return pd.merge(
+            data_df,
+            dims_df[['sourceref'] + list(self.fixedProps.keys())].set_index('sourceref'),
+            how='left',
+            left_index=True, right_index=True,
+            sort=False
+        )
+
 # Factor aproximado para convertir distancias en coordenadas
 # a distancias en metros.
 # See https://sciencing.com/convert-distances-degrees-meters-7858322.html
@@ -1579,7 +1597,7 @@ class SimParking:
         self.name = sim.get('name', {}).get('value', '')
         self.location = sim.get('location', {}).get('value', {})
         self.capacity = int(sim.get('capacity', {}).get('value', '1000'))
-        self.bias = int(sim.get('bias', {}).get('value', 5))
+        self.bias = int(sim.get('bias', {}).get('value', 5) or 5)
         self.zone = reference.match_zone(geometry.shape(self.location), "1")
         logging.info("SimParking entity loaded: %s", self.__dict__)
 
@@ -1685,14 +1703,13 @@ class SimParking:
         distance_parkings.name = 'weight'
         # Find the relative capacities between this parking and the others
         assert(reference.dims_df_map is not None)
-        parkings_df = reference.dims_df_map['OffStreetParking']
-        parkings_df = parkings_df[parkings_df['sourceref'] != self.sourceref]
-        parkings = parkings_df.set_index('sourceref')['capacity']
-        parking_capacities = pd.merge(distance_parkings, parkings, how='left', left_index=True, right_index=True, sort=False)
+        entitytype = 'OffStreetParking'
+        meta = reference.metadata[entitytype]
+        parking_capacities = meta.decorate(data_df=distance_parkings, dims_df=reference.dims_df_map[entitytype])
         assert(parking_capacities.index.names == ['to_sourceref'])
         assert(parking_capacities.columns.to_list() == ['weight', 'capacity'])
         parking_capacities = parking_capacities.reset_index()
-        parking_capacities['entitytype'] = 'OffStreetParking'
+        parking_capacities['entitytype'] = entitytype
         # Add a prevision of how many new people will try to
         # use the new parking, based on the zone intensity.
         intensities = self.find_close_intensity(reference)
@@ -1739,7 +1756,7 @@ class SimTraffic:
         self.sceneref = sim_props.sceneref
         self.name = sim.get('name', {}).get('value', '')
         self.capacity = int(sim.get('capacity', {}).get('value', '1000'))
-        self.bias = int(sim.get('bias', {}).get('value', 5))
+        self.bias = int(sim.get('bias', {}).get('value', 5) or 5)
         self.category = sim.get('category', {}).get('value', 'pedestrian').lower().strip()
         self.bbox = shapely.MultiPoint(sim.get('location').get('value', [[0,0],[0,0]]))
         # Save location to sim_props, so that it can be used
@@ -1786,7 +1803,7 @@ class SimRoute:
         self.sim_date = sim_props.sim_date
         self.trips = float(sim.get('trips', {}).get('value', 100))
         self.intensity = float(sim.get('intensity', {}).get('value', 1000))
-        self.bias = int(sim.get('bias', {}).get('value', 5))
+        self.bias = int(sim.get('bias', {}).get('value', 5) or 5)
         self.sim_id = sim['id']
         self.sim_type = sim['type']
         self.sourceref = f"{self.sceneref}_{self.sim_date.strftime('%Y_%m_%d')}"

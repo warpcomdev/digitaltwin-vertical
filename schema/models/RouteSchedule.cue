@@ -62,9 +62,9 @@ RouteSchedule: templates.#Twin & {
 	}
 
 	#sql: peak: {
-		hourFrom:   6
-		hourTo:     24
-		morningEnd: 14
+		hourFrom:   7
+		hourTo:     23
+		morningEnd: 15
 		columns: [
 			"timeinstant",
 			"sourceref",

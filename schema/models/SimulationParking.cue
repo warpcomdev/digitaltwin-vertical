@@ -113,6 +113,7 @@ SimulationParking: {
 							qs: {
 								ETL_VECTORIZE_SIMULATION_TYPE: "${type}"
 								ETL_VECTORIZE_SIMULATION_ID:   "${id}"
+								ETL_VECTORIZE_CHANGETYPE: "${changeType}"
 							}
 							payload: null
 						}
