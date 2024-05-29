@@ -1929,7 +1929,7 @@ class SimParking:
         # Resto uno del factor de escala porque no quiero obtener directamente
         # el resultado final, sino un incremental.
         occupationpercent_tensor = torch.from_numpy(df['occupationpercent'].to_numpy())
-        incremental_tensor = (total_factor * occupationpercent_tensor) * (capacity_tensor / self.capacity)
+        incremental_tensor = (total_factor * occupationpercent_tensor) * (self.capacity / capacity_tensor)
         result = pd.Series(incremental_tensor, index=df.index)
         # logging
         distance_factor_series = pd.Series(distance_factor, index=df.index)
