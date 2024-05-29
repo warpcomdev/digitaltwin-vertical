@@ -1079,7 +1079,9 @@ class HiddenLayer:
         activation: typing.Callable[[torch.Tensor], torch.Tensor] = DecoderLayer.linear
         if scale > 0:
             activation = DecoderLayer.scaled_sigmoid(scale, 0.9)
-        self.private[offsets_key] = activation(self.private[offsets_key] + offsets_val)
+        # Cast tensor types
+        addition = self.private[offsets_key] + torch.from_numpy(offsets_val).type(self.private.dtype)
+        self.private[offsets_key] = activation(addition)
 
 @dataclass
 class DecoderLayer:
@@ -1220,11 +1222,11 @@ class DecoderLayer:
             left_mask = (x <= st)
             left_values = x[left_mask]
             right_mask = (x > st)
-            right_values = (A * torch.sigmoid(B * x[right_mask] + C) + D).double()
+            right_values = (A * torch.sigmoid(B * x[right_mask] + C) + D).type(x.dtype)
             result = torch.empty_like(x)
             result[left_mask] = left_values
             result[right_mask] = right_values
-            return result.float()
+            return result
         return scaled_func
 
     @staticmethod
@@ -1272,9 +1274,9 @@ class DecoderLayer:
         inverse_sigma_left = math.sqrt(math.log((y1 + 0.0)/y0)) / (x1 + 0.0)
         def piecewise_gaussian(tensor: torch.Tensor, amp_left=y1, amp_right=y1-yinf, bias=yinf, mean=x1, inverse_sigma_left=inverse_sigma_left, inverse_sigma_right=inverse_sigma_right) -> torch.Tensor:
             left_mask = tensor < mean
-            left_values = amp_left * torch.exp(-(((tensor[left_mask] - mean) * inverse_sigma_left) ** 2))
+            left_values = (amp_left * torch.exp(-(((tensor[left_mask] - mean) * inverse_sigma_left) ** 2))).type(tensor.dtype)
             right_mask = tensor >= mean            
-            right_values = amp_right * torch.exp(-(((tensor[right_mask] - mean) * inverse_sigma_right) ** 2)) + bias
+            right_values = (amp_right * torch.exp(-(((tensor[right_mask] - mean) * inverse_sigma_right) ** 2)) + bias).type(tensor.dtype)
             result = torch.empty_like(tensor)
             result[left_mask] = left_values
             result[right_mask] = right_values
