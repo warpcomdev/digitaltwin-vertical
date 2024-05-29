@@ -1220,11 +1220,11 @@ class DecoderLayer:
             left_mask = (x <= st)
             left_values = x[left_mask]
             right_mask = (x > st)
-            right_values = (A * torch.sigmoid(B * x[right_mask] + C) + D).float()
+            right_values = (A * torch.sigmoid(B * x[right_mask] + C) + D).double()
             result = torch.empty_like(x)
             result[left_mask] = left_values
             result[right_mask] = right_values
-            return result
+            return result.float()
         return scaled_func
 
     @staticmethod
