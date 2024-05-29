@@ -1241,9 +1241,12 @@ class DecoderLayer:
 
         # el bias puede ir de 1 (mínimo impacto) a 9 (máximo impacto)
         # lo usamos para escalar el alcance de la función y sus efectos.
+        logging.info(f"BEFORE BIAS: y1={y1}, y2={y2}, x2={x2}")
         bias_f = 1 + 0.05 * (5 - bias)
+        y2 = y2 * bias_f * (y2/y1) # Reducir proporcionalmente y2, para garantizar que sigue siendo menor que el nuevo y1
         y1 = y1 * bias_f
         x2 = x2 * bias_f
+        logging.info(f"AFTER BIAS: bias_f={bias_f}, y1={y1}, y2={y2}, x2={x2}")
 
         logging.info(f"inverse_sigma_right: y1={y1}, yinf={yinf}, y2={y2}, x2={x2}, x1={x1}")
         inverse_sigma_right = math.sqrt(math.log((y1 - yinf + 0.0)/(y2 - yinf))) / (x2 - x1 + 0.0)
