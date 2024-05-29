@@ -1910,20 +1910,20 @@ class SimParking:
         def capacity_scale(capacity_tensor: torch.Tensor) -> torch.Tensor:
             """
             Mantengo el 100% de la escala por distancia cuando los parkings tienen 
-            un tamaño parecido, reduzco el impacto por distancia Calculo un impacto del 25% cuando la capacidad del parking nuevo es muy
-            superior a la del existente.
+            un tamaño parecido, reduzco el impacto por distancia si el parking existente es mucho mayor
+            que el nuevo, y la aumento si es mucho menor.
 
             Recibe el tensor de capacidades.
             """
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.25, x2=1, y2=1.10, bias=self.bias)
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=4, x2=1, y2=2, bias=self.bias)
             tensor = scale(capacity_tensor / self.capacity)
             return tensor
         distance_factor = distance_scale(torch.from_numpy(df['distance'].to_numpy()))
         capacity_factor = capacity_scale(torch.from_numpy(df['capacity'].to_numpy()))
-        total_factor = distance_factor * capacity_factor
+        total_factor = (distance_factor - 1) * (capacity_factor - 1)
         # Resto uno del factor de escala porque no quiero obtener directamente
         # el resultado final, sino un incremental.
-        incremental_factor = (total_factor - 1) * (-1)
+        incremental_factor = total_factor * (-1)
         result = pd.Series(torch.from_numpy(df['hidden'].to_numpy()) * incremental_factor, index=df.index)
         distance_factor_series = pd.Series(distance_factor, index=df.index)
         distance_factor_series.name = 'distance_factor'
