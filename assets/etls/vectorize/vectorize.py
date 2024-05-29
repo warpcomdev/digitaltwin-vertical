@@ -680,7 +680,7 @@ class Metadata:
         if not self.fixedProps:
             if isinstance(data_df, pd.Series):
                 return data_df.to_frame()
-            return data_df
+            return typing.cast(pd.DataFrame, data_df)
         merged = pd.merge(
             left=data_df,
             right=dims_df[['sourceref'] + list(self.fixedProps.keys())].set_index('sourceref'),
@@ -951,7 +951,7 @@ class HiddenLayer:
     # (entitytype, metric, sourceref, hour, minute)
     index: pd.MultiIndex
 
-    def impact(self, reference: Reference, perturbation: Dataset, target_entitytype: str, target_metric: str, func: typing.Callable[[pd.DataFrame], pd.Series]) -> pd.Series:
+    def impact(self, reference: Reference, perturbation: Dataset, target_entitytype: str, target_metric: str, func: typing.Callable[[Reference, pd.DataFrame], pd.Series]) -> pd.Series:
         """
         Calculates the impact of the given perturbation into the target entity types.
 
@@ -978,8 +978,8 @@ class HiddenLayer:
         
         Finally, the distance between `sourceref` and `from_sourceref`
         (in meters) is calculated. and the following columns are appended
-        to the dataframe: `distance`, `from_zone`, `to_zone`,
-        `from_zonelist`, `to_zonelist`.
+        to the dataframe: `to_entitytype`, `to_sourceref`, `distance`,
+        `from_zone`, `to_zone`, `from_zonelist`, `to_zonelist`.
         
         Then, the `func` function is called with this extended DataFrame.
         It will get called once per each sourceref in the input Dataset,
@@ -994,6 +994,7 @@ class HiddenLayer:
         # Get the part of the input tensor that belongs to the target entitytype and metric
         target_series = pd.Series(self.private, index=self.index)
         target_series = target_series.loc[target_entitytype, target_metric]
+        target_series = target_series.fillna(0.0)
         target_series.name = 'hidden'
         assert(target_series.index.names == ['sourceref', 'hour', 'minute'])
         target_meta = reference.metadata[target_entitytype]
@@ -1028,25 +1029,24 @@ class HiddenLayer:
             assert(candidates.index.names == ['to_entitytype', 'to_sourceref'])
             target_with_distance = pd.merge(
                 target_df,
-                candidates.reset_index().rename(columns={
-                    'to_entitytype': 'entitytype',
-                    'to_sourceref': 'sourceref'}),
+                candidates.reset_index(),
                 how='left',
-                on=['entitytype', 'sourceref'],
+                left_on = ['entitytype', 'sourceref'],
+                right_on = ['to_entitytype', 'to_sourceref'],
                 sort=False
             )
             # Now, join by hour and minute to the values of the
             # perturbing entity
             target_and_perturb = pd.merge(
                 target_with_distance,
-                group,
+                group.fillna(0),
                 how='left',
                 on=['hour', 'minute'],
                 sort=False
             )
             # Set the index of the resulting frame
             target_and_perturb = target_and_perturb.set_index(['sourceref', 'hour', 'minute'])
-            accumulator = accumulator.add(func(target_and_perturb))
+            accumulator = accumulator.add(func(reference, target_and_perturb))
         assert(accumulator.index.names == ['sourceref', 'hour', 'minute'])
         return accumulator
 
@@ -1215,6 +1215,55 @@ class DecoderLayer:
         def scaled_func(x: torch.Tensor, A=A, B=B, C=C, D=D):
             return (A * torch.sigmoid(B * x + C) + D).float()
         return scaled_func
+
+    @staticmethod
+    def scaled_gaussian(y0: float, x1: float, y1: float, x2: float, y2: float, bias: int) -> typing.Callable[[torch.Tensor], torch.Tensor]:
+        """
+        Generates a gaussian function with maximum at (x1, y1) and tending to yinf when x tends to infinity.
+
+        The generated gaussian crosses the points:
+        
+        (0, y0)
+        (x1, y1) (maximum)
+        (x2, y2)
+        (infinity, yinf)
+
+        if x1 == 0, y0 is ignored
+
+        """
+        # Assertions to ensure the invariants hold
+        yinf = 1 # This function is used for scaling, it must go to 1 in infinity
+        assert x1 == 0 or y0 < y1, "y0 must be less than y1"
+        assert x1 >= 0, "x1 must be greater than 0"
+        assert x2 > x1, "x2 must be greater than x1"
+        assert y2 < y1, "y2 must be less than y1"
+        assert y2 > yinf, "y2 must be greater than yinf"
+
+        # el bias puede ir de 1 (mínimo impacto) a 9 (máximo impacto)
+        # lo usamos para escalar el alcance de la función y sus efectos.
+        bias_f = 1 + 0.05 * (5 - bias)
+        y1 = y1 * bias_f
+        x2 = x2 * bias_f
+
+        inverse_sigma_right = math.sqrt(math.log((y1 - yinf + 0.0)/(y2 - yinf))) / (x2 - x1 + 0.0)
+        if x1 == 0:
+            # This is not a piecewise gaussian, but a regular gaussian
+            def gaussian(tensor: torch.Tensor, amplitude=y1, sigma=inverse_sigma_right) -> torch.Tensor:
+                return amplitude * torch.exp(-((tensor * sigma) ** 2)) + yinf
+            return gaussian
+
+        # Calculate sigma for the left and right sides
+        inverse_sigma_left = math.sqrt(math.log((y1 + 0.0)/y0)) / (x1 + 0.0)
+        def piecewise_gaussian(tensor: torch.Tensor, amp_left=y1, amp_right=y1-yinf, bias=yinf, mean=x1, inverse_sigma_left=inverse_sigma_left, inverse_sigma_right=inverse_sigma_right) -> torch.Tensor:
+            left_mask = tensor < mean
+            left_values = amp_left * torch.exp(-(((tensor[left_mask] - mean) * inverse_sigma_left) ** 2))
+            right_mask = tensor >= mean            
+            right_values = amp_right * torch.exp(-(((tensor[right_mask] - mean) * inverse_sigma_right) ** 2)) + bias
+            result = torch.empty_like(tensor)
+            result[left_mask] = left_values
+            result[right_mask] = right_values
+            return result
+        return piecewise_gaussian
 
 class Decoder:
     """
@@ -1534,7 +1583,7 @@ class SimulationImpact:
     source_removed: typing.Optional[typing.Sequence[str]]
     impacted_entitytype: str
     impacted_metric: str
-    impact_func: typing.Callable[[pd.DataFrame], pd.Series]
+    impact_func: typing.Callable[[Reference, pd.DataFrame], pd.Series]
 
 class Simulation(typing.Protocol):
     """
@@ -1840,11 +1889,39 @@ class SimParking:
         #     impact_func=self.impact_congestion
         # )
     
-    def impact_parkings(self, df: pd.DataFrame) -> pd.Series:
+    def impact_parkings(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_parkings. Received df columns:\n%s", df.columns)
-        return pd.Series([100.0] * len(df), index=df.index)
+        def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
+            """
+            Calculo un impacto medio del 25% en los parkings que están a distancia 0,
+            hasta un 10% en los que están a 400 metros.
 
-    def impact_congestion(self, df: pd.DataFrame) -> pd.Series:
+            Recibe el tensor de distancias.
+            """
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.25, x2=400, y2=1.10, bias=self.bias)
+            # El impacto del parking en otros parkings es inverso,
+            # baja su ocupación. Por eso divido en lugar de multiplicar.
+            tensor = 1 / scale(distance_tensor)
+            return tensor
+        def capacity_scale(capacity_tensor: torch.Tensor) -> torch.Tensor:
+            """
+            Calculo un impacto del 25% cuando la capacidad del parking nuevo es muy
+            superior a la del existente.
+
+            Recibe el tensor de capacidades
+            """
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.25, x2=1, y2=1.10, bias=self.bias)
+            tensor = 1 / scale(capacity_tensor / self.capacity)
+            return tensor
+        distance_factor = distance_scale(torch.from_numpy(df['distance'].to_numpy()))
+        capacity_factor = capacity_scale(torch.from_numpy(df['capacity'].to_numpy()))
+        total_factor = distance_factor * capacity_factor
+        # Resto uno del factor de escala porque no quiero obtener directamente
+        # el resultado final, sino un incremental.
+        total_factor = total_factor - 1
+        return pd.Series(torch.from_numpy(df['hidden'].to_numpy()) * total_factor, index=df.index)
+
+    def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_congestion. Received df columns:\n%s", df.columns)
         return pd.Series([0.0] * len(df), index=df.index)
 
@@ -2011,11 +2088,11 @@ class SimTraffic:
             impact_func=self.impact_intensity
         )
 
-    def impact_congestion(self, df: pd.DataFrame) -> pd.Series:
+    def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.info("SimTraffic impact_congestion:\n%s", df)
         return pd.Series([0] * len(df), index=df.index)
 
-    def impact_intensity(self, df: pd.DataFrame) -> pd.Series:
+    def impact_intensity(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.info("SimTraffic impact_intensity:\n%s", df)
         return pd.Series([0] * len(df), index=df.index)
 
@@ -2136,11 +2213,11 @@ class SimRoute:
             impact_func=self.impact_parking
         )
 
-    def impact_route_intensity(self, df: pd.DataFrame) -> pd.Series:
+    def impact_route_intensity(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.info("SimRoute impact_route:\n%s", df)
         return pd.Series([0] * len(df), index=df.index)
 
-    def impact_parking(self, df: pd.DataFrame) -> pd.Series:
+    def impact_parking(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.info("SimRoute impact_parking:\n%s", df)
         return pd.Series([0] * len(df), index=df.index)
 
