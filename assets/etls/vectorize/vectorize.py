@@ -191,6 +191,51 @@ class Dataset(DatasetProperties):
     entityType: str
     df: pd.DataFrame
 
+    def change_time(self, must_have_hour: bool, must_have_minute: bool) -> pd.DataFrame:
+        """
+        Return a new DataFrame where the `hour` and `minute` columns
+        are changed to reflect the new values of `hasHour` and `hasMinute`
+
+        - If `hasMinute` equals True, the resulting DataFrame will have 
+          a column called `minute` with ten-minute intervals from 0 to 50.
+          If the current DataFrame does not have sucha column, the current
+          columns will be copied, once per 10-minute interval.
+
+        - If `hasHour` equals True, the resulting DataFrame will have
+          a column called `hour` with hourly intervals from 0 to 23.
+          If the current DataFrame does not have sucha column, the current
+          columns will be copied, once per hour.
+        """
+        result_df = self.df
+        minute_df = pd.DataFrame([10 * i for i in range(0, 6)], columns=('minute',))
+        hour_df = pd.DataFrame(list(range(0, 24)), columns=('hour',))
+        hasMinute = ('minute' in self.df.columns)
+        hasHour = ('hour' in self.df.columns)
+        if must_have_minute:
+            assert(must_have_hour)
+            # We need to expand the DataFrame to one row
+            # per hour and to-minute interval, optionally
+            # filling the gaps with copies.
+            if not hasMinute:
+                result_df = pd.merge(result_df, minute_df, how='cross')
+            if not hasHour:
+                assert(not hasMinute)
+                result_df = pd.merge(result_df, hour_df, how='cross')
+        elif must_have_hour:
+            # We need to adjust the perturb df to one row
+            # per hour, poentially copying or aggregating
+            # rows depending on whether the pertur metadata
+            # hasHour and hasMinute.
+            if hasMinute:
+                assert(hasHour)
+                result_df = result_df.groupby(by=['sourceref', 'hour']).mean(numeric_only=True)
+            elif not hasHour:
+                assert(not hasMinute)
+                result_df = pd.merge(result_df, hour_df, how='cross')
+        elif hasMinute or hasHour:
+            result_df = result_df.groupby(by=['sourceref']).mean(numeric_only=True)
+        return result_df
+
 @dataclass
 class VectorProperties:
     """
@@ -464,14 +509,14 @@ class Metadata:
     def pivot(self, props: DatasetProperties, series: pd.Series) -> Dataset:
         """
         Pivots a pd.Series that has a multi-index with
-        (entitytype, metric, sourceref, hour, minute)
+        (metric, sourceref, hour, minute)
         into a dataset for the given entitytype.
 
         It will filter the rows for this particular entitytype, and
         then pivot the metrics so that each metric becomes a column.
         """
-        assert(series.index.names == ['entitytype', 'metric', 'sourceref', 'hour', 'minute'])
-        typed_series: pd.Series = series.loc[self.entityType]
+        assert(series.index.names == ['metric', 'sourceref', 'hour', 'minute'])
+        typed_series: pd.Series = series
         metrics: typing.List[pd.Series] = []
         if self.metrics:
             # Extract the rows corresponding to each metric
@@ -632,16 +677,20 @@ class Metadata:
         - The result is a dataframe eith the same index as
           the data_df, and a column per fixedProperty.
         """
-        assert(self.fixedProps)
-        return pd.merge(
+        if not self.fixedProps:
+            if isinstance(data_df, pd.Series):
+                return data_df.to_frame()
+            return data_df
+        merged = pd.merge(
             left=data_df,
-            right=dims_df[['sourceref'] + list(self.fixedProps.keys())],
+            right=dims_df[['sourceref'] + list(self.fixedProps.keys())].set_index('sourceref'),
             how='left',
             left_index=True,
-            right_index=False,
-            on='sourceref',
+            right_index=True,
             sort=False
         )
+        assert(data_df.index.names == merged.index.names)
+        return merged
 
 # Factor aproximado para convertir distancias en coordenadas
 # a distancias en metros.
@@ -799,40 +848,6 @@ class Reference:
             closest.update(candidates.index.get_level_values(0).values)
         return tuple(closest)
 
-    def merge_distance(self, entities: typing.Union[pd.DataFrame, pd.Series], from_type: str, from_sourceref: str) -> pd.DataFrame:
-        """
-        Merges the given DataFrame or Series with the "distance_df"
-        dataframe, extending the input with columns "distance", "from_zone",
-        "to_zone", "from_zonelist" and "to_zonelist".
-
-        - The "from_zone" and "from_zonelist" will belong to the entityid
-          identified by parameters `from_type` and `from_sourceref`
-        - The "to_zone" and "to_zonelist" will belong to the entityid
-          identified by the `entitytype` and `sourceref` columns in the
-          input.
-
-        The returned dataframe will hae the same index
-        as the input series or dataframe.
-        """
-        assert(self.distance_df is not None)
-        assert(frozenset(self.entities.names).issuperset(('entitytype', 'sourceref')))
-        candidates = self.distance_df.loc[from_type, from_sourceref]
-        candidates = candidates[['distance', 'from_zone', 'from_zonelist', 'to_zone', 'to_zonelist']]
-        candidates = candidates.dropna()
-        candidates = candidates[candidates['distance'] > 0]
-        assert(candidates.index.names == ['to_entitytype', 'to_sourceref'])
-        merged = pd.merge(
-            left=entities,
-            right=candidates,
-            how='left',
-            left_index=True,
-            right_index=True,
-            left_on=['entitytype', 'sourceref'],
-            right_on=['to_entitytype', 'to_sourceref'],
-            sort=False
-        )
-        return merged
-
     def weights_by_distance(self, from_type: str, from_sourceref: str, to_type: str, to_sourceref: typing.Optional[typing.List[str]]=None) -> pd.Series:
         """
         Calculates the similarity between the (from_type, from_sourceref)
@@ -948,94 +963,123 @@ class HiddenLayer:
 
         This function transforms the private Tensor into a pd.Series
         indexed by self.index, and then locates all the rows belonging
-        to the specified target_entitytype and target_metric. Depending
-        on the metadata of the target entitytype, the resulting series
-        will have:
-         
-        - One row per target_sourceref, hour of day and ten-minute interval
-          (if metadata.hasMinute)
-        - Or, one row per target_sourceref and hour of day (if metadata.hasHour)
-        - Or, just one row per target_sourceRef, with hour = 0 and minute = 0.
+        to the specified target_entitytype and target_metric.
 
         This series is then turned into a DataFrame with a column called
         `hidden`, and extended by adding the fixed properties of the
         target_entitytype (e.g. the parking capacity). The DataFrame has a
         MultiIndex of (sourceref, hour, minute)
          
-        Finally, for each entitytype and sourceref in the perturbation Dataset,
-        the extended DataFrame is merged with the part of the Dataset for that
-        entitytype and sourceref, and a `distance` column is added with
-        the distance between the two sourcerefs.
+        For each entitytype and sourceref in the perturbation Dataset,
+        the extended DataFrame is merged with the input dataset, and the
+        following columns are added: 'from_entitytype', 'from_sourceref',
+        <all the metrics of the input dataset for the given entitytype
+        and sourceref>.
         
-        Once we have this merged DataFrame, we add a `distance` column
-        to each row with the distance in meters between the sourcerefs, and call
-        the func on the DataFrame.
-
-        The result of the func should be a pd.Series with the same index as
-        the DataFrame. All the series will be added to the private tensor
-        once the calculations are finished.
+        Finally, the distance between `sourceref` and `from_sourceref`
+        (in meters) is calculated. and the following columns are appended
+        to the dataframe: `distance`, `from_zone`, `to_zone`,
+        `from_zonelist`, `to_zonelist`.
+        
+        Then, the `func` function is called with this extended DataFrame.
+        It will get called once per each sourceref in the input Dataset,
+        and must return a pd.Series with the same index as
+        the DataFrame.
+        
+        The function will add up the returned series of every invocation
+        to `func`, and return the resulting series.
         """
-        assert(Reference.metadata is not None)
-        assert(Reference.dims_df_map is not None)
-        assert(Reference.distance_df is not None)
+        assert(reference.metadata is not None)
+        assert(reference.dims_df_map is not None)
+        # Get the part of the input tensor that belongs to the target entitytype and metric
         target_series = pd.Series(self.private, index=self.index)
         target_series = target_series.loc[target_entitytype, target_metric]
         target_series.name = 'hidden'
+        assert(target_series.index.names == ['sourceref', 'hour', 'minute'])
         target_meta = reference.metadata[target_entitytype]
         target_df = target_meta.merge_fixed_props(target_series, reference.dims_df_map[target_entitytype])
-        target_df.entitytype = target_entitytype
-        # Restore the `entitytype` level that was dropped byt he `loc` above
-        target_df = target_df.set_index('entitytype', append=True).reorder_levels(['entitytype', 'sourceref', 'hour', 'minute'])
-        assert(target_df.index.names == ['entitytype', 'sourceref', 'hour', 'minute'])
-        # --
-        # Now we must match the cardinality of the target dataframe, and the
-        # perturbation dataframe. Each of them might have a different number
-        # of rows per sourceref, depending on the values of their metadata
-        # hasHour and hasMinute. The possibilities are:
-        #
-        #      perturbation_df      | hasMinute True | hasHour True | other
-        # target_with_distance      |                |              |
-        #   hasMinute True          | 1:1            | N:1          | N:1
-        #   hasHour True            | N:1            | 1:1          | 1:N
-        #   other                   | 1:N            | 1:N          | 1:1
-        #
-        # - 1:1: Per each row of target_with_distance, there is a row of perturbation.
-        # - N:1: target_with_distance will have rows for hours and minutes for wich there will
-        #        be no match in perturbation_df. Therefore we must "fill the gaps" by
-        #        duplicating rows of the perturbation_df.
-        # - 1:N: target_with_distance will ignore rows from the perturbation_df because
-        #        they refer to hours or minutes that target_with_distance does not have.
-        #        we will have to "summarize" the values of the perturbation_df.
-        #
+        # Restore the `entitytype` and `metric`` levels that were dropped by the `loc` above
+        target_df['entitytype'] = target_entitytype
+        target_df['metric'] = target_metric
+        target_df = target_df.reset_index()
+        # Make sure the perturbation dataframe has the same number of rows
+        # per entity as the target dataframe
+        perturb_df = perturbation.change_time(target_meta.hasHour, target_meta.hasMinute)
+        if not target_meta.hasMinute:
+            perturb_df['minute'] = 0
+        if not target_meta.hasHour:
+            assert(not target_meta.hasMinute)
+            perturb_df['hour'] = 0
+        # Avoid name conflicts later on
+        perturb_df['from_entitytype'] = perturbation.entityType
+        perturb_df = perturb_df.rename(columns={
+            'sourceref': 'from_sourceref'
+        })
+        # Now we iterate on the input dataset
+        accumulator = pd.Series([0.0] * len(target_series), index=target_series.index)
+        assert(reference.distance_df is not None)
+        for key, group in perturb_df.groupby('from_sourceref'):
+            perturb_sourceref = typing.cast(str, key)
+            # Extend the target_df with the distance to the perturbing entity
+            candidates = typing.cast(pd.DataFrame, reference.distance_df.loc[perturbation.entityType, perturb_sourceref])
+            candidates = candidates[['distance', 'from_zone', 'from_zonelist', 'to_zone', 'to_zonelist']]
+            candidates = candidates.dropna()
+            candidates = candidates[candidates['distance'] > 0]
+            assert(candidates.index.names == ['to_entitytype', 'to_sourceref'])
+            target_with_distance = pd.merge(
+                target_df,
+                candidates.reset_index().rename(columns={
+                    'to_entitytype': 'entitytype',
+                    'to_sourceref': 'sourceref'}),
+                how='left',
+                on=['entitytype', 'sourceref'],
+                sort=False
+            )
+            # Now, join by hour and minute to the values of the
+            # perturbing entity
+            target_and_perturb = pd.merge(
+                target_with_distance,
+                group,
+                how='left',
+                on=['hour', 'minute'],
+                sort=False
+            )
+            # Set the index of the resulting frame
+            target_and_perturb = target_and_perturb.set_index(['sourceref', 'hour', 'minute'])
+            accumulator = accumulator.add(func(target_and_perturb))
+        assert(accumulator.index.names == ['sourceref', 'hour', 'minute'])
+        return accumulator
 
-        perturb_groups = perturbation.df.groupby(level=['entitytype', 'sourceref'])
-        for key, group in perturb_groups:
-            from_entitytype, from_sourceref = key
-            target_with_distance = reference.merge_distance(target_df, from_entitytype, from_sourceref)
-
-
-
-
-        return  perturbation
-
-    def scale(self) -> pd.Series:
+    def add_to_tensor(self, series: pd.Series, target_entitytype: str, target_metric: str, scale: int=0):
         """
-        Returns a pandas Series with a scale value for each row
-        of the status vector.
+        Receives a series with a multi-index with levels
+        (metric, sourceref, hour, minute), and
+        adds the values of the series to the corresponding positions
+        of the private tensor.
 
-        The scale is a way to measure how relevant
-        is the encoded parameter to the output.
+        if the metrics in the series are scaled,
+        the functions truncated the values after adding to the result
+        tensor, to make sure the final result is within range.
         """
-        # Currently, the scale metric is a comparison to the mean
-        # for the entitytype and metric.
-        result = pd.Series(self.private.numpy(), index=self.index)
-        grouped = result.groupby(level=['entitytype', 'metric'])
-        mean = grouped.mean()
-        diff = grouped.max() - grouped.min()
-        diff = diff.replace(0, 1).abs()
-        result = result.sub(mean, level=['entitytype', 'metric'])
-        result = result.div(diff, level=['entitytype', 'metric'])
-        return result
+        assert(series.index.names == ['sourceref', 'hour', 'minute'])
+        series = series[series != 0]
+        if len(series) <= 0:
+            logging.info("series not added to tensor because it is 0")
+            return
+        # Find of the offsets in the tensor where I have to add the values
+        vector_offsets = pd.Series(range(0, len(self.index)), index=self.index, dtype=np.int32)
+        vector_offsets.name = 'offset'
+        vector_offsets = vector_offsets[target_entitytype, target_metric]
+        assert(vector_offsets.index.names == ['sourceref', 'hour', 'minute'])
+        # Align values and offsets
+        series.name = 'metric'
+        offsets_df = pd.merge(series, vector_offsets, how='inner', left_index=True, right_index=True, sort=False)
+        offsets_key = offsets_df['offset'].to_list()
+        offsets_val = offsets_df['metric'].to_numpy()
+        activation: typing.Callable[[torch.Tensor], torch.Tensor] = DecoderLayer.linear
+        if scale > 0:
+            activation = DecoderLayer.scaled_sigmoid(scale, 0.9)
+        self.private[offsets_key] = activation(self.private[offsets_key] + offsets_val)
 
 @dataclass
 class DecoderLayer:
@@ -1169,7 +1213,7 @@ class DecoderLayer:
         D = scale * 1.0 - A
         B = (-2.0 * C) / (threshold * scale)
         def scaled_func(x: torch.Tensor, A=A, B=B, C=C, D=D):
-            return A * torch.sigmoid(B * x + C) + D
+            return (A * torch.sigmoid(B * x + C) + D).float()
         return scaled_func
 
 class Decoder:
@@ -1378,6 +1422,7 @@ class SimulationProperties:
     description: str
     location: typing.Any
     settings: typing.Sequence[typing.Any]
+    dryrun: bool=False
 
     @staticmethod
     def create(broker: Broker, identityref: str, identity_date: datetime, fallback: typing.Any=None) -> typing.Optional['SimulationProperties']:
@@ -1404,6 +1449,8 @@ class SimulationProperties:
 
     def feedback(self, broker: Broker, status: str, *args):
         """Send feedback to the broker"""
+        if self.dryrun:
+            return
         broker.push(entities=[{
             'id': self.sceneref,
             'type': self.entitytype,
@@ -1466,12 +1513,35 @@ class SimulationProperties:
         """Return simulationsignature, for logging purposes"""
         return f"{self.sceneref} - {self.sim_date}"
 
+
+@dataclass
+class SimulationImpact:
+    """
+    This class contains the information needed to apply
+    impacts to the simulation, after creating or removing
+    entities.
+
+    - source_entitytype: the entityt type that has been added or removed.
+    - source_removed:
+        - if None, the impact is due to entities being added, not removed.
+        - Otherwise, it must contains the data of the removed entities.
+    - impacted_entitytype: the entitytype that is impacted by the change.
+    - impacted_metric: the metric of the entitytype that is impacted by the change.
+    - impact_func: the function that computes the impact.
+      See HiddenLayer.impact for more details.
+    """
+    source_entitytype: str
+    source_removed: typing.Optional[typing.Sequence[str]]
+    impacted_entitytype: str
+    impacted_metric: str
+    impact_func: typing.Callable[[pd.DataFrame], pd.Series]
+
 class Simulation(typing.Protocol):
     """
     Protocol to represent the simulation API
     """
 
-    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
+    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False) -> typing.Iterable[SimulationImpact]:
         """
         Add any entities created by the simulation to the dims_df_map and,
         if needed, to the database or broker.
@@ -1480,7 +1550,7 @@ class Simulation(typing.Protocol):
         the dimension table if needed for the simulation.
         """
 
-    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
+    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False) -> typing.Iterable[SimulationImpact]:
         """
         Remove any entities destroyed by the simulation from the dims_df_map and,
         if needed, from the database or broker.
@@ -1497,22 +1567,6 @@ class Simulation(typing.Protocol):
         entities from the decoder output
         """
         pass
-
-    def update_encoding(self, props: DatasetProperties, hidden: HiddenLayer, partial: typing.Optional[pd.Series]) -> HiddenLayer:
-        """
-        Updates the encoding to reflect the impact of the simulation in the city status.
-        `partial` is the result of calling Decoder.decode once with any new entities
-        added by the simulation.
-        """
-        return hidden
-
-    def vet_output(self, result: pd.Series) -> pd.Series:
-        """
-        Vets the output of the simulation,
-        potentially changing values that deviate
-        from reasonable expections (e.g. percent > 100%)
-        """
-        return result
 
 def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.Optional[str]=None, dryrun: bool=False):
     """
@@ -1535,6 +1589,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
     if not sim_props:
         logging.warning("No simulation found")
         return
+    sim_props.dryrun = dryrun
     sim_props.feedback(broker, "initiating simulation")
     sim_handlers = list(create_simulators(reference=reference, sim_props=sim_props, broker=broker, dryrun=dryrun))
 
@@ -1563,8 +1618,10 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
 
     # Handle adding entities to the scene
     logging.info("Creating simulation entities for %s", sim_props.signature())
+    impact_list: typing.Dict[str, typing.List[SimulationImpact]] = defaultdict(list)
     for handler in sim_handlers:
-        handler.add_entities(engine=engine, broker=broker, reference=reference, dryrun=dryrun)
+        for impact in handler.add_entities(engine=engine, broker=broker, reference=reference, dryrun=dryrun):
+            impact_list[impact.source_entitytype].append(impact)
 
     # Calculate distances across all points.
     logging.info("Calculating distances for %s", sim_props.signature())
@@ -1576,7 +1633,8 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
     # Handle removing entities from the scene
     logging.info("Removing simulation entities for %s", sim_props.signature())
     for handler in sim_handlers:
-        handler.drop_entities(engine=engine, broker=broker, reference=reference, dryrun=dryrun)
+        for impact in handler.drop_entities(engine=engine, broker=broker, reference=reference, dryrun=dryrun):
+            impact_list[impact.source_entitytype].append(impact)
 
     # Create the decoder. Apply all simulation modifications.
     logging.info("Preparing decoder for %s", sim_props.signature())
@@ -1643,29 +1701,46 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
             partial_result.shape if partial_result is not None else None
         )
 
-        for handler in sim_handlers:
-            hidden = handler.update_encoding(props=dataset_props, hidden=hidden, partial=partial_result)
-        logging.info("Simulated state shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
-            sim_props.sceneref,
-            last_identity_date,
-            trend,
-            daytype,
-            hidden.private.shape
-        )
-        sim_props.feedback(broker, "simulated state shape %s", hidden.private.shape)
+        # Accumulate all the impacts per entitytype and metric
+        accumulator: typing.Dict[str, typing.Dict[str, pd.Series]] = defaultdict(dict)
+        for entitytype, impacts in impact_list.items():
+            meta = reference.metadata[entitytype]
+            for impact in impacts:
+                if impact.source_removed:
+                    # If this is an impact of removed entities,
+                    # get the original data from the Dataset
+                    original_ds = data_map[entitytype]
+                    original_df = original_ds.df
+                    dataset = Dataset(
+                        timeinstant=original_ds.timeinstant,
+                        trend=original_ds.trend,
+                        daytype=original_ds.daytype,
+                        entityType=entitytype,
+                        df=original_df[original_df['sourceref'].isin(impact.source_removed)],
+                    )
+                    logging.info("Processing impact of removed entities of type %s (%s)", impact.source_entitytype, impact.source_removed)
+                elif partial_result is not None:
+                    # Otherwise, get the data from the parial result
+                    dataset = meta.pivot(dataset_props, partial_result[entitytype])
+                    logging.info("Processing impact of added entities of type %s", impact.source_entitytype)
+                # Accumulate impacts on target entitytytpes and metrics
+                delta = hidden.impact(reference, dataset, impact.impacted_entitytype, impact.impacted_metric, impact.impact_func)
+                logging.info("%s lines impacted for entitytype %s", delta.shape, entitytype)
+                entity_accum = accumulator[impact.impacted_entitytype]
+                if impact.impacted_metric in entity_accum:
+                    delta = entity_accum[impact.impacted_metric].add(delta, fill_value=0)
+                entity_accum[impact.impacted_metric] = delta
+                logging.info("%s total lines accumulated for entitytype %s", delta.shape, entitytype)
+
+        # And apply them all at once
+        for entitytype, impacted_metrics in accumulator.items():
+            for metric, delta in impacted_metrics.items():
+                logging.info("Adding to tensor %s lines of impact for entitytype %s and metric %s", delta.shape, entitytype, metric)
+                hidden.add_to_tensor(delta, entitytype, metric, reference.metadata[entitytype].metrics[metric].scale)
 
         # Decode the hidden status and vet the results
         result = decoder.decode(props=dataset_props, hidden=hidden, partial=False)
         assert(result is not None)
-        for handler in sim_handlers:
-            result = handler.vet_output(result)
-        logging.info("Simulated result shape for scene %s, timeinstant %s, trend %s, daytype %s: %s",
-            sim_props.sceneref,
-            last_identity_date,
-            trend,
-            daytype,
-            result.shape
-        )
         sim_props.feedback(broker, "simulated result shape %s", result.shape)
 
         # Write output vector for debugging purposes
@@ -1675,7 +1750,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
 
         # Split into Datasets to save back to the database
         for entityType, meta in reference.metadata.items():
-            dataset = meta.pivot(props=dataset_props, series=result)
+            dataset = meta.pivot(props=dataset_props, series=result[entityType])
             dims_df = dims_df_map[entityType]
             meta.to_sql(engine=engine, sceneref=sim_props.sceneref, dataset=dataset, dims_df=dims_df, dryrun=dryrun)
 
@@ -1726,7 +1801,7 @@ class SimParking:
         self.zone = reference.match_zone(geometry.shape(self.location), "1")
         logging.info("SimParking entity loaded: %s", self.__dict__)
 
-    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
+    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False) -> typing.Iterable[SimulationImpact]:
         assert(reference.dims_df_map is not None)
         new_parking = {
             'sourceref': self.sourceref,
@@ -1748,7 +1823,31 @@ class SimParking:
             self.save_simulation_entity(conn=conn, broker=broker, reference=reference)
             if dryrun:
                 conn.rollback()
+        # Add an impact on other parkings
+        yield SimulationImpact(
+            source_entitytype=self.entitytype,
+            source_removed=None,
+            impacted_entitytype='OffStreetParking',
+            impacted_metric='occupationpercent',
+            impact_func=self.impact_parkings
+        )
+        # # Add an impact on congestion
+        # yield SimulationImpact(
+        #     source_entitytype=self.entitytype,
+        #     source_removed=None,
+        #     impacted_entitytype='TrafficCongestion',
+        #     impacted_metric='congestion',
+        #     impact_func=self.impact_congestion
+        # )
     
+    def impact_parkings(self, df: pd.DataFrame) -> pd.Series:
+        logging.debug("SimParking::impact_parkings. Received df columns:\n%s", df.columns)
+        return pd.Series([100.0] * len(df), index=df.index)
+
+    def impact_congestion(self, df: pd.DataFrame) -> pd.Series:
+        logging.debug("SimParking::impact_congestion. Received df columns:\n%s", df.columns)
+        return pd.Series([0.0] * len(df), index=df.index)
+
     def save_simulation_entity(self, conn: Connection, broker: Broker, reference: Reference):
         """generate simulated OffStreetParking entity"""
         metadata = reference.metadata[self.entitytype]
@@ -1783,8 +1882,8 @@ class SimParking:
         with conn.execute(bound) as cursor:
             cursor.close()
 
-    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
-        pass
+    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False) -> typing.Iterable[SimulationImpact]:
+        return tuple()
 
     def prepare_decoder(self, reference: Reference, decoder: Decoder):
         # Get weights to calculate the ocupation of the new
@@ -1866,13 +1965,6 @@ class SimParking:
         intensities_df.to_csv("intensities_df_after.csv")
         return intensities_df
 
-    def update_encoding(self, props: DatasetProperties, hidden: HiddenLayer, partial: typing.Optional[pd.Series]) -> HiddenLayer:
-        # Produce an impact on other things close to the parking
-        return hidden
-
-    def vet_output(self, result: pd.Series) -> pd.Series:
-        return result
-
 class SimTraffic:
     """Simulation for traffic affectation"""
 
@@ -1889,13 +1981,20 @@ class SimTraffic:
         sim_props.location = json.loads(shapely.to_geojson(self.bbox))
         logging.info("SimTraffic entity loaded: %s", self.__dict__)
 
-    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
-        pass
+    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False) -> typing.Iterable[SimulationImpact]:
+        return tuple()
 
-    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
+    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False) -> typing.Iterable[SimulationImpact]:
         identityref = 'N/A'
         self.affected_places = reference.metadata['TrafficCongestion'].in_bbox(engine=engine, sceneref=identityref, bbox=self.bbox)
         logging.info("Affected TrafficCongestion entities: %s", ", ".join(self.affected_places))
+        yield SimulationImpact(
+            source_entitytype='TrafficCongestion',
+            source_removed=self.affected_places,
+            impacted_entitytype='TrafficCongestion',
+            impacted_metric='congestion',
+            impact_func=self.impact_congestion
+        )
         # Locate all TrafficIntensity entities close enough to any of the affected entities
         self.related_places = reference.get_closest(
             from_type='TrafficCongestion',
@@ -1904,6 +2003,21 @@ class SimTraffic:
             distance=25 # meters
         )
         logging.info("Related TrafficIntensity entities: %s", ", ".join(self.related_places))
+        yield SimulationImpact(
+            source_entitytype='TrafficIntensity',
+            source_removed=self.related_places,
+            impacted_entitytype='TrafficIntensity',
+            impacted_metric='intensity',
+            impact_func=self.impact_intensity
+        )
+
+    def impact_congestion(self, df: pd.DataFrame) -> pd.Series:
+        logging.info("SimTraffic impact_congestion:\n%s", df)
+        return pd.Series([0] * len(df), index=df.index)
+
+    def impact_intensity(self, df: pd.DataFrame) -> pd.Series:
+        logging.info("SimTraffic impact_intensity:\n%s", df)
+        return pd.Series([0] * len(df), index=df.index)
 
     def prepare_decoder(self, reference: Reference, decoder: Decoder):
         if self.affected_places:
@@ -1912,13 +2026,6 @@ class SimTraffic:
         if self.related_places:
             for place in self.related_places:
                 decoder.drop_sourceref('TrafficIntensity', place)
-
-    def update_encoding(self, props: DatasetProperties, hidden: HiddenLayer, partial: typing.Optional[pd.Series]) -> HiddenLayer:
-        # Produce an impact on other things close to the parking
-        return hidden
-
-    def vet_output(self, result: pd.Series) -> pd.Series:
-        return result
 
 class SimRoute:
     """Simulation for route affectation"""
@@ -1987,7 +2094,7 @@ class SimRoute:
             #logging.info("SimRoute: removing stops with refSimulation: none")
             broker.delete("Stop", q="refSimulation:none")
 
-    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
+    def add_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False) -> typing.Iterable[SimulationImpact]:
         assert(reference.dims_df_map is not None)
         # Rename stops and associate to the proper sourceref
         new_route = {
@@ -2012,7 +2119,31 @@ class SimRoute:
                 self.save_simulation_entity(conn, reference, entitytype)
             if dryrun:
                 conn.rollback()
-    
+        # Add an impact on other routes
+        yield SimulationImpact(
+            source_entitytype='RouteIntensity',
+            source_removed=None,
+            impacted_entitytype='RouteIntensity',
+            impacted_metric='intensity',
+            impact_func=self.impact_route_intensity
+        )
+        # Add an impact on parkings
+        yield SimulationImpact(
+            source_entitytype='RouteIntensity',
+            source_removed=None,
+            impacted_entitytype='OffStreetParking',
+            impacted_metric='occupationpercent',
+            impact_func=self.impact_parking
+        )
+
+    def impact_route_intensity(self, df: pd.DataFrame) -> pd.Series:
+        logging.info("SimRoute impact_route:\n%s", df)
+        return pd.Series([0] * len(df), index=df.index)
+
+    def impact_parking(self, df: pd.DataFrame) -> pd.Series:
+        logging.info("SimRoute impact_parking:\n%s", df)
+        return pd.Series([0] * len(df), index=df.index)
+
     def save_simulation_entity(self, conn: Connection, reference: Reference, entitytype: str):
         """generate simulated RouteSchedule or RouteIntensity entity"""
         # Save the new parking to the database
@@ -2049,8 +2180,8 @@ class SimRoute:
         with conn.execute(bound) as cursor:
             cursor.close()
 
-    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False):
-        pass
+    def drop_entities(self, engine: Engine, broker: Broker, reference: Reference, dryrun:bool=False) -> typing.Iterable[SimulationImpact]:
+        return tuple()
 
     def prepare_decoder(self, reference: Reference, decoder: Decoder):
         capacities = self.build_similarity_df(reference).reset_index()
@@ -2110,12 +2241,6 @@ class SimRoute:
         capacities['intensity_scale'] = capacities.apply(lambda x: self.intensity / x['intensity'], axis=1)
         capacities['trips_scale'] = capacities.apply(lambda x: self.trips / (x['forwardtrips'] + x['returntrips']), axis=1)
         return capacities
-
-    def update_encoding(self, props: DatasetProperties, hidden: HiddenLayer, partial: typing.Optional[pd.Series]) -> HiddenLayer:
-        return hidden
-
-    def vet_output(self, result: pd.Series) -> pd.Series:
-        return result
 
 if __name__ == "__main__":
     logging.basicConfig(

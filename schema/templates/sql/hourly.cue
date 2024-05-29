@@ -8,8 +8,8 @@ hourly: {
 
 	// Parámetros de entrada de la vista:
 	input: {
-		hourFrom: int // Inicio del periodo de agregación
-		hourTo:   int // Fin del periodo de agregación
+		hourFrom: int // Inicio del periodo de agregación (incluido)
+		hourTo:   int // Fin del periodo de agregación (excluido)
 		columns: [...string] // Lista de columnas a agrupar
 		aggregations: [string]: string // Diccionario alias => expresión SQL
 

@@ -33,7 +33,7 @@ t.hour,
   AVG(congestion) AS congestion,
   t.entityid
 FROM :target_schema.dtwin_trafficcongestion_sim AS t
-WHERE t.hour >= 7 AND t.hour <= 22
+WHERE t.hour >= 7 AND t.hour < 23
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.hour, t.entityid;
 -- CREATE VIEW dtwin_trafficcongestion_yesterday
 -- Vista que reemplaza el timeinstant de la tabla "lastdata"
@@ -101,7 +101,7 @@ FROM (SELECT
   t.name,
   t.zone,
   CASE
-    WHEN t.hour <= 14 THEN TRUE
+    WHEN t.hour < 15 THEN TRUE
     ELSE FALSE
   END AS morning,
   entityid,
@@ -109,7 +109,7 @@ FROM (SELECT
   t.minute,
   t.congestion
 FROM :target_schema.dtwin_trafficcongestion_sim AS t
-WHERE t.hour >= 7 AND t.hour <= 22
+WHERE t.hour >= 7 AND t.hour < 23
 ORDER BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, 8, t.congestion DESC) AS ordenadas) AS numeradas
 WHERE numeradas.is_min IS NULL OR numeradas.is_max IS NULL
 GROUP BY  numeradas.timeinstant, numeradas.sourceref, numeradas.sceneref, numeradas.trend, numeradas.daytype, numeradas.name, numeradas.zone, entityid;

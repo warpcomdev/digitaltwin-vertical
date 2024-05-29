@@ -8,9 +8,9 @@ peak: {
 
 	// Parámetros de entrada de la vista:
 	input: {
-		hourFrom:   int    // inicio del intervalo de interés
-		hourTo:     int    // fin del intervalo de interés
-		morningEnd: int    // hora que marca la separación entre mañana y tarde
+		hourFrom:   int    // inicio del intervalo de interés (incluido)
+		hourTo:     int    // fin del intervalo de interés (excluido)
+		morningEnd: int    // hora que marca la separación entre mañana y tarde (excluida)
 		metric:     string // columna que contiene la métrica por la que ordenar
 		columns: [...string] // Lista de columnas a agrupar
 

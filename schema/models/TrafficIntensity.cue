@@ -40,7 +40,7 @@ TrafficIntensity: templates.#Twin & {
 		aggregations: {
 			intensity: "SUM(intensity)"
 		}
-		where: "hour >= 7 and hour <= 23"
+		where: "hour >= 7 and hour < 23"
 	}
 
 	#sql: yesterday: {
