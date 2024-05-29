@@ -1212,8 +1212,19 @@ class DecoderLayer:
         A = (2.0 - threshold) * scale
         D = scale * 1.0 - A
         B = (-2.0 * C) / (threshold * scale)
-        def scaled_func(x: torch.Tensor, A=A, B=B, C=C, D=D):
-            return (A * torch.sigmoid(B * x + C) + D).float()
+        def scaled_func(x: torch.Tensor, A=A, B=B, C=C, D=D, st=scale*threshold):
+            # Voy a separarlo en una curva lineal a la izquierda
+            # del threshold, y la sigmoide a la derecha, para evitar
+            # la distorisión que mete la sigmoide a los valores
+            # distintos de la media
+            left_mask = x <= st
+            left_values = x[left_mask]
+            right_mask = x > st            
+            right_values = (A * torch.sigmoid(B * x[right_mask] + C) + D).float()
+            result = torch.empty_like(x)
+            result[left_mask] = left_values
+            result[right_mask] = right_values
+            return result
         return scaled_func
 
     @staticmethod
@@ -1915,7 +1926,7 @@ class SimParking:
 
             Recibe el tensor de capacidades.
             """
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=4, x2=1, y2=2, bias=self.bias)
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=3, x2=1, y2=2, bias=self.bias)
             tensor = scale(capacity_tensor / self.capacity)
             return tensor
         distance_factor = distance_scale(torch.from_numpy(df['distance'].to_numpy()))
