@@ -1911,7 +1911,7 @@ class SimParking:
     def impact_parkings(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_parkings. Received df columns:\n%s", df.columns)
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=0.5, x2=750.0, y2=0.25, yinf=0.0, bias=self.bias)
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1, x2=1000.0, y2=0.3, yinf=0.0, bias=self.bias)
             # Cuanta gente he "robado" del parking de al lado:
             # si estamos muy cerca, calculo que la mitad de mi ocupación
             # viene del otro parking; si nos vamos alejando, vamos "robando" menos gente.
@@ -1920,16 +1920,25 @@ class SimParking:
         distance_scale_series = pd.Series(distance_scale(torch.from_numpy(df['distance'].to_numpy())), index=df.index)
         distance_scale_series.name = "distance_scale"
         merged = pd.concat([df, distance_scale_series], axis=1)
+        scale = reference.metadata['OffStreetParking'].metrics['occupationpercent'].scale
         def calculate_delta(row):
-            capacity = row['capacity']
-            distance_scale = row['distance_scale']
-            occupationpercent = row['occupationpercent']
-            # how many people are in the new parking?
-            new_occupation = occupationpercent * self.capacity
-            # how many might come from the other parking?
-            impact = distance_scale * new_occupation * min(1, capacity / self.capacity)
-            # reduce the number of users in the old parking
-            return -impact / capacity
+            old_capacity = row['capacity']
+            old_occupation = row['hidden']
+            new_capacity = self.capacity
+            new_occupation = row['occupationpercent']
+            # El número máximo de personas dispuestas a trasladarse
+            # de un parking a otro, dependerá de la distancia entre
+            # parkings y la capacidad de los mismos.
+            budget = row['distance_scale'] * min(old_capacity, new_capacity)
+            # La cantidad de personas que realmente se trasladará,
+            # dependerá de la diferencia de llenado entre ambos parkings.
+            # Vamos a estimar que si la diferencia es de -100%, no se
+            # va nadie, y si la dierencia es 100% se va todo el mundo.
+            # es una linea que pasa por los puntos
+            # (-100, 0) y (100, budget)
+            occupation_difference = old_occupation - new_occupation
+            displacement = (occupation_difference - (-scale)) * budget / (scale - (-scale))
+            return - (displacement / old_capacity)
         difference = merged.apply(calculate_delta, axis=1)
         logging.debug("SimParking::impact_parkings. Difference:\n%s", difference.to_string())
         return difference
