@@ -1232,11 +1232,11 @@ class DecoderLayer:
 
         """
         # Assertions to ensure the invariants hold
-        yinf = 1 # This function is used for scaling, it must go to 1 in infinity
+        yinf = 1.0 # This function is used for scaling, it must go to 1 in infinity
         assert x1 == 0 or y0 < y1, "y0 must be less than y1"
         assert x1 >= 0, "x1 must be greater than 0"
         assert x2 > x1, "x2 must be greater than x1"
-        assert y2 < y1, "y2 must be less than y1"
+        assert y1 > y2, "y2 must be less than y1"
         assert y2 > yinf, "y2 must be greater than yinf"
 
         # el bias puede ir de 1 (mínimo impacto) a 9 (máximo impacto)
@@ -1898,7 +1898,7 @@ class SimParking:
 
             Recibe el tensor de distancias.
             """
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.25, x2=400, y2=1.10, bias=self.bias)
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.25, x2=400.0, y2=1.10, bias=self.bias)
             # El impacto del parking en otros parkings es inverso,
             # baja su ocupación. Por eso divido en lugar de multiplicar.
             tensor = 1 / scale(distance_tensor)
