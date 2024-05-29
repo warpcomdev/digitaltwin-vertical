@@ -1245,6 +1245,7 @@ class DecoderLayer:
         y1 = y1 * bias_f
         x2 = x2 * bias_f
 
+        logging.info(f"inverse_sigma_right: y1={y1}, yinf={yinf}, y2={y2}, x2={x2}, x1={x1}")
         inverse_sigma_right = math.sqrt(math.log((y1 - yinf + 0.0)/(y2 - yinf))) / (x2 - x1 + 0.0)
         if x1 == 0:
             # This is not a piecewise gaussian, but a regular gaussian
