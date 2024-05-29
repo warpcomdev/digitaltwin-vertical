@@ -1940,7 +1940,7 @@ class SimParking:
         total_factor_series = pd.Series(total_factor, index=df.index)
         total_factor_series.name = 'total_factor'
         capacity_relation_series = pd.Series(total_factor, index=df.index)
-        capacity_factor_series.name = 'capacity relation'
+        capacity_relation_series.name = 'capacity relation'
         incremental_factor_series = pd.Series(incremental_tensor, index=df.index)
         incremental_factor_series.name = 'incremental_factor'
         result.name = 'result'
