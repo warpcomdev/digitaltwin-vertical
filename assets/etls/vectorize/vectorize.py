@@ -1265,7 +1265,7 @@ class DecoderLayer:
         inverse_sigma_right = math.sqrt(math.log((y1 - yinf + 0.0)/(y2 - yinf))) / (x2 - x1 + 0.0)
         if x1 == 0:
             # This is not a piecewise gaussian, but a regular gaussian
-            def gaussian(tensor: torch.Tensor, amplitude=y1, sigma=inverse_sigma_right) -> torch.Tensor:
+            def gaussian(tensor: torch.Tensor, amplitude=y1-yinf, sigma=inverse_sigma_right) -> torch.Tensor:
                 return amplitude * torch.exp(-((tensor * sigma) ** 2)) + yinf
             return gaussian
 
