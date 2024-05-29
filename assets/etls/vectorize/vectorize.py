@@ -1219,11 +1219,13 @@ class DecoderLayer:
             # del threshold, y la sigmoide a la derecha, para evitar
             # la distorisión que mete la sigmoide a los valores
             # distintos de la media
+            negative_mask = (x <= 0)
             left_mask = (x <= st)
             left_values = x[left_mask]
             right_mask = (x > st)
             right_values = (A * torch.sigmoid(B * x[right_mask] + C) + D).type(x.dtype)
             result = torch.empty_like(x)
+            result[negative_mask] = 0
             result[left_mask] = left_values
             result[right_mask] = right_values
             return result
@@ -1909,23 +1911,21 @@ class SimParking:
     def impact_parkings(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_parkings. Received df columns:\n%s", df.columns)
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            # Impacto del 35% cuando están al lado, 20% a 400 metros
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.35, x2=400.0, y2=1.2, yinf=1.0, bias=self.bias)
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1, x2=1000.0, y2=0.5, yinf=0.0, bias=self.bias)
             # El impacto del parking en otros parkings es inverso,
             # baja su ocupación. Por eso divido en lugar de multiplicar.
             tensor = scale(distance_tensor)
             return tensor
         def capacity_scale(capacity_tensor: torch.Tensor) -> torch.Tensor:
-            # Impacto del doble cuando el parking nuevo es más grande,
-            # tendente a cero cuando es más pequeño.
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.5, x2=3, y2=0.75, yinf=0, bias=self.bias)
-            tensor = scale(capacity_tensor)
+            # El impacto del parking debe bajar cuando el parking es inmenso
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.25, x2=3, y2=1, yinf=0, bias=self.bias)
+            tensor = scale(self.capacity / capacity_tensor)
             return tensor
         distance_tensor = torch.from_numpy(df['distance'].to_numpy())
         distance_factor = distance_scale(distance_tensor)
-        capacity_tensor = torch.from_numpy(df['capacity'].to_numpy()) / self.capacity
+        capacity_tensor = torch.from_numpy(df['capacity'].to_numpy())
         capacity_factor = capacity_scale(capacity_tensor)
-        total_factor_tensor = (distance_factor - 1) * capacity_factor * (-1)
+        total_factor_tensor = (distance_factor * capacity_factor) * (-1)
         # Resto uno del factor de escala porque no quiero obtener directamente
         # el resultado final, sino un incremental.
         occupationpercent_tensor = torch.from_numpy(df['occupationpercent'].to_numpy())
@@ -1945,6 +1945,7 @@ class SimParking:
         incremental_factor_series.name = 'incremental_factor'
         result.name = 'result'
         logging.debug('PARKING FACTORS:\n%s', pd.concat([
+            pd.Series(distance_tensor.numpy(), index=df.index),
             distance_factor_series,
             capacity_factor_series,
             total_factor_series,
