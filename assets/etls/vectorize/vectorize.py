@@ -1212,14 +1212,14 @@ class DecoderLayer:
         A = (2.0 - threshold) * scale
         D = scale * 1.0 - A
         B = (-2.0 * C) / (threshold * scale)
-        def scaled_func(x: torch.Tensor, A=A, B=B, C=C, D=D, st=scale*threshold):
+        def scaled_func(x: torch.Tensor, A=A, B=B, C=C, D=D, st=threshold*scale):
             # Voy a separarlo en una curva lineal a la izquierda
             # del threshold, y la sigmoide a la derecha, para evitar
             # la distorisión que mete la sigmoide a los valores
             # distintos de la media
-            left_mask = x <= st
+            left_mask = (x <= st)
             left_values = x[left_mask]
-            right_mask = x > st            
+            right_mask = (x > st)
             right_values = (A * torch.sigmoid(B * x[right_mask] + C) + D).float()
             result = torch.empty_like(x)
             result[left_mask] = left_values
