@@ -1846,7 +1846,7 @@ class SimParking:
         self.sim_date = sim_props.sim_date
         self.entitytype = "OffStreetParking"
         self.sceneref = sim_props.sceneref
-        self.sourceref = f"{self.sceneref}_{self.sim_date.strftime('%Y_%m_%d')}"
+        self.sourceref = f"sim_{self.sceneref}"
         self.name = sim.get('name', {}).get('value', '')
         self.location = sim.get('location', {}).get('value', {})
         self.capacity = int(sim.get('capacity', {}).get('value', '1000'))
@@ -1918,16 +1918,16 @@ class SimParking:
             tensor = scale(capacity_tensor / self.capacity)
             return tensor
         distance_factor = distance_scale(torch.from_numpy(df['distance'].to_numpy()))
-        logging.debug("DISTANCE_FACTOR: %s", pd.Series(distance_factor, index=df.index))
+        logging.debug("DISTANCE_FACTOR: %s", pd.Series(distance_factor, index=df.index).to_string())
         capacity_factor = capacity_scale(torch.from_numpy(df['capacity'].to_numpy()))
-        logging.debug("CAPACITY_FACTOR: %s", pd.Series(capacity_factor, index=df.index))
+        logging.debug("CAPACITY_FACTOR: %s", pd.Series(capacity_factor, index=df.index).to_string())
         total_factor = distance_factor * capacity_factor
         # Resto uno del factor de escala porque no quiero obtener directamente
         # el resultado final, sino un incremental.
         total_factor = (total_factor - 1) * (-1)
-        logging.debug("TOTAL_FACTOR: %s", pd.Series(total_factor, index=df.index))
+        logging.debug("TOTAL_FACTOR: %s", pd.Series(total_factor, index=df.index).to_string())
         incremental = pd.Series(torch.from_numpy(df['hidden'].to_numpy()) * total_factor, index=df.index)
-        logging.debug("INCREMENTAL: %s", incremental)
+        logging.debug("INCREMENTAL: %s", incremental.to_string())
         return incremental
 
     def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
@@ -2124,7 +2124,7 @@ class SimRoute:
         self.bias = int(sim.get('bias', {}).get('value', 5) or 5)
         self.sim_id = sim['id']
         self.sim_type = sim['type']
-        self.sourceref = f"{self.sceneref}_{self.sim_date.strftime('%Y_%m_%d')}"
+        self.sourceref = f"sim_{self.sceneref}"
         self.fetch_stops(broker=broker, reference=reference, dryrun=dryrun)
         # Add location to the simulation properties, so it can be
         # updated to the database.
