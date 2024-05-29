@@ -1241,8 +1241,8 @@ class DecoderLayer:
 
         # el bias puede ir de 1 (mínimo impacto) a 9 (máximo impacto)
         # lo usamos para escalar el alcance de la función y sus efectos.
-        logging.info(f"BEFORE BIAS: y1={y1}, y2={y2}, x2={x2}")
-        bias_f = 1 + 0.05 * (5 - bias)
+        logging.info(f"BEFORE BIAS: bias={bias}, y1={y1}, y2={y2}, x2={x2}")
+        bias_f = 1 + 0.05 * (bias - 5)
         y2 = yinf + (y2 - yinf) * bias_f * (y2/y1) # Reducir proporcionalmente y2, para garantizar que sigue siendo menor que el nuevo y1
         y1 = yinf + (y1 - yinf) * bias_f
         x2 = x2 * bias_f
@@ -1909,7 +1909,8 @@ class SimParking:
             return tensor
         def capacity_scale(capacity_tensor: torch.Tensor) -> torch.Tensor:
             """
-            Calculo un impacto del 25% cuando la capacidad del parking nuevo es muy
+            Mantengo el 100% de la escala por distancia cuando los parkings tienen 
+            un tamaño parecido, reduzco el impacto por distancia Calculo un impacto del 25% cuando la capacidad del parking nuevo es muy
             superior a la del existente.
 
             Recibe el tensor de capacidades.
