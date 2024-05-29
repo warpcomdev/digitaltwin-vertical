@@ -1257,8 +1257,8 @@ class DecoderLayer:
         # lo usamos para escalar el alcance de la función y sus efectos.
         logging.info(f"BEFORE BIAS: bias={bias}, x1={x1}, y1={y1}, x2={x2}, y2={y2}, yinf={yinf}")
         bias_f = 1 + 0.05 * (bias - 5)
-        y2 = yinf + (y2 - yinf) * bias_f * (y2/y1) # Reducir proporcionalmente y2, para garantizar que sigue siendo menor que el nuevo y1
         y1 = yinf + (y1 - yinf) * bias_f
+        y2 = yinf + (y2 - yinf) * bias_f # Reducir proporcionalmente y2, para garantizar que sigue siendo menor que el nuevo y1
         x2 = x2 * bias_f
         logging.info(f"AFTER BIAS: bias_f={bias_f}, x1={x1}, y1={y1}, x2={x2}, y2={y2}")
 
@@ -1911,7 +1911,7 @@ class SimParking:
     def impact_parkings(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_parkings. Received df columns:\n%s", df.columns)
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1, x2=1000.0, y2=0.3, yinf=0.0, bias=self.bias)
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=0.5, x2=1500.0, y2=0.25, yinf=0.0, bias=self.bias)
             # Cuanta gente he "robado" del parking de al lado:
             # si estamos muy cerca, calculo que la mitad de mi ocupación
             # viene del otro parking; si nos vamos alejando, vamos "robando" menos gente.
@@ -1921,27 +1921,27 @@ class SimParking:
         distance_scale_series.name = "distance_scale"
         merged = pd.concat([df, distance_scale_series], axis=1)
         scale = reference.metadata['OffStreetParking'].metrics['occupationpercent'].scale
-        def calculate_delta(row):
-            old_capacity = row['capacity']
-            old_occupation = row['hidden']
-            new_capacity = self.capacity
-            new_occupation = row['occupationpercent']
-            # El número máximo de personas dispuestas a trasladarse
-            # de un parking a otro, dependerá de la distancia entre
-            # parkings y la capacidad de los mismos.
-            budget = row['distance_scale'] * min(old_capacity, new_capacity)
-            # La cantidad de personas que realmente se trasladará,
-            # dependerá de la diferencia de llenado entre ambos parkings.
-            # Vamos a estimar que si la diferencia es de -100%, no se
-            # va nadie, y si la dierencia es 100% se va todo el mundo.
-            # es una linea que pasa por los puntos
-            # (-100, 0) y (100, budget)
-            occupation_difference = old_occupation - new_occupation
-            displacement = (occupation_difference - (-scale)) * budget / (scale - (-scale))
-            return - (displacement / old_capacity)
-        difference = merged.apply(calculate_delta, axis=1)
-        logging.debug("SimParking::impact_parkings. Difference:\n%s", difference.to_string())
-        return difference
+        # El número máximo de personas dispuestas a trasladarse
+        # de un parking a otro, dependerá de la distancia entre
+        # parkings y la capacidad de los mismos.
+        merged['old_occupation'] = merged['capacity'] * merged['hidden'] / scale
+        merged['new_occupation'] = self.capacity * merged['occupationpercent'] / scale
+        merged['people_to_move'] = merged['distance_scale'] * merged[['old_occupation', 'new_occupation']].min(axis=1)
+        merged['occupation_difference'] = merged['hidden'] - merged['occupationpercent']
+        # La cantidad de personas que realmente se trasladará,
+        # dependerá de la diferencia de llenado entre ambos parkings.
+        # Vamos a estimar que si la diferencia es de -100%, no se
+        # va nadie, y si la dierencia es 100% se va todo el mundo.
+        # Vamos a hacer una exponencial que se va a llevar más gente
+        # cuanto mayor sea esa diferencia
+        coefficient = math.log(2) / (2.0 * scale)
+        merged['displaced_people'] = merged['people_to_move'] * (np.exp((merged['occupation_difference'] + scale) * coefficient) - 1)
+        merged['displaced_percent'] = (merged['displaced_people'] / merged['capacity']) * scale
+        logging.debug("PARKING IMPACT CALCULATIONS:\n%s", merged[[
+            "from_entitytype", "from_sourceref", "to_entitytype", "to_sourceref", "capacity", "hidden", "occupationpercent",
+            "distance", "distance_scale", "people_to_move", "displaced_people", "displaced_percent"
+        ]].to_string())
+        return (merged['displaced_percent'] * -1)
 
     def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_congestion. Received df columns:\n%s", df.columns)
