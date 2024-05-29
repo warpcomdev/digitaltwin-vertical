@@ -1911,50 +1911,28 @@ class SimParking:
     def impact_parkings(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_parkings. Received df columns:\n%s", df.columns)
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=0.25, x2=1000.0, y2=0.10, yinf=0.0, bias=self.bias)
-            # El impacto del parking en otros parkings es inverso,
-            # baja su ocupación. Por eso divido en lugar de multiplicar.
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=0.5, x2=750.0, y2=0.25, yinf=0.0, bias=self.bias)
+            # Cuanta gente he "robado" del parking de al lado:
+            # si estamos muy cerca, calculo que la mitad de mi ocupación
+            # viene del otro parking; si nos vamos alejando, vamos "robando" menos gente.
             tensor = scale(distance_tensor)
             return tensor
-        def capacity_scale(capacity_tensor: torch.Tensor) -> torch.Tensor:
-            # El impacto del parking debe bajar cuando el parking es inmenso
-            scale = DecoderLayer.scaled_gaussian(y0=0.75, x1=1, y1=1, x2=3, y2=0.75, yinf=0, bias=self.bias)
-            tensor = scale(self.capacity / capacity_tensor)
-            return tensor
-        distance_tensor = torch.from_numpy(df['distance'].to_numpy())
-        distance_factor = distance_scale(distance_tensor)
-        capacity_tensor = torch.from_numpy(df['capacity'].to_numpy())
-        capacity_factor = capacity_scale(capacity_tensor)
-        total_factor_tensor = (distance_factor * capacity_factor) * (-1)
-        # Resto uno del factor de escala porque no quiero obtener directamente
-        # el resultado final, sino un incremental.
-        occupationpercent_tensor = torch.from_numpy(df['occupationpercent'].to_numpy())
-        capacity_relation_tensor = (self.capacity / capacity_tensor)
-        incremental_tensor = total_factor_tensor * occupationpercent_tensor * capacity_relation_tensor
-        result = pd.Series(incremental_tensor, index=df.index)
-        # logging
-        distance_factor_series = pd.Series(distance_factor, index=df.index)
-        distance_factor_series.name = 'distance_factor'
-        capacity_factor_series = pd.Series(capacity_factor, index=df.index)
-        capacity_factor_series.name = 'capacity_factor'
-        total_factor_series = pd.Series(total_factor_tensor, index=df.index)
-        total_factor_series.name = 'total_factor'
-        capacity_relation_series = pd.Series(capacity_relation_tensor, index=df.index)
-        capacity_relation_series.name = 'capacity relation'
-        incremental_factor_series = pd.Series(incremental_tensor, index=df.index)
-        incremental_factor_series.name = 'incremental_factor'
-        result.name = 'result'
-        logging.debug('PARKING FACTORS:\n%s', pd.concat([
-            pd.Series(distance_tensor.numpy(), index=df.index),
-            distance_factor_series,
-            capacity_factor_series,
-            total_factor_series,
-            df['occupationpercent'],
-            capacity_relation_series,
-            incremental_factor_series,
-            result,
-        ], axis=1).to_string())
-        return result
+        distance_scale_series = pd.Series(distance_scale(torch.from_numpy(df['distance'].to_numpy())), index=df.index)
+        distance_scale_series.name = "distance_scale"
+        merged = pd.concat([df, distance_scale_series], axis=1)
+        def calculate_delta(row):
+            capacity = row['capacity']
+            distance_scale = row['distance_scale']
+            occupationpercent = row['occupationpercent']
+            # how many people are in the new parking?
+            new_occupation = occupationpercent * self.capacity
+            # how many might come from the other parking?
+            impact = distance_scale * new_occupation * min(1, capacity / self.capacity)
+            # reduce the number of users in the old parking
+            return -impact / capacity
+        difference = merged.apply(calculate_delta, axis=1)
+        logging.debug("SimParking::impact_parkings. Difference:\n%s", difference.to_string())
+        return difference
 
     def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_congestion. Received df columns:\n%s", df.columns)
