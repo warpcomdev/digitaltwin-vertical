@@ -1918,12 +1918,17 @@ class SimParking:
             tensor = scale(capacity_tensor / self.capacity)
             return tensor
         distance_factor = distance_scale(torch.from_numpy(df['distance'].to_numpy()))
+        logging.debug("DISTANCE_FACTOR: %s", pd.Series(distance_factor, index=df.index))
         capacity_factor = capacity_scale(torch.from_numpy(df['capacity'].to_numpy()))
+        logging.debug("CAPACITY_FACTOR: %s", pd.Series(capacity_factor, index=df.index))
         total_factor = distance_factor * capacity_factor
         # Resto uno del factor de escala porque no quiero obtener directamente
         # el resultado final, sino un incremental.
         total_factor = (total_factor - 1) * (-1)
-        return pd.Series(torch.from_numpy(df['hidden'].to_numpy()) * total_factor, index=df.index)
+        logging.debug("TOTAL_FACTOR: %s", pd.Series(total_factor, index=df.index))
+        incremental = pd.Series(torch.from_numpy(df['hidden'].to_numpy()) * total_factor, index=df.index)
+        logging.debug("INCREMENTAL: %s", incremental)
+        return incremental
 
     def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_congestion. Received df columns:\n%s", df.columns)
