@@ -1252,14 +1252,14 @@ class DecoderLayer:
 
         # el bias puede ir de 1 (mínimo impacto) a 9 (máximo impacto)
         # lo usamos para escalar el alcance de la función y sus efectos.
-        logging.info(f"BEFORE BIAS: bias={bias}, y1={y1}, y2={y2}, x2={x2}")
+        logging.info(f"BEFORE BIAS: bias={bias}, x1={x1}, y1={y1}, x2={x2}, y2={y2}, yinf={yinf}")
         bias_f = 1 + 0.05 * (bias - 5)
         y2 = yinf + (y2 - yinf) * bias_f * (y2/y1) # Reducir proporcionalmente y2, para garantizar que sigue siendo menor que el nuevo y1
         y1 = yinf + (y1 - yinf) * bias_f
         x2 = x2 * bias_f
-        logging.info(f"AFTER BIAS: bias_f={bias_f}, y1={y1}, y2={y2}, x2={x2}")
+        logging.info(f"AFTER BIAS: bias_f={bias_f}, x1={x1}, y1={y1}, x2={x2}, y2={y2}")
 
-        logging.info(f"inverse_sigma_right: y1={y1}, yinf={yinf}, y2={y2}, x2={x2}, x1={x1}")
+        logging.info(f"inverse_sigma_right: y1={y1}, y2={y2}, x2={x2}, x1={x1}")
         inverse_sigma_right = math.sqrt(math.log((y1 - yinf + 0.0)/(y2 - yinf))) / (x2 - x1 + 0.0)
         if x1 == 0:
             # This is not a piecewise gaussian, but a regular gaussian
@@ -1268,6 +1268,7 @@ class DecoderLayer:
             return gaussian
 
         # Calculate sigma for the left and right sides
+        logging.info(f"inverse_sigma_left: y1={y1}, y0={y0}, x1={x1}")
         inverse_sigma_left = math.sqrt(math.log((y1 + 0.0)/y0)) / (x1 + 0.0)
         def piecewise_gaussian(tensor: torch.Tensor, amp_left=y1, amp_right=y1-yinf, bias=yinf, mean=x1, inverse_sigma_left=inverse_sigma_left, inverse_sigma_right=inverse_sigma_right) -> torch.Tensor:
             left_mask = tensor < mean
