@@ -1905,24 +1905,24 @@ class SimParking:
             scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.25, x2=400.0, y2=1.10, bias=self.bias)
             # El impacto del parking en otros parkings es inverso,
             # baja su ocupación. Por eso divido en lugar de multiplicar.
-            tensor = 1 / scale(distance_tensor)
+            tensor = scale(distance_tensor)
             return tensor
         def capacity_scale(capacity_tensor: torch.Tensor) -> torch.Tensor:
             """
             Calculo un impacto del 25% cuando la capacidad del parking nuevo es muy
             superior a la del existente.
 
-            Recibe el tensor de capacidades
+            Recibe el tensor de capacidades.
             """
             scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.25, x2=1, y2=1.10, bias=self.bias)
-            tensor = 1 / scale(capacity_tensor / self.capacity)
+            tensor = scale(capacity_tensor / self.capacity)
             return tensor
         distance_factor = distance_scale(torch.from_numpy(df['distance'].to_numpy()))
         capacity_factor = capacity_scale(torch.from_numpy(df['capacity'].to_numpy()))
         total_factor = distance_factor * capacity_factor
         # Resto uno del factor de escala porque no quiero obtener directamente
         # el resultado final, sino un incremental.
-        total_factor = total_factor - 1
+        total_factor = (total_factor - 1) * (-1)
         return pd.Series(torch.from_numpy(df['hidden'].to_numpy()) * total_factor, index=df.index)
 
     def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
