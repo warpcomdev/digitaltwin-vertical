@@ -1911,14 +1911,14 @@ class SimParking:
     def impact_parkings(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_parkings. Received df columns:\n%s", df.columns)
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1, x2=1000.0, y2=0.5, yinf=0.0, bias=self.bias)
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=0.25, x2=1000.0, y2=0.10, yinf=0.0, bias=self.bias)
             # El impacto del parking en otros parkings es inverso,
             # baja su ocupación. Por eso divido en lugar de multiplicar.
             tensor = scale(distance_tensor)
             return tensor
         def capacity_scale(capacity_tensor: torch.Tensor) -> torch.Tensor:
             # El impacto del parking debe bajar cuando el parking es inmenso
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.25, x2=3, y2=1, yinf=0, bias=self.bias)
+            scale = DecoderLayer.scaled_gaussian(y0=0.75, x1=1, y1=1, x2=3, y2=0.75, yinf=0, bias=self.bias)
             tensor = scale(self.capacity / capacity_tensor)
             return tensor
         distance_tensor = torch.from_numpy(df['distance'].to_numpy())
