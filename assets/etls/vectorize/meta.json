@@ -7,7 +7,24 @@
       "dayType"
     ],
     "fixedProps": {},
-    "metrics": {},
+    "metrics": {
+      "NO2": {
+        "scale": 0,
+        "integer": false
+      },
+      "PM25": {
+        "scale": 0,
+        "integer": false
+      },
+      "PM10": {
+        "scale": 0,
+        "integer": false
+      },
+      "O3": {
+        "scale": 0,
+        "integer": false
+      }
+    },
     "calcs": {},
     "hasHour": false,
     "hasMinute": false,
