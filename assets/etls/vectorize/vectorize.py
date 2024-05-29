@@ -1230,7 +1230,7 @@ class DecoderLayer:
         return scaled_func
 
     @staticmethod
-    def scaled_gaussian(y0: float, x1: float, y1: float, x2: float, y2: float, bias: int) -> typing.Callable[[torch.Tensor], torch.Tensor]:
+    def scaled_gaussian(y0: float, x1: float, y1: float, x2: float, y2: float, yinf: float, bias: int) -> typing.Callable[[torch.Tensor], torch.Tensor]:
         """
         Generates a gaussian function with maximum at (x1, y1) and tending to yinf when x tends to infinity.
 
@@ -1245,7 +1245,6 @@ class DecoderLayer:
 
         """
         # Assertions to ensure the invariants hold
-        yinf = 1.0 # This function is used for scaling, it must go to 1 in infinity
         assert x1 == 0 or y0 < y1, "y0 must be less than y1"
         assert x1 >= 0, "x1 must be greater than 0"
         assert x2 > x1, "x2 must be greater than x1"
@@ -1910,42 +1909,36 @@ class SimParking:
     def impact_parkings(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_parkings. Received df columns:\n%s", df.columns)
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            """
-            Calculo un impacto medio del 25% en los parkings que están a distancia 0,
-            hasta un 10% en los que están a 400 metros.
-
-            Recibe el tensor de distancias.
-            """
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.25, x2=400.0, y2=1.10, bias=self.bias)
+            # Impacto del 35% cuando están al lado, 20% a 400 metros
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.35, x2=400.0, y2=1.2, yinf=1.0, bias=self.bias)
             # El impacto del parking en otros parkings es inverso,
             # baja su ocupación. Por eso divido en lugar de multiplicar.
             tensor = scale(distance_tensor)
             return tensor
         def capacity_scale(capacity_tensor: torch.Tensor) -> torch.Tensor:
-            """
-            Mantengo el 100% de la escala por distancia cuando los parkings tienen 
-            un tamaño parecido, reduzco el impacto por distancia si el parking existente es mucho mayor
-            que el nuevo, y la aumento si es mucho menor.
-
-            Recibe el tensor de capacidades.
-            """
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=3, x2=1, y2=2, bias=self.bias)
-            tensor = scale(capacity_tensor / self.capacity)
+            # Impacto del doble cuando el parking nuevo es más grande,
+            # tendente a cero cuando es más pequeño.
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1.5, x2=3, y2=0.75, yinf=0, bias=self.bias)
+            tensor = scale(capacity_tensor)
             return tensor
-        distance_factor = distance_scale(torch.from_numpy(df['distance'].to_numpy()))
-        capacity_factor = capacity_scale(torch.from_numpy(df['capacity'].to_numpy()))
-        total_factor = (distance_factor - 1) * (capacity_factor - 1)
+        distance_tensor = torch.from_numpy(df['distance'].to_numpy())
+        distance_factor = distance_scale(distance_tensor)
+        capacity_tensor = torch.from_numpy(df['capacity'].to_numpy()) / self.capacity
+        capacity_factor = capacity_scale(capacity_tensor)
+        total_factor = (distance_factor - 1) * capacity_factor * (-1)
         # Resto uno del factor de escala porque no quiero obtener directamente
         # el resultado final, sino un incremental.
-        incremental_factor = total_factor * (-1)
-        result = pd.Series(torch.from_numpy(df['hidden'].to_numpy()) * incremental_factor, index=df.index)
+        occupationpercent_tensor = torch.from_numpy(df['occupationpercent'].to_numpy())
+        incremental_tensor = (total_factor * occupationpercent_tensor) * (capacity_tensor / self.capacity)
+        result = pd.Series(incremental_tensor, index=df.index)
+        # logging
         distance_factor_series = pd.Series(distance_factor, index=df.index)
         distance_factor_series.name = 'distance_factor'
         capacity_factor_series = pd.Series(capacity_factor, index=df.index)
         capacity_factor_series.name = 'capacity_factor'
         total_factor_series = pd.Series(total_factor, index=df.index)
         total_factor_series.name = 'total_factor'
-        incremental_factor_series = pd.Series(incremental_factor, index=df.index)
+        incremental_factor_series = pd.Series(incremental_tensor, index=df.index)
         incremental_factor_series.name = 'incremental_factor'
         result.name = 'result'
         logging.debug('PARKING FACTORS: %s', pd.concat([
