@@ -1950,10 +1950,10 @@ class SimParking:
         coefficient = math.log(2) / (2.0 * scale)
         merged['displaced_people'] = merged['people_to_move'] * (np.exp((merged['occupation_difference'] + scale) * coefficient) - 1)
         merged['displaced_percent'] = (merged['displaced_people'] / merged['capacity']) * scale
-        logging.debug("PARKING IMPACT CALCULATIONS:\n%s", merged[[
-            "from_entitytype", "from_sourceref", "to_entitytype", "to_sourceref", "capacity", "hidden", "occupationpercent",
-            "distance", "distance_scale", "people_to_move", "displaced_people", "displaced_percent"
-        ]].to_string())
+        # logging.debug("PARKING IMPACT CALCULATIONS:\n%s", merged[[
+        #     "from_entitytype", "from_sourceref", "to_entitytype", "to_sourceref", "capacity", "hidden", "occupationpercent",
+        #     "distance", "distance_scale", "people_to_move", "displaced_people", "displaced_percent"
+        # ]].to_string())
         return (merged['displaced_percent'] * -1)
 
     def save_simulation_entity(self, conn: Connection, broker: Broker, reference: Reference):
@@ -2131,7 +2131,7 @@ class SimTraffic:
         merged = pd.concat([df, distance_scale_series], axis=1)
         # Traslado la congestión a las vías cercanas
         merged['displaced'] = merged['congestion'] * merged['distance_scale'] / len(self.affected_places)
-        logging.debug("IMPACT CONGESTION:\n%s", merged.to_string())
+        #logging.debug("IMPACT CONGESTION:\n%s", merged.to_string())
         return merged['displaced']
 
     def impact_parking(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
@@ -2177,7 +2177,6 @@ class SimTraffic:
         intensities_df = intensities_df[['zone', 'intensity']].groupby('zone').max()
         intensities_df = intensities_df.reset_index()
         intensities_df = intensities_df.rename(columns={ "intensity": "max_intensity" })
-        logging.debug("MAX INTENSITIES:\n%s", intensities_df)
         return intensities_df
 
     def prepare_decoder(self, reference: Reference, decoder: Decoder):
