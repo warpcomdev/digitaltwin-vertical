@@ -667,7 +667,7 @@ class Metadata:
                 affected_places = cursor.fetchall()
                 return [place[0] for place in affected_places]
 
-    def merge_fixed_props(self, data_df: typing.Union[pd.Series, pd.DataFrame], dims_df: pd.DataFrame) -> pd.DataFrame:
+    def merge_fixed_props(self, data_df: typing.Union[pd.Series, pd.DataFrame], dims_df: pd.DataFrame, how='left') -> pd.DataFrame:
         """
         Merge a series with the fixedProps properties
         obtained from the dims_df.
@@ -684,7 +684,7 @@ class Metadata:
         merged = pd.merge(
             left=data_df,
             right=dims_df[['sourceref'] + list(self.fixedProps.keys())].set_index('sourceref'),
-            how='left',
+            how=how,
             left_index=True,
             right_index=True,
             sort=False
@@ -1011,6 +1011,25 @@ class HiddenLayer:
         if not target_meta.hasHour:
             assert(not target_meta.hasMinute)
             perturb_df['hour'] = 0
+        # Fill in the gaps in hours and minutes
+        # meta_test = reference.metadata[perturbation.entityType]
+        # fake_meta = Metadata(
+            # dimensions=meta_test.dimensions,
+            # metrics=meta_test.metrics,
+            # fixedProps=meta_test.fixedProps,
+            # calcs=meta_test.calcs,
+            # hasHour=target_meta.hasHour,
+            # hasMinute=target_meta.hasMinute,
+            # multiZone=meta_test.multiZone,
+            # namespace=meta_test.namespace,
+            # entityType=meta_test.entityType,
+            # dataTableName=meta_test.dataTableName,
+            # dimsTableName=meta_test.dimsTableName
+        # )
+        # fixed_df = reference.dims_df_map[perturbation.entityType]
+        # fake_meta.hasHour = target_meta.hasHour
+        # fake_meta.hasMinute = target_meta.hasMinute
+        # perturb_df = fake_meta.normalize(fixed_df=fixed_df, dataset=perturb_df).df
         # Avoid name conflicts later on
         perturb_df['from_entitytype'] = perturbation.entityType
         perturb_df = perturb_df.rename(columns={
@@ -1048,7 +1067,6 @@ class HiddenLayer:
             )
             # Set the index of the resulting frame
             target_and_perturb = target_and_perturb.set_index(['sourceref', 'hour', 'minute'])
-            target_and_perturb = target_and_perturb.fillna(0)
             accumulator = accumulator.add(func(reference, target_and_perturb))
         assert(accumulator.index.names == ['sourceref', 'hour', 'minute'])
         return accumulator
@@ -2078,13 +2096,13 @@ class SimTraffic:
         identityref = 'N/A'
         self.affected_places = reference.metadata['TrafficCongestion'].in_bbox(engine=engine, sceneref=identityref, bbox=self.bbox)
         logging.info("Affected TrafficCongestion entities: %s", ", ".join(self.affected_places))
-        yield SimulationImpact(
-            source_entitytype='TrafficCongestion',
-            source_removed=self.affected_places,
-            impacted_entitytype='TrafficCongestion',
-            impacted_metric='congestion',
-            impact_func=self.impact_congestion
-        )
+        # yield SimulationImpact(
+        #     source_entitytype='TrafficCongestion',
+        #     source_removed=self.affected_places,
+        #     impacted_entitytype='TrafficCongestion',
+        #     impacted_metric='congestion',
+        #     impact_func=self.impact_congestion
+        # )
         # Locate all TrafficIntensity entities close enough to any of the affected entities
         self.related_places = reference.get_closest(
             from_type='TrafficCongestion',
