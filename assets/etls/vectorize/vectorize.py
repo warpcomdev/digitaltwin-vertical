@@ -2104,8 +2104,8 @@ class SimTraffic:
     def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.info("SimTraffic impact_congestion:\n%s", df.columns)
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            scale = DecoderLayer.scaled_gaussian(y0=0.25, x1=300, y1=1, x2=1000, y2=0.5, yinf=0.0, bias=self.bias) + 1e-8
-            tensor = scale(distance_tensor)
+            scale = DecoderLayer.scaled_gaussian(y0=0.25, x1=300, y1=1, x2=1000, y2=0.5, yinf=0.0, bias=self.bias)
+            tensor = scale(distance_tensor) + 1e-8
             return tensor
         distance_scale_series = pd.Series(distance_scale(torch.from_numpy(df['distance'].to_numpy())), index=df.index)
         distance_scale_series.name = "distance_scale"
@@ -2120,11 +2120,11 @@ class SimTraffic:
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
             if self.category == "pedestrian":
                 # Add stability...
-                scale = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.75, x2=1000, y2=0.30, yinf=0.0, bias=self.bias) + 1e-8
+                scale = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.75, x2=1000, y2=0.30, yinf=0.0, bias=self.bias)
             else:
                 # Add stability...
-                scale = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.5, x2=1000, y2=0.20, yinf=0.0, bias=self.bias) + 1e-8
-            tensor = scale(distance_tensor)
+                scale = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.5, x2=1000, y2=0.20, yinf=0.0, bias=self.bias)
+            tensor = scale(distance_tensor) + 1e-8
             return tensor
         # Get parking capacity
         distance_scale_series = pd.Series(distance_scale(torch.from_numpy(df['distance'].to_numpy())), index=df.index)
