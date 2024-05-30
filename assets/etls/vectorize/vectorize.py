@@ -1005,7 +1005,7 @@ class HiddenLayer:
         target_df = target_df.reset_index()
         # Make sure the perturbation dataframe has the same number of rows
         # per entity as the target dataframe
-        perturb_df = perturbation.change_time(target_meta.hasHour, target_meta.hasMinute)
+        perturb_df = perturbation.change_time(target_meta.hasHour, target_meta.hasMinute).copy()
         if not target_meta.hasMinute:
             perturb_df['minute'] = 0
         if not target_meta.hasHour:
@@ -1016,6 +1016,8 @@ class HiddenLayer:
         perturb_df = perturb_df.rename(columns={
             'sourceref': 'from_sourceref'
         })
+        logging.info("PERTURB_DF COLUMNS:\n%s", perturb_df.columns)
+        logging.info("PERTURB_DF INDEX:\n%s", perturb_df.index)
         # Now we iterate on the input dataset
         accumulator = pd.Series([0.0] * len(target_series), index=target_series.index)
         assert(reference.distance_df is not None)
