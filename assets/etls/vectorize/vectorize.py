@@ -2096,13 +2096,13 @@ class SimTraffic:
         identityref = 'N/A'
         self.affected_places = reference.metadata['TrafficCongestion'].in_bbox(engine=engine, sceneref=identityref, bbox=self.bbox)
         logging.info("Affected TrafficCongestion entities: %s", ", ".join(self.affected_places))
-        yield SimulationImpact(
-            source_entitytype='TrafficCongestion',
-            source_removed=self.affected_places,
-            impacted_entitytype='TrafficCongestion',
-            impacted_metric='congestion',
-            impact_func=self.impact_congestion
-        )
+        # yield SimulationImpact(
+        #     source_entitytype='TrafficCongestion',
+        #     source_removed=self.affected_places,
+        #     impacted_entitytype='TrafficCongestion',
+        #     impacted_metric='congestion',
+        #     impact_func=self.impact_congestion
+        # )
         # Locate all TrafficIntensity entities close enough to any of the affected entities
         self.related_places = reference.get_closest(
             from_type='TrafficCongestion',
