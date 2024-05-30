@@ -1005,7 +1005,7 @@ class HiddenLayer:
         target_df = target_df.reset_index()
         # Make sure the perturbation dataframe has the same number of rows
         # per entity as the target dataframe
-        perturb_df = perturbation.change_time(target_meta.hasHour, target_meta.hasMinute)
+        perturb_df = perturbation.change_time(target_meta.hasHour, target_meta.hasMinute).copy()
         if not target_meta.hasMinute:
             perturb_df['minute'] = 0
         if not target_meta.hasHour:
@@ -1899,19 +1899,11 @@ class SimParking:
             impacted_metric='occupationpercent',
             impact_func=self.impact_parkings
         )
-        # # Add an impact on congestion
-        # yield SimulationImpact(
-        #     source_entitytype=self.entitytype,
-        #     source_removed=None,
-        #     impacted_entitytype='TrafficCongestion',
-        #     impacted_metric='congestion',
-        #     impact_func=self.impact_congestion
-        # )
     
     def impact_parkings(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_parkings. Received df columns:\n%s", df.columns)
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=0.5, x2=1500.0, y2=0.25, yinf=0.0, bias=self.bias)
+            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=0.75, x2=1000.0, y2=0.25, yinf=0.0, bias=self.bias)
             # Cuanta gente he "robado" del parking de al lado:
             # si estamos muy cerca, calculo que la mitad de mi ocupación
             # viene del otro parking; si nos vamos alejando, vamos "robando" menos gente.
@@ -1942,10 +1934,6 @@ class SimParking:
             "distance", "distance_scale", "people_to_move", "displaced_people", "displaced_percent"
         ]].to_string())
         return (merged['displaced_percent'] * -1)
-
-    def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
-        logging.debug("SimParking::impact_congestion. Received df columns:\n%s", df.columns)
-        return pd.Series([0.0] * len(df), index=df.index)
 
     def save_simulation_entity(self, conn: Connection, broker: Broker, reference: Reference):
         """generate simulated OffStreetParking entity"""
@@ -2105,18 +2093,65 @@ class SimTraffic:
         yield SimulationImpact(
             source_entitytype='TrafficIntensity',
             source_removed=self.related_places,
-            impacted_entitytype='TrafficIntensity',
-            impacted_metric='intensity',
-            impact_func=self.impact_intensity
+            impacted_entitytype='OffStreetParking',
+            impacted_metric='occupationpercent',
+            impact_func=self.impact_parking
         )
 
     def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
-        logging.info("SimTraffic impact_congestion:\n%s", df)
-        return pd.Series([0] * len(df), index=df.index)
+        logging.info("SimTraffic impact_congestion:\n%s", df.columns)
+        def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
+            scale = DecoderLayer.scaled_gaussian(y0=0.25, x1=300, y1=1, x2=500, y2=0.5, yinf=0.0, bias=self.bias)
+            tensor = scale(distance_tensor)
+            return tensor
+        distance_scale_series = pd.Series(distance_scale(torch.from_numpy(df['distance'].to_numpy())), index=df.index)
+        distance_scale_series.name = "distance_scale"
+        merged = pd.concat([df, distance_scale_series], axis=1)
+        # Traslado la congestión a las vías cercanas
+        merged['displaced'] = merged['congestion'] * merged['distance_scale']
+        #logging.debug("IMPACT CONGESTION:\n%s", merged.to_string())
+        return merged['displaced']
 
-    def impact_intensity(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
-        logging.info("SimTraffic impact_intensity:\n%s", df)
-        return pd.Series([0] * len(df), index=df.index)
+    def impact_parking(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
+        logging.info("SimTraffic impact_parking:\n%s", df.columns)
+        def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
+            scale = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.5, x2=1000, y2=0.25, yinf=0.0, bias=self.bias)
+            tensor = scale(distance_tensor)
+            return tensor
+        # Get parking capacity
+        distance_scale_series = pd.Series(distance_scale(torch.from_numpy(df['distance'].to_numpy())), index=df.index)
+        distance_scale_series.name = "distance_scale"
+        merged = pd.concat([df, distance_scale_series], axis=1)
+        merged = pd.merge(merged, self.intensity_per_zone(reference), how='left', left_on='to_zone', right_on='zone')
+        # PReserve the index!
+        merged = merged.reset_index(drop=True).set_index(df.index)
+        # Si hay zonas para las que no tengo intensidad, uso la maxima
+        max_intensity = merged['intensity'].max()
+        merged.fillna(max_intensity, inplace=True)
+        scale = reference.metadata['OffStreetParking'].metrics['occupationpercent'].scale
+        merged['spare_capacity'] = (merged['capacity'] * (1 - merged['hidden'] / scale)) * (0.25 + 0.5 * self.bias / 10)
+        # Traslado parte de la intensidad de tráfico, al parking
+        merged['add_occupation'] = merged['distance_scale'] * (merged['intensity'] / merged['max_intensity'])
+        merged['add_occupation'] = merged['add_occupation'] * merged['spare_capacity']
+        merged['add_occupation'] = merged[['add_occupation', 'spare_capacity']].min(axis=1)
+        merged['displaced'] = (merged['add_occupation'] / merged['capacity']) * scale
+        #logging.debug("IMPACT PARKING:\n%s", merged.to_string())
+        return merged['displaced']
+
+    def intensity_per_zone(self, reference: Reference) -> pd.DataFrame:
+        """
+        Aggregate the traffic intensity per zone
+        """
+        assert(reference.dims_df_map is not None)
+        zones_df = reference.dims_df_map['TrafficIntensity']
+        assert(reference.data_df_map is not None)
+        intensities_df = reference.data_df_map['TrafficIntensity']
+        intensities_df = pd.merge(intensities_df, zones_df, how='inner', on='sourceref', sort=False)
+        intensities_df = intensities_df[['zone', 'intensity']].groupby('zone').max()
+        intensities_df = intensities_df.reset_index()
+        intensities_df = intensities_df.rename(columns={ "intensity": "max_intensity" })
+        logging.debug("MAX INTENSITIES:\n%s", intensities_df)
+        return intensities_df
 
     def prepare_decoder(self, reference: Reference, decoder: Decoder):
         if self.affected_places:
