@@ -2115,7 +2115,10 @@ class SimTraffic:
     def impact_parking(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.info("SimTraffic impact_parking:\n%s", df.columns)
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            scale = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.5, x2=1000, y2=0.25, yinf=0.0, bias=self.bias)
+            if self.category == "pedestrian":
+                scale = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.75, x2=1000, y2=0.30, yinf=0.0, bias=self.bias)
+            else:
+                scale = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.5, x2=1000, y2=0.20, yinf=0.0, bias=self.bias)
             tensor = scale(distance_tensor)
             return tensor
         # Get parking capacity
