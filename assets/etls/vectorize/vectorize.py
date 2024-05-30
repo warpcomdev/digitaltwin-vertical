@@ -1005,7 +1005,7 @@ class HiddenLayer:
         target_df = target_df.reset_index()
         # Make sure the perturbation dataframe has the same number of rows
         # per entity as the target dataframe
-        perturb_df = perturbation.change_time(target_meta.hasHour, target_meta.hasMinute).copy()
+        perturb_df = perturbation.change_time(target_meta.hasHour, target_meta.hasMinute)
         if not target_meta.hasMinute:
             perturb_df['minute'] = 0
         if not target_meta.hasHour:
