@@ -2092,13 +2092,14 @@ class SimTraffic:
             distance=25 # meters
         )
         logging.info("Related TrafficIntensity entities: %s", ", ".join(self.related_places))
-        yield SimulationImpact(
-            source_entitytype='TrafficIntensity',
-            source_removed=self.related_places,
-            impacted_entitytype='OffStreetParking',
-            impacted_metric='occupationpercent',
-            impact_func=self.impact_parking
-        )
+        if len(self.related_places):
+            yield SimulationImpact(
+                source_entitytype='TrafficIntensity',
+                source_removed=self.related_places,
+                impacted_entitytype='OffStreetParking',
+                impacted_metric='occupationpercent',
+                impact_func=self.impact_parking
+            )
 
     def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.info("SimTraffic impact_congestion:\n%s", df.columns)
