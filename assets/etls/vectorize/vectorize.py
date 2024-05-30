@@ -1048,6 +1048,7 @@ class HiddenLayer:
             )
             # Set the index of the resulting frame
             target_and_perturb = target_and_perturb.set_index(['sourceref', 'hour', 'minute'])
+            target_and_perturb = target_and_perturb.fillna(0)
             accumulator = accumulator.add(func(reference, target_and_perturb))
         assert(accumulator.index.names == ['sourceref', 'hour', 'minute'])
         return accumulator
