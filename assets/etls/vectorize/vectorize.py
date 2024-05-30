@@ -1012,24 +1012,24 @@ class HiddenLayer:
             assert(not target_meta.hasMinute)
             perturb_df['hour'] = 0
         # Fill in the gaps in hours and minutes
-        meta_test = reference.metadata[perturbation.entityType]
-        fake_meta = Metadata(
-            dimensions=meta_test.dimensions,
-            metrics=meta_test.metrics,
-            fixedProps=meta_test.fixedProps,
-            calcs=meta_test.calcs,
-            hasHour=target_meta.hasHour,
-            hasMinute=target_meta.hasMinute,
-            multiZone=meta_test.multiZone,
-            namespace=meta_test.namespace,
-            entityType=meta_test.entityType,
-            dataTableName=meta_test.dataTableName,
-            dimsTableName=meta_test.dimsTableName
-        )
-        perturbed_dims = reference.dims_df_map[perturbation.entityType]
-        perturbed_dims = perturbed_dims[perturbed_dims['sourceref'].isin(perturb_df['sourceref'])]
-        fake_fixed_df = fake_meta.get_fixed_df(perturbed_dims)
-        perturb_df = fake_meta.normalize(fixed_df=fake_fixed_df, dataset=perturb_df).df
+        # meta_test = reference.metadata[perturbation.entityType]
+        # fake_meta = Metadata(
+        #     dimensions=meta_test.dimensions,
+        #     metrics=meta_test.metrics,
+        #     fixedProps=meta_test.fixedProps,
+        #     calcs=meta_test.calcs,
+        #     hasHour=target_meta.hasHour,
+        #     hasMinute=target_meta.hasMinute,
+        #     multiZone=meta_test.multiZone,
+        #     namespace=meta_test.namespace,
+        #     entityType=meta_test.entityType,
+        #     dataTableName=meta_test.dataTableName,
+        #     dimsTableName=meta_test.dimsTableName
+        # )
+        # perturbed_dims = reference.dims_df_map[perturbation.entityType]
+        # perturbed_dims = perturbed_dims[perturbed_dims['sourceref'].isin(perturb_df['sourceref'])]
+        # fake_fixed_df = fake_meta.get_fixed_df(perturbed_dims)
+        # perturb_df = fake_meta.normalize(fixed_df=fake_fixed_df, dataset=perturb_df).df
         # Avoid name conflicts later on
         perturb_df['from_entitytype'] = perturbation.entityType
         perturb_df = perturb_df.rename(columns={
@@ -2096,14 +2096,14 @@ class SimTraffic:
         identityref = 'N/A'
         self.affected_places = reference.metadata['TrafficCongestion'].in_bbox(engine=engine, sceneref=identityref, bbox=self.bbox)
         logging.info("Affected TrafficCongestion entities: %s", ", ".join(self.affected_places))
-        # yield SimulationImpact(
-        #     source_entitytype='TrafficCongestion',
-        #     source_removed=self.affected_places,
-        #     impacted_entitytype='TrafficCongestion',
-        #     impacted_metric='congestion',
-        #     impact_func=self.impact_congestion
-        # )
-        # Locate all TrafficIntensity entities close enough to any of the affected entities
+        yield SimulationImpact(
+            source_entitytype='TrafficCongestion',
+            source_removed=self.affected_places,
+            impacted_entitytype='TrafficCongestion',
+            impacted_metric='congestion',
+            impact_func=self.impact_congestion
+        )
+        #Locate all TrafficIntensity entities close enough to any of the affected entities
         self.related_places = reference.get_closest(
             from_type='TrafficCongestion',
             from_sourceref=self.affected_places,
@@ -2131,7 +2131,7 @@ class SimTraffic:
         merged = pd.concat([df, distance_scale_series], axis=1)
         # Traslado la congestión a las vías cercanas
         merged['displaced'] = merged['congestion'] * merged['distance_scale'] / len(self.affected_places)
-        #logging.debug("IMPACT CONGESTION:\n%s", merged.to_string())
+        logging.debug("IMPACT CONGESTION:\n%s", merged.to_string())
         return merged['displaced']
 
     def impact_parking(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
