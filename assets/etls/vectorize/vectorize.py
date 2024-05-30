@@ -2104,7 +2104,7 @@ class SimTraffic:
     def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.info("SimTraffic impact_congestion:\n%s", df.columns)
         def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            scale = DecoderLayer.scaled_gaussian(y0=0.25, x1=300, y1=1, x2=500, y2=0.5, yinf=0.0, bias=self.bias)
+            scale = DecoderLayer.scaled_gaussian(y0=0.25, x1=300, y1=1, x2=1000, y2=0.5, yinf=0.0, bias=self.bias) + 1e-8
             tensor = scale(distance_tensor)
             return tensor
         distance_scale_series = pd.Series(distance_scale(torch.from_numpy(df['distance'].to_numpy())), index=df.index)
