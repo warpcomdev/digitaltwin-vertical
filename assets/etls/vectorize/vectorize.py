@@ -2111,8 +2111,8 @@ class SimTraffic:
         distance_scale_series.name = "distance_scale"
         merged = pd.concat([df, distance_scale_series], axis=1)
         # Traslado la congestión a las vías cercanas
-        merged['displaced'] = merged['congestion'] * merged['distance_scale']
-        #logging.debug("IMPACT CONGESTION:\n%s", merged.to_string())
+        merged['displaced'] = merged['congestion'] * merged['distance_scale'] / len(self.affected_places)
+        logging.debug("IMPACT CONGESTION:\n%s", merged.to_string())
         return merged['displaced']
 
     def impact_parking(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
