@@ -15,7 +15,7 @@ import typing
 import logging
 import math
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from contextlib import contextmanager, ExitStack
 from collections import defaultdict, Counter
 from sqlalchemy import create_engine, event, text, URL, Engine, Connection,TextClause
@@ -194,17 +194,7 @@ class Dataset(DatasetProperties):
     def change_time(self, must_have_hour: bool, must_have_minute: bool) -> pd.DataFrame:
         """
         Return a new DataFrame where the `hour` and `minute` columns
-        are changed to reflect the new values of `hasHour` and `hasMinute`
-
-        - If `hasMinute` equals True, the resulting DataFrame will have 
-          a column called `minute` with ten-minute intervals from 0 to 50.
-          If the current DataFrame does not have sucha column, the current
-          columns will be copied, once per 10-minute interval.
-
-        - If `hasHour` equals True, the resulting DataFrame will have
-          a column called `hour` with hourly intervals from 0 to 23.
-          If the current DataFrame does not have sucha column, the current
-          columns will be copied, once per hour.
+        are changed to reflect the new values of `hasHour` and `hasMinute`.
         """
         result_df = self.df
         minute_df = pd.DataFrame([10 * i for i in range(0, 6)], columns=('minute',))
@@ -237,16 +227,7 @@ class Dataset(DatasetProperties):
         return result_df
 
 @dataclass
-class VectorProperties:
-    """
-    Holds the properties of a vectorized dataset for a given
-    entity type. See type `TypedVector` for a description
-    of a vectorized dataset.
-    """
-    entityType: str
-
-@dataclass
-class TypedVector(VectorProperties):
+class TypedVector:
     """
     Holds the data of a vectorized dataset for a given entity type.
     This data is fixed length: There is a row per entity id,
@@ -268,6 +249,7 @@ class TypedVector(VectorProperties):
     does not have data for the given combination of sourceref,
     hour and minute.
     """
+    entitytype: str
     df: pd.DataFrame
 
 # -------------------------------------
@@ -309,6 +291,9 @@ class Metadata:
             # to match database column names
             kw[metric_cols] = { k.lower(): props[k] for k in sorted(props.keys()) }
         return Metadata(**kw)
+
+    def with_interval(self, hasHour: bool, hasMinute: bool) -> 'Metadata':
+        return replace(self, hasHour=hasHour, hasMinute=hasMinute)
 
     def dim_query(self, sceneref: str) -> TextClause:
         """Build SQL query to determine all entity IDs in the model"""
@@ -432,7 +417,7 @@ class Metadata:
         datasets for more infor on regularization.
         """
         typed_vector = TypedVector(
-            entityType=self.entityType,
+            entitytype=self.entityType,
             # Even if there there are no metrics, we still need
             # rows in the index to be able to add or remove entities
             # from the simulation.
@@ -505,6 +490,16 @@ class Metadata:
             vector_list.append(slim_series)
         series = pd.concat(vector_list, axis=0)
         return series
+
+    def embed(self, fixed_df: pd.DataFrame, dataset: typing.Optional[pd.DataFrame], requested_metrics: typing.Optional[typing.Sequence[str]]=None) -> pd.Series:
+        """
+        Embeds a Dataset into a one-dimensional vector.
+
+        Currently, the embedding is a combination of normalizing the dataset to
+        have one row per time step, and unpivoting it to make the metrics go into
+        separate rows.
+        """
+        return self.unpivot(self.normalize(fixed_df=fixed_df, dataset=dataset), requested_metrics=requested_metrics)
 
     def pivot(self, props: DatasetProperties, series: pd.Series) -> Dataset:
         """
@@ -903,15 +898,12 @@ class Vector:
     """
     Untyped Vector class.
 
-    Contains both the complete series of metrics that make up
-    the inpt of the encoder, as well as the properties of all
-    TypedVectors that went into the series, particularly
-    the scales and offsets.
+    Contains the complete series of metrics that make up
+    the input of the encoder.
 
     The index of the series is expected to be a tuple
     (entitytype, metric, sourceRef, hour, minute).
     """
-    properties: typing.Mapping[str, VectorProperties]
     df: pd.Series
 
     @staticmethod
@@ -926,18 +918,15 @@ class Vector:
         The data for each entity type must be generated using the
         """
         vector_list = []
-        props = {}
-        for entityType, meta in meta_map.items():
-            entity_data = data_map.get(entityType, None)
+        for entitytype, meta in meta_map.items():
+            entity_data = data_map.get(entitytype, None)
+            entity_fixed = fixed_df_map[entitytype]
             entity_df: typing.Optional[pd.DataFrame] = None
             if entity_data is not None:
                 entity_df = entity_data.df
-            typed_vector = meta.normalize(fixed_df=fixed_df_map[entityType], dataset=entity_df)
-            # Copy the properties for de-escalation
-            props[entityType] = VectorProperties(entityType=typed_vector.entityType)
-            vector_list.append(meta.unpivot(typed_vector=typed_vector))
+            vector_list.append(meta.embed(fixed_df=entity_fixed, dataset=entity_df))
         vector = pd.concat(vector_list, axis=0)
-        return Vector(properties=props, df=vector.astype(np.float64))
+        return Vector(df=vector.astype(np.float64))
 
 @dataclass
 class HiddenLayer:
@@ -992,7 +981,7 @@ class HiddenLayer:
         assert(reference.metadata is not None)
         assert(reference.dims_df_map is not None)
         # Get the part of the input tensor that belongs to the target entitytype and metric
-        target_series = pd.Series(self.private, index=self.index)
+        target_series = pd.Series(self.private.numpy(), index=self.index)
         target_series = target_series.loc[target_entitytype, target_metric]
         target_series = target_series.fillna(0.0)
         target_series.name = 'hidden'
@@ -1004,32 +993,11 @@ class HiddenLayer:
         target_df['metric'] = target_metric
         target_df = target_df.reset_index()
         # Make sure the perturbation dataframe has the same number of rows
-        # per entity as the target dataframe
-        perturb_df = perturbation.change_time(target_meta.hasHour, target_meta.hasMinute).copy()
-        if not target_meta.hasMinute:
-            perturb_df['minute'] = 0
-        if not target_meta.hasHour:
-            assert(not target_meta.hasMinute)
-            perturb_df['hour'] = 0
-        # Fill in the gaps in hours and minutes
-        # meta_test = reference.metadata[perturbation.entityType]
-        # fake_meta = Metadata(
-        #     dimensions=meta_test.dimensions,
-        #     metrics=meta_test.metrics,
-        #     fixedProps=meta_test.fixedProps,
-        #     calcs=meta_test.calcs,
-        #     hasHour=target_meta.hasHour,
-        #     hasMinute=target_meta.hasMinute,
-        #     multiZone=meta_test.multiZone,
-        #     namespace=meta_test.namespace,
-        #     entityType=meta_test.entityType,
-        #     dataTableName=meta_test.dataTableName,
-        #     dimsTableName=meta_test.dimsTableName
-        # )
-        # perturbed_dims = reference.dims_df_map[perturbation.entityType]
-        # perturbed_dims = perturbed_dims[perturbed_dims['sourceref'].isin(perturb_df['sourceref'])]
-        # fake_fixed_df = fake_meta.get_fixed_df(perturbed_dims)
-        # perturb_df = fake_meta.normalize(fixed_df=fake_fixed_df, dataset=perturb_df).df
+        # per entity as the target dataframe (hours and minutes)
+        perturb_meta = reference.metadata[perturbation.entityType].with_interval(hasHour=target_meta.hasHour, hasMinute=target_meta.hasMinute)
+        perturb_dims = perturbation.df['sourceref'].drop_duplicates().to_frame()
+        perturb_fixed_df = perturb_meta.get_fixed_df(perturb_dims)
+        perturb_df = perturb_meta.normalize(fixed_df=perturb_fixed_df, dataset=perturbation.change_time(target_meta.hasHour, target_meta.hasMinute)).df
         # Avoid name conflicts later on
         perturb_df['from_entitytype'] = perturbation.entityType
         perturb_df = perturb_df.rename(columns={
@@ -1305,6 +1273,14 @@ class DecoderLayer:
             return result
         return piecewise_gaussian
 
+    @staticmethod
+    def apply_scale(series: pd.Series, scale: typing.Callable[[torch.Tensor], torch.Tensor], name: str="distance_scale") -> pd.Series:
+        """Apply a scaling function to a pandas series"""
+        scaled_tensor = scale(torch.from_numpy(series.to_numpy())) + 1e-8
+        scaled_series = pd.Series(scaled_tensor.numpy(), index=series.index)
+        scaled_series.name = name
+        return scaled_series
+
 class Decoder:
     """
     This class decodes the hidden layer to an output vector.
@@ -1369,19 +1345,8 @@ class Decoder:
     def add_layer(self, layer: DecoderLayer):
         """
         Updates the decoder so that it will include the results
-        for the provided index. Index includes
-        (entitytype, metric, sourceref, hour and minute)
-
-        The dimensions of the weights must be A x B, where:
-
-        - A: length of the index.
-        - B: number of rows of the hidden layer, which is also the
-          width of the current weight matrix.
-
-        The dimensions of the bias must be A x 1
+        of the provided layer in the output.
         """
-        # Let's calculate a reference vector for the entity type,
-        # so we can make sure the sizes match
         # Compare sizes for matrix multiplication
         assert(layer.weights.shape[0] == len(layer.index))
         assert(layer.weights.shape[1] == self.main_layer.weights.shape[1])
@@ -1396,7 +1361,7 @@ class Decoder:
         entity with id `sourceref` and type `entitytype`. The new results
         will include the metric `metric`.
 
-        The results or this decoder will be a weighhted average of
+        The results or this decoder will be a weighted average of
         the metrics of other entities. The weighted average is derived
         from the `weights` series provided, which must have multiindex:
 
@@ -1444,8 +1409,7 @@ class Decoder:
         # Build a series for the target entitytype and sourceref
         dims_df = pd.DataFrame([sourceref], columns=['sourceref'])
         meta = self.meta_map[entitytype]
-        typed_vector = meta.normalize(fixed_df=meta.get_fixed_df(dims_df), dataset=None)
-        added_vector = meta.unpivot(typed_vector=typed_vector, requested_metrics=[metric,])
+        added_vector = meta.embed(fixed_df=meta.get_fixed_df(dims_df), dataset=None, requested_metrics=[metric,])
         assert(added_vector.index.names == ["entitytype", "metric", "sourceref", "hour", "minute"])
         # Now, we must match the dimensionality of the weights_tensor
         # to the dimensionalty of the added_vector.
@@ -1923,16 +1887,11 @@ class SimParking:
     
     def impact_parkings(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.debug("SimParking::impact_parkings. Received df columns:\n%s", df.columns)
-        def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            scale = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=0.75, x2=1000.0, y2=0.25, yinf=0.0, bias=self.bias)
-            # Cuanta gente he "robado" del parking de al lado:
-            # si estamos muy cerca, calculo que la mitad de mi ocupación
-            # viene del otro parking; si nos vamos alejando, vamos "robando" menos gente.
-            tensor = scale(distance_tensor)
-            return tensor
-        distance_scale_series = pd.Series(distance_scale(torch.from_numpy(df['distance'].to_numpy())), index=df.index)
-        distance_scale_series.name = "distance_scale"
-        merged = pd.concat([df, distance_scale_series], axis=1)
+        # Cuanta gente he "robado" del parking de al lado:
+        # si estamos muy cerca, calculo que la mitad de mi ocupación
+        # viene del otro parking; si nos vamos alejando, vamos "robando" menos gente.
+        scale_func = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=0.75, x2=1000.0, y2=0.25, yinf=0.0, bias=self.bias)
+        merged = pd.concat([df, DecoderLayer.apply_scale(series=df['distance'], scale=scale_func, name="distance_scale")], axis=1)
         scale = reference.metadata['OffStreetParking'].metrics['occupationpercent'].scale
         # El número máximo de personas dispuestas a trasladarse
         # de un parking a otro, dependerá de la distancia entre
@@ -2122,13 +2081,8 @@ class SimTraffic:
 
     def impact_congestion(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.info("SimTraffic impact_congestion:\n%s", df.columns)
-        def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            scale = DecoderLayer.scaled_gaussian(y0=0.25, x1=1000, y1=1, x2=3000, y2=0.5, yinf=0.0, bias=self.bias)
-            tensor = scale(distance_tensor) + 1e-8
-            return tensor
-        distance_scale_series = pd.Series(distance_scale(torch.from_numpy(df['distance'].to_numpy())), index=df.index)
-        distance_scale_series.name = "distance_scale"
-        merged = pd.concat([df, distance_scale_series], axis=1)
+        scale_func = DecoderLayer.scaled_gaussian(y0=0.25, x1=1000, y1=1, x2=3000, y2=0.5, yinf=0.0, bias=self.bias)
+        merged = pd.concat([df, DecoderLayer.apply_scale(series=df['distance'], scale=scale_func, name="distance_scale")], axis=1)
         # Traslado la congestión a las vías cercanas
         merged['displaced'] = merged['congestion'] * merged['distance_scale'] / len(self.affected_places)
         logging.debug("IMPACT CONGESTION:\n%s", merged.to_string())
@@ -2136,19 +2090,12 @@ class SimTraffic:
 
     def impact_parking(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
         logging.info("SimTraffic impact_parking:\n%s", df.columns)
-        def distance_scale(distance_tensor: torch.Tensor) -> torch.Tensor:
-            if self.category == "pedestrian":
-                # Add stability...
-                scale = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.75, x2=1000, y2=0.30, yinf=0.0, bias=self.bias)
-            else:
-                # Add stability...
-                scale = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.5, x2=1000, y2=0.20, yinf=0.0, bias=self.bias)
-            tensor = scale(distance_tensor) + 1e-8
-            return tensor
+        if self.category == "pedestrian":
+            scale_func = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.75, x2=1000, y2=0.30, yinf=0.0, bias=self.bias)
+        else:
+            scale_func = DecoderLayer.scaled_gaussian(y0=1, x1=0, y1=0.5, x2=1000, y2=0.20, yinf=0.0, bias=self.bias)
         # Get parking capacity
-        distance_scale_series = pd.Series(distance_scale(torch.from_numpy(df['distance'].to_numpy())), index=df.index)
-        distance_scale_series.name = "distance_scale"
-        merged = pd.concat([df, distance_scale_series], axis=1)
+        merged = pd.concat([df, DecoderLayer.apply_scale(series=df['distance'], scale=scale_func, name="distance_scale")], axis=1)
         merged = pd.merge(merged, self.intensity_per_zone(reference), how='left', left_on='to_zone', right_on='zone')
         # PReserve the index!
         merged = merged.reset_index(drop=True).set_index(df.index)
