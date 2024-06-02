@@ -962,18 +962,18 @@ class HiddenLayer:
         For each entitytype and sourceref in the perturbation Dataset,
         the extended DataFrame is merged with the input dataset, and the
         following columns are added: 'from_entitytype', 'from_sourceref',
-        <all the metrics of the input dataset for the given entitytype
-        and sourceref>.
+        <all the metrics of the perturbation dataset for the given
+        from_entitytype and from_sourceref>.
         
         Finally, the distance between `sourceref` and `from_sourceref`
         (in meters) is calculated. and the following columns are appended
-        to the dataframe: `to_entitytype`, `to_sourceref`, `distance`,
-        `from_zone`, `to_zone`, `from_zonelist`, `to_zonelist`.
+        to the dataframe: `distance`, `from_zone`, `to_zone`,
+        `from_zonelist`, `to_zonelist`.
         
         Then, the `func` function is called with this extended DataFrame.
         It will get called once per each sourceref in the input Dataset,
         and must return a pd.Series with the same index as
-        the DataFrame.
+        the DataFrame (i.e. (`sourceref`, `hour`, `minute`)).
         
         The function will add up the returned series of every invocation
         to `func`, and return the resulting series.
@@ -991,51 +991,54 @@ class HiddenLayer:
         # Restore the `entitytype` and `metric`` levels that were dropped by the `loc` above
         target_df['entitytype'] = target_entitytype
         target_df['metric'] = target_metric
-        target_df = target_df.reset_index()
         # Make sure the perturbation dataframe has the same number of rows
         # per entity as the target dataframe (hours and minutes)
         perturb_meta = reference.metadata[perturbation.entityType].with_interval(hasHour=target_meta.hasHour, hasMinute=target_meta.hasMinute)
         perturb_dims = perturbation.df['sourceref'].drop_duplicates().to_frame()
         perturb_fixed_df = perturb_meta.get_fixed_df(perturb_dims)
         perturb_df = perturb_meta.normalize(fixed_df=perturb_fixed_df, dataset=perturbation.change_time(target_meta.hasHour, target_meta.hasMinute)).df
-        # Avoid name conflicts later on
+        perturb_df = perturb_df.rename(columns={'sourceref': 'from_sourceref'}).fillna(0)
         perturb_df['from_entitytype'] = perturbation.entityType
-        perturb_df = perturb_df.rename(columns={
-            'sourceref': 'from_sourceref'
-        })
-        logging.info("PERTURB_DF COLUMNS:\n%s", perturb_df.columns)
-        logging.info("PERTURB_DF INDEX:\n%s", perturb_df.index)
         # Now we iterate on the input dataset
+        distinct_targets = target_df.index.get_level_values('sourceref').drop_duplicates().to_series()
         accumulator = pd.Series([0.0] * len(target_series), index=target_series.index)
         assert(reference.distance_df is not None)
         for key, group in perturb_df.groupby('from_sourceref'):
-            perturb_sourceref = typing.cast(str, key)
             # Extend the target_df with the distance to the perturbing entity
-            candidates = typing.cast(pd.DataFrame, reference.distance_df.loc[perturbation.entityType, perturb_sourceref])
+            perturb_sourceref = typing.cast(str, key)
+            candidates = typing.cast(pd.DataFrame, reference.distance_df.loc[perturbation.entityType, perturb_sourceref, target_entitytype]).reset_index() # type: ignore
+            candidates = candidates.rename(columns={ 'to_sourceref': 'sourceref' }).set_index('sourceref')
             candidates = candidates[['distance', 'from_zone', 'from_zonelist', 'to_zone', 'to_zonelist']]
-            candidates = candidates.dropna()
-            candidates = candidates[candidates['distance'] > 0]
-            assert(candidates.index.names == ['to_entitytype', 'to_sourceref'])
+            assert(candidates.index.names == ['sourceref'])
             target_with_distance = pd.merge(
                 target_df,
-                candidates.reset_index(),
+                candidates,
                 how='left',
-                left_on = ['entitytype', 'sourceref'],
-                right_on = ['to_entitytype', 'to_sourceref'],
+                left_index=True,
+                right_index=True,
                 sort=False
             )
+            assert(target_df.index.equals(target_with_distance.index))
             # Now, join by hour and minute to the values of the
             # perturbing entity
+            # First, make sure the normalziation is fine, and we have
+            # hour and minute rows matching in target_df and
+            # perturb_df.
+            assert(len(group) * len(distinct_targets) == len(target_df))
+            perturb_indexed = pd.merge(distinct_targets, group, how='cross', sort=False)
+            perturb_indexed = perturb_indexed.set_index(['sourceref', 'hour', 'minute'])
             target_and_perturb = pd.merge(
                 target_with_distance,
-                group.fillna(0),
+                perturb_indexed,
                 how='left',
-                on=['hour', 'minute'],
+                left_index=True,
+                right_index=True,
                 sort=False
             )
-            # Set the index of the resulting frame
-            target_and_perturb = target_and_perturb.set_index(['sourceref', 'hour', 'minute'])
-            accumulator = accumulator.add(func(reference, target_and_perturb))
+            assert(target_df.index.equals(target_and_perturb.index))
+            increment = func(reference, target_and_perturb)
+            assert(increment.index.equals(target_and_perturb.index))
+            accumulator = accumulator.add(increment)
         assert(accumulator.index.names == ['sourceref', 'hour', 'minute'])
         return accumulator
 
@@ -1275,9 +1278,19 @@ class DecoderLayer:
 
     @staticmethod
     def apply_scale(series: pd.Series, scale: typing.Callable[[torch.Tensor], torch.Tensor], name: str="distance_scale") -> pd.Series:
-        """Apply a scaling function to a pandas series"""
-        scaled_tensor = scale(torch.from_numpy(series.to_numpy())) + 1e-8
-        scaled_series = pd.Series(scaled_tensor.numpy(), index=series.index)
+        """
+        Apply a scaling function to a pandas series
+        
+        When the input value is 0, the output value os also 0.
+        This is to avoid issues with distances from an entity
+        to itself.
+        """
+        tensor = torch.nan_to_num(torch.from_numpy(series.to_numpy()))
+        tensor_mask = tensor > 0
+        scaled_tensor = scale(tensor[tensor_mask]) + 1e-8
+        result_tensor = torch.zeros_like(tensor)
+        result_tensor[tensor_mask] = scaled_tensor
+        scaled_series = pd.Series(result_tensor.numpy(), index=series.index)
         scaled_series.name = name
         return scaled_series
 
