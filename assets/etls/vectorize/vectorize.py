@@ -2148,7 +2148,7 @@ class SimTraffic:
         return merged['displaced']
 
     def impact_parking(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
-        logging.info("SimTraffic impact_parking:\n%s", df.columns)
+        logging.info("SimTraffic impact_parking:\n%s\n%s", df.index.names, df.columns)
         # The closer the parking to the affected streets, the more people will use it
         if self.category == 'pedestrian':
             scale_func = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1, x2=1000, y2=0.5, yinf=0, bias=self.bias)
@@ -2156,10 +2156,19 @@ class SimTraffic:
             scale_func = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=0.25, x2=1000, y2=0.15, yinf=0, bias=self.bias)
         merged = pd.concat([df, DecoderLayer.apply_scale(series=df['distance'], scale=scale_func, name="distance_scale")], axis=1)
         scale = reference.metadata['OffStreetParking'].metrics['occupationpercent'].scale
+        # Modulo el incremento por hora del día. Vamos a aumentarlo más cuando más demanda hay
+        range_per_entity = merged.reset_index()[['sourceref', 'hidden']].groupby('sourceref', as_index=True).agg(
+            min_occupationpercent=('hidden', 'min'),
+            max_occupationpercent=('hidden', 'max')
+        )
+        logging.info("SimTraffic range_per_entity:\n%s\n%s", range_per_entity.index.names, range_per_entity.columns)
+        range_per_entity['slope_occupationpercent'] = range_per_entity['max_occupationpercent'] - range_per_entity['min_occupationpercent'] + 1e-8
+        merged = pd.merge(merged, range_per_entity, left_index=True, right_index=True)
+        merged['hour_scale'] = (merged['hidden'] - merged['min_occupationpercent'] + 1e-8) / merged['slope_occupationpercent']
         # Get a measure of the spare capacity, affected by the bias
         # In this impact, the hidden column is occupationpercent.
         merged['spare_capacity'] = (merged['capacity'] * (1 - merged['hidden'] / scale)) * (0.25 + 0.5 * self.bias / 10)
-        merged['increased_occupation'] = merged['spare_capacity'] * merged['distance_scale']
+        merged['increased_occupation'] = merged['spare_capacity'] * merged['distance_scale'] * merged['hour_scale']
         merged['increase'] = (merged['increased_occupation'] * scale) / merged['capacity']
         # Since this will be computed once per street closure, divide
         # by number of closed streets
