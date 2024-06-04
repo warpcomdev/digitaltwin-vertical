@@ -112,11 +112,11 @@ class Broker:
         )
         cb = tc.cb.cbManager(
             endpoint=os.getenv('ETL_VECTORIZE_ENDPOINT_CB'),
-            sleep_send_batch=int(os.getenv('ETL_VECTORIZE_SLEEP_SEND_BATCH', '5')),
+            sleep_send_batch=int(os.getenv('ETL_VECTORIZE_SLEEP_SEND_BATCH', '1')),
             timeout=int(os.getenv('ETL_VECTORIZE_TIMEOUT', '10')),
             post_retry_connect=float(os.getenv('ETL_VECTORIZE_POST_RETRY_CONNECT', '3')),
             post_retry_backoff_factor=float(os.getenv('ETL_VECTORIZE_POST_RETRY_BACKOFF_FACTOR', '2')),
-            batch_size=int(os.getenv('ETL_VECTORIZE_BATCH_SIZE', '50')),
+            batch_size=int(os.getenv('ETL_VECTORIZE_BATCH_SIZE', '20')),
         )
         return Broker(auth=auth, cb=cb)
 
@@ -2163,7 +2163,7 @@ class SimTraffic:
         merged['increase'] = (merged['increased_occupation'] * scale) / merged['capacity']
         # Since this will be computed once per street closure, divide
         # by number of closed streets
-        merged['displaced'] = merged['spare_capacity'] / len(self.affected_places)
+        merged['displaced'] = merged['increase'] / len(self.affected_places)
         return merged['displaced']
 
 class SimRoute:
