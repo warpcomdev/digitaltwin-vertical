@@ -10,8 +10,8 @@ Simulation: {
 		Instancia de simulación. Recopila la última fecha en la que se ha ejecutado
 		una simulación, o cálculo de vista identidad.
 		"""
-	namespace: "dtwin"
-	exampleId: "N/A"
+	namespace:     "dtwin"
+	exampleId:     "N/A"
 	#geometryType: "Geometry"
 
 	model: [string]: {types.#ModelAttribute}
@@ -101,6 +101,11 @@ Simulation: {
 							ETL_VECTORIZE_SIMULATION_ID: {
 								type:        "string"
 								description: "ID de la entidad que dispara la simulación"
+								default:     ""
+							}
+							ETL_VECTORIZE_ALTERATIONTYPE: {
+								type:        "string"
+								description: "introduzca 'entityDelete' para borrar una simulacion"
 								default:     ""
 							}
 						}

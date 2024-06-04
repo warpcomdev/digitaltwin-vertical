@@ -575,6 +575,28 @@ class Metadata:
             df=df
         )
 
+    def clean_sql(self, conn: Connection, sceneref: str, trend: typing.Optional[str]=None, daytype: typing.Optional[str]=None, dims_also: bool=False):
+        """Remove simulation data from database"""
+        assert(sceneref is not None and sceneref != 'N/A')
+        kw: typing.Dict[str, typing.Any] = {
+            "sceneref": sceneref
+        }
+        # Add optional filters
+        statement = f"DELETE FROM {self.dataTableName} WHERE sceneref=:sceneref"
+        for key, val in { 'trend': trend, 'daytype': daytype }.items():
+            if val is not None:
+                statement = statement + f" AND {key}=:{key}"
+                kw[key] = val
+        # Clear the simulation table to avoid pkey duplicates
+        sql = text(statement).bindparams(**kw)
+        with conn.execute(sql) as curr:
+            curr.close()
+        if dims_also and trend is None and daytype is None:
+            # Remove from dims table too
+            statement = f"DELETE FROM {self.dimsTableName} WHERE sceneref=:sceneref"
+            with conn.execute(text(statement).bindparams(sceneref=sceneref)) as curr:
+                curr.close()
+
     def to_sql(self, engine: Engine, sceneref: str, dataset: Dataset, dims_df:typing.Optional[pd.DataFrame]=None, dryrun:bool=False):
         # if we get a dims_df, try to join the
         # resulting dataframe to the dim_df to pick
@@ -595,21 +617,14 @@ class Metadata:
                 on=['sourceref']
             )
         with engine.begin() as conn:
+            # Clear the simulation table to avoid pkey duplicates
+            self.clean_sql(conn, sceneref=sceneref, trend=dataset.trend, daytype=dataset.daytype)
             kw: typing.Dict[str, typing.Any] = {
+                "timeinstant": dataset.timeinstant,
                 "sceneref": sceneref,
                 "trend": dataset.trend,
                 "daytype": dataset.daytype,
             }
-            # Clear the simulation table to avoid pkey duplicates
-            statement = text(
-                f"""
-                DELETE FROM {self.dataTableName}
-                WHERE sceneref=:sceneref
-                AND trend=:trend
-                AND daytype=:daytype
-                """).bindparams(**kw)
-            with conn.execute(statement) as curr:
-                curr.close()
             logging.info("saving %d rows to the database for entityType %s, dimensions %s", len(df), self.entityType, kw)
             df.to_sql(
                 self.dataTableName,
@@ -624,7 +639,6 @@ class Metadata:
                 for col, expr in self.calcs.items():
                     expressions.append(f"{col} = {expr}")
             if expressions:
-                kw["timeinstant"] = dataset.timeinstant
                 statement = text(f"""
                     UPDATE {self.dataTableName} SET {','.join(expressions)} 
                     WHERE sceneref=:sceneref
@@ -1892,6 +1906,25 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
     logging.info("Total memory usage: %s", psutil.Process().memory_info().rss)
     sim_props.feedback(broker, f"done in {stop - start}")
 
+def cleanup(reference: Reference, engine: Engine, broker: Broker, dryrun: bool=False):
+    """
+    Cleans up a simulation
+    """
+    sim_id = os.getenv("ETL_VECTORIZE_SIMULATION_ID")
+    assert(sim_id is not None)
+    assert(sim_id != "N/A")
+    with engine.begin() as con:
+        # Remove simulation form all entity types
+        for meta in reference.metadata.values():
+            logging.warning("Removing simulation %s data from %s", sim_id, meta.dataTableName)
+            meta.clean_sql(con, sim_id, dims_also=True)
+        logging.warning("Removing simulation %s from simlation_lastdata", sim_id)
+        stmt = text("DELETE FROM dtwin_simulation_lastdata where entityid=:sceneref").bindparams(sceneref=sim_id)
+        with con.execute(stmt) as cur:
+            cur.close()
+        if dryrun:
+            con.rollback()
+
 class SimParking:
     """Simulation for parking creation"""
 
@@ -2474,10 +2507,15 @@ if __name__ == "__main__":
             engine = stack.enter_context(psql_engine())
             broker = stack.enter_context(orion_engine())
             reference = Reference.create(meta_path=pathlib.Path(args.meta), engine=engine)
+            logging.info("Metadata order:\n%s", ", ".join(reference.metadata.keys()))
             changeType = os.getenv("ETL_VECTORIZE_ALTERATIONTYPE", "")
             logging.warning("ETL_VECTORIZE_ALTERATIONTYPE=%s", changeType)
-            logging.info("Metadata order:\n%s", ", ".join(reference.metadata.keys()))
-            main(reference, engine, broker, args.fallback, args.dryrun)
+            if changeType == "entityDelete":
+                logging.warning("Cleaning up database after simulation removal")
+                cleanup(reference, engine, broker, args.dryrun)
+            else:
+                logging.warning("Starting simulation")
+                main(reference, engine, broker, args.fallback, args.dryrun)
         logging.info("ETL OK")
     except Exception as err:
         logging.exception(msg="Error during vectorization", stack_info=True)

@@ -1,2 +1,2 @@
-entityID,entityType,TimeInstant<DateTime>,sceneref<TextUnrestricted>,name<TextUnrestricted>,description<TextUnrestricted>
-N/A,Simulation,2018-12-10T20:40:23,example text,example text,example text
+entityID,entityType,TimeInstant<DateTime>,sceneref<TextUnrestricted>,name<TextUnrestricted>,location<geo:json>,description<TextUnrestricted>
+N/A,Simulation,2018-12-10T20:40:23,example text,example text,"{""type"": ""geo:json"", ""value"": {""type"": ""Polygon"", ""coordinates"": [[[3.5, 24.6], [33, 44]]]}}",example text

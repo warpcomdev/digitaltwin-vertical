@@ -16,7 +16,7 @@
         "range": "-"
       },
       "name": {
-        "description": "Nombre de la simulación",
+        "description": "Nombre de la nueva simulación",
         "ngsiType": "TextUnrestricted",
         "dbType": "text",
         "extra": "-",
@@ -26,7 +26,17 @@
         "range": "-"
       },
       "description": {
-        "description": "Descripción de la somulación",
+        "description": "Descripción de la nueva simulación",
+        "ngsiType": "TextUnrestricted",
+        "dbType": "text",
+        "extra": "-",
+        "unit": "-",
+        "flows": [],
+        "example": "example text",
+        "range": "-"
+      },
+      "bias": {
+        "description": "Bias a aplicar en la simulación",
         "ngsiType": "TextUnrestricted",
         "dbType": "text",
         "extra": "-",
@@ -54,16 +64,6 @@
         "flows": [],
         "range": "-"
       },
-      "bias": {
-        "description": "Bias de la simulación",
-        "ngsiType": "TextUnrestricted",
-        "dbType": "text",
-        "extra": "-",
-        "unit": "-",
-        "flows": [],
-        "example": "example text",
-        "range": "-"
-      },
       "status": {
         "description": "Estado de la simulación",
         "ngsiType": "TextUnrestricted",
@@ -79,20 +79,26 @@
       "etl_vectorize": {
         "class": "FLOW_RAW",
         "subscriptions": {
-          "SimulationParking_etl": {
-            "documentation": "Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking",
-            "description": "SimulationParking:JENKINS::etl",
+          "trigger_etl": {
+            "documentation": "Subscripción del flujo etl_vectorize (tipo FLOW_RAW) en modelo SimulationTraffic",
+            "description": "SimulationTraffic:JENKINS::etl_vectorize_run",
             "status": "active",
             "subject": {
               "entities": [
                 {
                   "idPattern": ".*",
-                  "type": "SimulationParking"
+                  "type": "SimulationTraffic"
                 }
               ],
               "condition": {
                 "attrs": [
                   "TimeInstant"
+                ],
+                "alterationTypes": [
+                  "entityCreate",
+                  "entityUpdate",
+                  "entityChange",
+                  "entityDelete"
                 ]
               }
             },
@@ -107,7 +113,8 @@
                 },
                 "qs": {
                   "ETL_VECTORIZE_SIMULATION_TYPE": "${type}",
-                  "ETL_VECTORIZE_SIMULATION_ID": "${id}"
+                  "ETL_VECTORIZE_SIMULATION_ID": "${id}",
+                  "ETL_VECTORIZE_CHANGETYPE": "${alterationType}"
                 },
                 "payload": null
               }

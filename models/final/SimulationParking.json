@@ -16,7 +16,7 @@
         "range": "-"
       },
       "name": {
-        "description": "Nombre del nuevo parking",
+        "description": "Nombre de la nueva simulación",
         "ngsiType": "TextUnrestricted",
         "dbType": "text",
         "extra": "-",
@@ -26,7 +26,17 @@
         "range": "-"
       },
       "description": {
-        "description": "Descripción del parking",
+        "description": "Descripción de la nueva simulación",
+        "ngsiType": "TextUnrestricted",
+        "dbType": "text",
+        "extra": "-",
+        "unit": "-",
+        "flows": [],
+        "example": "example text",
+        "range": "-"
+      },
+      "bias": {
+        "description": "Bias a aplicar en la simulación",
         "ngsiType": "TextUnrestricted",
         "dbType": "text",
         "extra": "-",
@@ -54,26 +64,6 @@
         },
         "range": "-"
       },
-      "capacity": {
-        "description": "Capacidad del nuevo parking",
-        "ngsiType": "Number",
-        "dbType": "integer",
-        "extra": "-",
-        "unit": "-",
-        "flows": [],
-        "example": 5,
-        "range": "-"
-      },
-      "bias": {
-        "description": "Bias del nuevo parking",
-        "ngsiType": "TextUnrestricted",
-        "dbType": "text",
-        "extra": "-",
-        "unit": "-",
-        "flows": [],
-        "example": "example text",
-        "range": "-"
-      },
       "status": {
         "description": "Estado de la simulación",
         "ngsiType": "TextUnrestricted",
@@ -83,15 +73,25 @@
         "flows": [],
         "example": "example text",
         "range": "-"
+      },
+      "capacity": {
+        "description": "Capacidad del nuevo parking",
+        "ngsiType": "Number",
+        "dbType": "integer",
+        "extra": "-",
+        "unit": "-",
+        "flows": [],
+        "example": 5,
+        "range": "-"
       }
     },
     "flows": {
       "etl_vectorize": {
         "class": "FLOW_RAW",
         "subscriptions": {
-          "SimulationParking_etl": {
-            "documentation": "Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking",
-            "description": "SimulationParking:JENKINS::etl",
+          "trigger_etl": {
+            "documentation": "Subscripción del flujo etl_vectorize (tipo FLOW_RAW) en modelo SimulationParking",
+            "description": "SimulationParking:JENKINS::etl_vectorize_run",
             "status": "active",
             "subject": {
               "entities": [
@@ -103,6 +103,12 @@
               "condition": {
                 "attrs": [
                   "TimeInstant"
+                ],
+                "alterationTypes": [
+                  "entityCreate",
+                  "entityUpdate",
+                  "entityChange",
+                  "entityDelete"
                 ]
               }
             },
@@ -117,7 +123,8 @@
                 },
                 "qs": {
                   "ETL_VECTORIZE_SIMULATION_TYPE": "${type}",
-                  "ETL_VECTORIZE_SIMULATION_ID": "${id}"
+                  "ETL_VECTORIZE_SIMULATION_ID": "${id}",
+                  "ETL_VECTORIZE_CHANGETYPE": "${alterationType}"
                 },
                 "payload": null
               }

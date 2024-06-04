@@ -55,7 +55,7 @@
       "location": {
         "description": "Polígono que delimita la zona",
         "ngsiType": "geo:json",
-        "dbType": "geometry(Polygon)",
+        "dbType": "geometry",
         "extra": "-",
         "unit": "-",
         "flows": [

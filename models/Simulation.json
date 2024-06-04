@@ -136,6 +136,11 @@
                                     "type": "string",
                                     "description": "ID de la entidad que dispara la simulación",
                                     "default": ""
+                                },
+                                "ETL_VECTORIZE_ALTERATIONTYPE": {
+                                    "type": "string",
+                                    "description": "introduzca 'entityDelete' para borrar una simulacion",
+                                    "default": ""
                                 }
                             }
                         }

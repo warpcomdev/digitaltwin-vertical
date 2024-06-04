@@ -66,7 +66,7 @@ RouteIntensity: templates.#Twin & {
 			"zone",
 		]
 		aggregations: {
-			intensity_per_trip: "sum(t.intensity) / sum(t.forwardtrips + t.returntrips)::double precision",
+			intensity_per_trip: "sum(t.intensity) / sum(t.forwardtrips + t.returntrips)::double precision"
 			intensity_per_stop: "sum(t.intensity) / sum(t.forwardtrips * t.forwardstops + t.returntrips * t.returnstops)"
 		}
 		where: """

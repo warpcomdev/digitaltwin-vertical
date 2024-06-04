@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_zone_lastdata (
   zoneid integer,
   name text,
   label text,
-  location geometry(Polygon),
+  location geometry,
   -- Common model attributes
   entityid text,
   entitytype text,

@@ -6,6 +6,6 @@
     "description": { "type": "Text", "value": "Fallback simulation" },
     "category": { "type": "Text", "value": "pedestrian" },
     "trips": {"type":"Number", "value": 100},
-    "intensity": {"type":"Number", "value": 1000},
+    "intensity": {"type":"Number", "value": 2000},
     "bias": { "type": "Text", "value": "5" }
 }

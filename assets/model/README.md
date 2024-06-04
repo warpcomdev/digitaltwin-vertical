@@ -402,12 +402,13 @@ Ejemplo de `RouteSchedule` (en NGSIv2):
 
 Instancia de simulación. Recopila la última fecha en la que se ha ejecutado una simulación, o cálculo de vista identidad.
 
-| Atributo    | ngsiType         | dbType                            | description                                              | example                 | extra | unit | range |
-| ----------- | ---------------- | --------------------------------- | -------------------------------------------------------- | ----------------------- | ----- | ---- | ----- |
-| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación | `"2018-12-10T20:40:23"` | -     | -    | -     |
-| sceneref    | TextUnrestricted | text                              | Escenario de simulación que ha creado la entidad         | `"example text"`        | -     | -    | -     |
-| name        | TextUnrestricted | text                              | Nombre de la simulación                                  | `"example text"`        | -     | -    | -     |
-| description | TextUnrestricted | text                              | Texto descriptivo de la simulación                       | `"example text"`        | -     | -    | -     |
+| Atributo    | ngsiType         | dbType                            | description                                              | example                                                                                        | extra | unit | range |
+| ----------- | ---------------- | --------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----- | ---- | ----- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha / Hora del cálculo de vista identidad o simulación | `"2018-12-10T20:40:23"`                                                                        | -     | -    | -     |
+| sceneref    | TextUnrestricted | text                              | Escenario de simulación que ha creado la entidad         | `"example text"`                                                                               | -     | -    | -     |
+| name        | TextUnrestricted | text                              | Nombre de la simulación                                  | `"example text"`                                                                               | -     | -    | -     |
+| location    | geo:json         | geometry                          | Geometría de la simulación                               | `{"type": "geo:json", "value": {"type": "Polygon", "coordinates": [[[3.5, 24.6], [33, 44]]]}}` | -     | -    | -     |
+| description | TextUnrestricted | text                              | Texto descriptivo de la simulación                       | `"example text"`                                                                               | -     | -    | -     |
 
 Ejemplo de `Simulation` (en NGSIv2):
 
@@ -427,6 +428,24 @@ Ejemplo de `Simulation` (en NGSIv2):
         "type": "TextUnrestricted",
         "value": "example text"
     },
+    "location": {
+        "type": "geo:json",
+        "value": {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [
+                        3.5,
+                        24.6
+                    ],
+                    [
+                        33,
+                        44
+                    ]
+                ]
+            ]
+        }
+    },
     "description": {
         "type": "TextUnrestricted",
         "value": "example text"
@@ -438,15 +457,15 @@ Ejemplo de `Simulation` (en NGSIv2):
 
 Parámetros de simulación de nuevo parking
 
-| Atributo    | ngsiType         | dbType                            | description                 | example                                                                        | extra | unit | range |
-| ----------- | ---------------- | --------------------------------- | --------------------------- | ------------------------------------------------------------------------------ | ----- | ---- | ----- |
-| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha de la simulacion      | `"2018-12-10T20:40:23"`                                                        | -     | -    | -     |
-| name        | TextUnrestricted | text                              | Nombre del nuevo parking    | `"example text"`                                                               | -     | -    | -     |
-| description | TextUnrestricted | text                              | Descripción del parking     | `"example text"`                                                               | -     | -    | -     |
-| location    | geo:json         | geometry(Point)                   | Ubicación de la entidad     | `{"type": "geo:json", "value": {"type": "Point", "coordinates": [3.5, 24.6]}}` | -     | -    | -     |
-| capacity    | Number           | integer                           | Capacidad del nuevo parking | `5`                                                                            | -     | -    | -     |
-| bias        | TextUnrestricted | text                              | Bias del nuevo parking      | `"example text"`                                                               | -     | -    | -     |
-| status      | TextUnrestricted | text                              | Estado de la simulación     | `"example text"`                                                               | -     | -    | -     |
+| Atributo    | ngsiType         | dbType                            | description                        | example                                                                        | extra | unit | range |
+| ----------- | ---------------- | --------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------ | ----- | ---- | ----- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha de la simulacion             | `"2018-12-10T20:40:23"`                                                        | -     | -    | -     |
+| name        | TextUnrestricted | text                              | Nombre de la nueva simulación      | `"example text"`                                                               | -     | -    | -     |
+| description | TextUnrestricted | text                              | Descripción de la nueva simulación | `"example text"`                                                               | -     | -    | -     |
+| bias        | TextUnrestricted | text                              | Bias a aplicar en la simulación    | `"example text"`                                                               | -     | -    | -     |
+| location    | geo:json         | geometry(Point)                   | Ubicación de la entidad            | `{"type": "geo:json", "value": {"type": "Point", "coordinates": [3.5, 24.6]}}` | -     | -    | -     |
+| status      | TextUnrestricted | text                              | Estado de la simulación            | `"example text"`                                                               | -     | -    | -     |
+| capacity    | Number           | integer                           | Capacidad del nuevo parking        | `5`                                                                            | -     | -    | -     |
 
 Ejemplo de `SimulationParking` (en NGSIv2):
 
@@ -466,6 +485,10 @@ Ejemplo de `SimulationParking` (en NGSIv2):
         "type": "TextUnrestricted",
         "value": "example text"
     },
+    "bias": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
     "location": {
         "type": "geo:json",
         "value": {
@@ -476,17 +499,13 @@ Ejemplo de `SimulationParking` (en NGSIv2):
             ]
         }
     },
-    "capacity": {
-        "type": "Number",
-        "value": 5
-    },
-    "bias": {
-        "type": "TextUnrestricted",
-        "value": "example text"
-    },
     "status": {
         "type": "TextUnrestricted",
         "value": "example text"
+    },
+    "capacity": {
+        "type": "Number",
+        "value": 5
     }
 }
 ```
@@ -495,16 +514,16 @@ Ejemplo de `SimulationParking` (en NGSIv2):
 
 Parámetros de simulación de nueva línea de transporte
 
-| Atributo    | ngsiType         | dbType                            | description                  | example                                                                                   | extra | unit | range |
-| ----------- | ---------------- | --------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------- | ----- | ---- | ----- |
-| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha de la simulacion       | `"2018-12-10T20:40:23"`                                                                   | -     | -    | -     |
-| name        | TextUnrestricted | text                              | Nombre de la simulación      | `"example text"`                                                                          | -     | -    | -     |
-| description | TextUnrestricted | text                              | Descripción de la simulación | `"example text"`                                                                          | -     | -    | -     |
-| location    | geo:json         | geometry(LineString)              | Geometría de la línea        | `{"type": "geo:json", "value": {"type": "Line", "coordinates": [[3.5, 24.6], [33, 44]]}}` | -     | -    | -     |
-| trips       | Number           | integer                           | Número de viajes diarios     | `5`                                                                                       | -     | -    | -     |
-| intensity   | Number           | integer                           | Número de viajeros diarios   | `5`                                                                                       | -     | -    | -     |
-| bias        | TextUnrestricted | text                              | Bias de la simulación        | `"example text"`                                                                          | -     | -    | -     |
-| status      | TextUnrestricted | text                              | Estado de la simulación      | `"example text"`                                                                          | -     | -    | -     |
+| Atributo    | ngsiType         | dbType                            | description                        | example                                                                                   | extra | unit | range |
+| ----------- | ---------------- | --------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------- | ----- | ---- | ----- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha de la simulacion             | `"2018-12-10T20:40:23"`                                                                   | -     | -    | -     |
+| name        | TextUnrestricted | text                              | Nombre de la nueva simulación      | `"example text"`                                                                          | -     | -    | -     |
+| description | TextUnrestricted | text                              | Descripción de la nueva simulación | `"example text"`                                                                          | -     | -    | -     |
+| bias        | TextUnrestricted | text                              | Bias a aplicar en la simulación    | `"example text"`                                                                          | -     | -    | -     |
+| location    | geo:json         | geometry(LineString)              | Geometría de la línea              | `{"type": "geo:json", "value": {"type": "Line", "coordinates": [[3.5, 24.6], [33, 44]]}}` | -     | -    | -     |
+| trips       | Number           | integer                           | Número de viajes diarios           | `5`                                                                                       | -     | -    | -     |
+| status      | TextUnrestricted | text                              | Estado de la simulación            | `"example text"`                                                                          | -     | -    | -     |
+| intensity   | Number           | integer                           | Número de viajeros diarios         | `5`                                                                                       | -     | -    | -     |
 
 Ejemplo de `SimulationRoute` (en NGSIv2):
 
@@ -521,6 +540,10 @@ Ejemplo de `SimulationRoute` (en NGSIv2):
         "value": "example text"
     },
     "description": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
+    "bias": {
         "type": "TextUnrestricted",
         "value": "example text"
     },
@@ -544,17 +567,13 @@ Ejemplo de `SimulationRoute` (en NGSIv2):
         "type": "Number",
         "value": 5
     },
-    "intensity": {
-        "type": "Number",
-        "value": 5
-    },
-    "bias": {
-        "type": "TextUnrestricted",
-        "value": "example text"
-    },
     "status": {
         "type": "TextUnrestricted",
         "value": "example text"
+    },
+    "intensity": {
+        "type": "Number",
+        "value": 5
     }
 }
 ```
@@ -563,14 +582,14 @@ Ejemplo de `SimulationRoute` (en NGSIv2):
 
 Parámetros de simulación de corte o peatonalización de tramo
 
-| Atributo    | ngsiType         | dbType                            | description                      | example                                | extra | unit | range |
-| ----------- | ---------------- | --------------------------------- | -------------------------------- | -------------------------------------- | ----- | ---- | ----- |
-| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha de la simulacion           | `"2018-12-10T20:40:23"`                | -     | -    | -     |
-| name        | TextUnrestricted | text                              | Nombre de la simulación          | `"example text"`                       | -     | -    | -     |
-| description | TextUnrestricted | text                              | Descripción de la somulación     | `"example text"`                       | -     | -    | -     |
-| location    | TextUnrestricted | json                              | Bounding-box de la zona afectada | `[[0.1111, 0.2222], [0.3333, 0.4444]]` | -     | -    | -     |
-| bias        | TextUnrestricted | text                              | Bias de la simulación            | `"example text"`                       | -     | -    | -     |
-| status      | TextUnrestricted | text                              | Estado de la simulación          | `"example text"`                       | -     | -    | -     |
+| Atributo    | ngsiType         | dbType                            | description                        | example                                | extra | unit | range |
+| ----------- | ---------------- | --------------------------------- | ---------------------------------- | -------------------------------------- | ----- | ---- | ----- |
+| TimeInstant | DateTime         | timestamp with time zone NOT NULL | Fecha de la simulacion             | `"2018-12-10T20:40:23"`                | -     | -    | -     |
+| name        | TextUnrestricted | text                              | Nombre de la nueva simulación      | `"example text"`                       | -     | -    | -     |
+| description | TextUnrestricted | text                              | Descripción de la nueva simulación | `"example text"`                       | -     | -    | -     |
+| bias        | TextUnrestricted | text                              | Bias a aplicar en la simulación    | `"example text"`                       | -     | -    | -     |
+| location    | TextUnrestricted | json                              | Bounding-box de la zona afectada   | `[[0.1111, 0.2222], [0.3333, 0.4444]]` | -     | -    | -     |
+| status      | TextUnrestricted | text                              | Estado de la simulación            | `"example text"`                       | -     | -    | -     |
 
 Ejemplo de `SimulationTraffic` (en NGSIv2):
 
@@ -590,6 +609,10 @@ Ejemplo de `SimulationTraffic` (en NGSIv2):
         "type": "TextUnrestricted",
         "value": "example text"
     },
+    "bias": {
+        "type": "TextUnrestricted",
+        "value": "example text"
+    },
     "location": {
         "type": "TextUnrestricted",
         "value": [
@@ -602,10 +625,6 @@ Ejemplo de `SimulationTraffic` (en NGSIv2):
                 0.4444
             ]
         ]
-    },
-    "bias": {
-        "type": "TextUnrestricted",
-        "value": "example text"
     },
     "status": {
         "type": "TextUnrestricted",
@@ -842,7 +861,7 @@ Zona. Este tipo de entidad solo se utiliza para rellenar los selectores en urbo.
 | zoneId      | Number           | integer                           | ID de zona                                               | `5`                                                                                            | -     | -    | -     |
 | name        | TextUnrestricted | text                              | Nombre de zona                                           | `"example text"`                                                                               | -     | -    | -     |
 | label       | TextUnrestricted | text                              | Etiqueta para selectores                                 | `"example text"`                                                                               | -     | -    | -     |
-| location    | geo:json         | geometry(Polygon)                 | Polígono que delimita la zona                            | `{"type": "geo:json", "value": {"type": "Polygon", "coordinates": [[[3.5, 24.6], [33, 44]]]}}` | -     | -    | -     |
+| location    | geo:json         | geometry                          | Polígono que delimita la zona                            | `{"type": "geo:json", "value": {"type": "Polygon", "coordinates": [[[3.5, 24.6], [33, 44]]]}}` | -     | -    | -     |
 
 Ejemplo de `Zone` (en NGSIv2):
 

@@ -2,9 +2,9 @@
   "SimulationParking": {
     "etl_vectorize": {
       "subscriptions": {
-        "SimulationParking_etl": {
-          "documentation": "Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking",
-          "description": "SimulationParking:JENKINS::etl",
+        "trigger_etl": {
+          "documentation": "Subscripción del flujo etl_vectorize (tipo FLOW_RAW) en modelo SimulationParking",
+          "description": "SimulationParking:JENKINS::etl_vectorize_run",
           "status": "active",
           "subject": {
             "entities": [
@@ -16,6 +16,12 @@
             "condition": {
               "attrs": [
                 "TimeInstant"
+              ],
+              "alterationTypes": [
+                "entityCreate",
+                "entityUpdate",
+                "entityChange",
+                "entityDelete"
               ]
             }
           },
@@ -30,7 +36,8 @@
               },
               "qs": {
                 "ETL_VECTORIZE_SIMULATION_TYPE": "${type}",
-                "ETL_VECTORIZE_SIMULATION_ID": "${id}"
+                "ETL_VECTORIZE_SIMULATION_ID": "${id}",
+                "ETL_VECTORIZE_CHANGETYPE": "${alterationType}"
               },
               "payload": null
             }

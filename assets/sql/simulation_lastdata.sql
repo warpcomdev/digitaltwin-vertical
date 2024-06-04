@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS :target_schema.dtwin_simulation_lastdata (
   timeinstant timestamp with time zone NOT NULL,
   sceneref text,
   name text,
+  location geometry,
   description text,
   -- Common model attributes
   entityid text,

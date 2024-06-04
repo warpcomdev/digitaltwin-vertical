@@ -173,7 +173,7 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo Simulation
 - **Protocolo**: HTTP
 - **Notificación personalizada**: `{"url": "<endpoint correspondiente a CYGNUS-LASTADATA en el entorno>", "headers": {"fiware-servicepath": "/dtwin"}}`
 - **Formato de atributos**: normalized
-- **Atributos a notificar**: TimeInstant, sceneref, name, description, alterationType
+- **Atributos a notificar**: TimeInstant, sceneref, name, location, description, alterationType
 - **Condición**: TimeInstant
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate, entityDelete
 - **Entidades**:
@@ -182,54 +182,57 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo Simulation
 
 # Suscripción a SimulationParking JENKINS
 
-Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking
+Subscripción del flujo etl_vectorize (tipo FLOW_RAW) en modelo SimulationParking
 
 - **Estado** : Activa
-- **Descripción**: SimulationParking:JENKINS::etl
+- **Descripción**: SimulationParking:JENKINS::etl_vectorize_run
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente al JENKINS en el entorno>/etl_digitaltwin_vectorize/buildWithParameters", "headers": {"Authorization": "Basic !!{JENKINS_BASIC_AUTH}"}, "qs": {"ETL_VECTORIZE_SIMULATION_TYPE": "${type}", "ETL_VECTORIZE_SIMULATION_ID": "${id}"}, "payload": null}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente al JENKINS en el entorno>/etl_digitaltwin_vectorize/buildWithParameters", "headers": {"Authorization": "Basic !!{JENKINS_BASIC_AUTH}"}, "qs": {"ETL_VECTORIZE_SIMULATION_TYPE": "${type}", "ETL_VECTORIZE_SIMULATION_ID": "${id}", "ETL_VECTORIZE_CHANGETYPE": "${alterationType}"}, "payload": null}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant
 - **Condición**: TimeInstant
+  - Tipo de alteration en entidad que desencadena la notificación: entityCreate, entityUpdate, entityChange, entityDelete
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: SimulationParking
 
 # Suscripción a SimulationRoute JENKINS
 
-Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationRoute
+Subscripción del flujo etl_vectorize (tipo FLOW_RAW) en modelo SimulationRoute
 
 - **Estado** : Activa
-- **Descripción**: SimulationRoute:JENKINS::etl
+- **Descripción**: SimulationRoute:JENKINS::etl_vectorize_run
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente al JENKINS en el entorno>/etl_digitaltwin_vectorize/buildWithParameters", "headers": {"Authorization": "Basic !!{JENKINS_BASIC_AUTH}"}, "qs": {"ETL_VECTORIZE_SIMULATION_TYPE": "${type}", "ETL_VECTORIZE_SIMULATION_ID": "${id}"}, "payload": null}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente al JENKINS en el entorno>/etl_digitaltwin_vectorize/buildWithParameters", "headers": {"Authorization": "Basic !!{JENKINS_BASIC_AUTH}"}, "qs": {"ETL_VECTORIZE_SIMULATION_TYPE": "${type}", "ETL_VECTORIZE_SIMULATION_ID": "${id}", "ETL_VECTORIZE_CHANGETYPE": "${alterationType}"}, "payload": null}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant
 - **Condición**: TimeInstant
+  - Tipo de alteration en entidad que desencadena la notificación: entityCreate, entityUpdate, entityChange, entityDelete
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: SimulationRoute
 
 # Suscripción a SimulationTraffic JENKINS
 
-Subscripción del flujo etl (tipo FLOW_RAW) en modelo SimulationParking
+Subscripción del flujo etl_vectorize (tipo FLOW_RAW) en modelo SimulationTraffic
 
 - **Estado** : Activa
-- **Descripción**: SimulationParking:JENKINS::etl
+- **Descripción**: SimulationTraffic:JENKINS::etl_vectorize_run
 - **Fecha y hora de expiración**: en blanco
 - **Segundos entre notificaciones**: en blanco
 - **Protocolo**: HTTP
-- **Notificación personalizada**: `{"url": "<endpoint correspondiente al JENKINS en el entorno>/etl_digitaltwin_vectorize/buildWithParameters", "headers": {"Authorization": "Basic !!{JENKINS_BASIC_AUTH}"}, "qs": {"ETL_VECTORIZE_SIMULATION_TYPE": "${type}", "ETL_VECTORIZE_SIMULATION_ID": "${id}"}, "payload": null}`
+- **Notificación personalizada**: `{"url": "<endpoint correspondiente al JENKINS en el entorno>/etl_digitaltwin_vectorize/buildWithParameters", "headers": {"Authorization": "Basic !!{JENKINS_BASIC_AUTH}"}, "qs": {"ETL_VECTORIZE_SIMULATION_TYPE": "${type}", "ETL_VECTORIZE_SIMULATION_ID": "${id}", "ETL_VECTORIZE_CHANGETYPE": "${alterationType}"}, "payload": null}`
 - **Formato de atributos**: normalized
 - **Atributos a notificar**: TimeInstant
 - **Condición**: TimeInstant
+  - Tipo de alteration en entidad que desencadena la notificación: entityCreate, entityUpdate, entityChange, entityDelete
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
-  - Type: SimulationParking
+  - Type: SimulationTraffic
 
 # Suscripción a TrafficCongestion HISTORIC
 

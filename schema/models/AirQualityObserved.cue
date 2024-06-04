@@ -22,7 +22,7 @@ AirQualityObserved: templates.#Twin & {
 		NO2: {
 			types.#Double
 			description: "Dióxido de Nitrógeno"
-			unit: "µg/m3",
+			unit:        "µg/m3"
 			flows: ["historic"]
 			#metric: true
 		}
@@ -30,7 +30,7 @@ AirQualityObserved: templates.#Twin & {
 		PM25: {
 			types.#Double
 			description: "Partículas en suspensión inferiores a 2,5 micras"
-			unit: "µg/m3",
+			unit:        "µg/m3"
 			flows: ["historic"]
 			#metric: true
 		}
@@ -38,7 +38,7 @@ AirQualityObserved: templates.#Twin & {
 		PM10: {
 			types.#Double
 			description: "Dióxido de Nitrógeno"
-			unit: "µg/m3",
+			unit:        "µg/m3"
 			flows: ["historic"]
 			#metric: true
 		}
@@ -46,7 +46,7 @@ AirQualityObserved: templates.#Twin & {
 		O3: {
 			types.#Double
 			description: "Ozono"
-			unit: "µg/m3",
+			unit:        "µg/m3"
 			flows: ["historic"]
 			#metric: true
 		}
