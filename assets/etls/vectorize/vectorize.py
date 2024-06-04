@@ -2315,12 +2315,68 @@ class SimRoute:
                 decoder.add_layer(decoder.weighted_layer(entitytype, metric, self.sourceref, weights_series))
 
     def impact_route_intensity(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
-        logging.info("SimRoute impact_route:\n%s", df)
+        logging.info("SimRoute impact_route_intensity:\n%s\n%s", df.index.names, df.columns)
         return pd.Series([0] * len(df), index=df.index)
 
     def impact_parking(self, reference: Reference, df: pd.DataFrame) -> pd.Series:
-        logging.info("SimRoute impact_parking:\n%s", df)
-        return pd.Series([0] * len(df), index=df.index)
+        logging.info("SimRoute impact_parking:\n%s\n%s", df.index.names, df.columns)
+        # Localizo la cantidad de viajeros que tienen las líneas cercanas a cada parking
+        assert(reference.distance_df is not None)
+        scale_func = DecoderLayer.scaled_gaussian(y0=0, x1=0, y1=1, x2=1000, y2=0.5, yinf=0, bias=self.bias)
+        # from_sourceref = parking
+        # to_sourceref = RouteIntensity
+        distance_df = reference.distance_df.reset_index()
+        distance_df = distance_df[(distance_df['from_entitytype'] == 'OffStreetParking') & (distance_df['to_entitytype'] == 'RouteIntensity')]
+        # No consideramos la nueva línea en estos cálculos
+        distance_df = distance_df[distance_df['to_sourceref'] != self.sourceref]
+        # Añadimos la columna "distance_scale"
+        distance_df = pd.concat([distance_df, DecoderLayer.apply_scale(series=distance_df['distance'], scale=scale_func, name="distance_scale")], axis=1)
+        # Añadimos la columna "intensity"
+        assert(reference.data_df_map is not None)
+        distance_df = pd.merge(
+            distance_df,
+            reference.data_df_map['RouteIntensity'][['sourceref', 'intensity']].groupby('sourceref').mean(),
+            how='left',
+            left_on='to_sourceref',
+            right_on='sourceref'
+        )
+        # Y añadimos los forwardstops y returnstops
+        distance_df = pd.merge(
+            distance_df,
+            reference.dims_df_map['RouteIntensity'][['sourceref', 'forwardstops', 'returnstops']].fillna(1),
+            how='left',
+            left_on='to_sourceref',
+            right_on='sourceref'
+        )
+        # Y calculamos la cantidad de gente que pasa cerca del parking,
+        # en función de la intensidad de las líneas y su distancia
+        distance_df['sum_intensity'] = distance_df['intensity'] * distance_df['distance_scale'] / (distance_df['forwardstops'] + distance_df['returnstops'])
+        logging.debug("impact_parking: distance_df=\n%s", distance_df.to_string())
+        intensity_df = distance_df[['from_sourceref', 'sum_intensity']].rename(columns={
+            "from_sourceref": "sourceref"
+        }).groupby('sourceref', as_index=True).sum()
+        logging.debug("impact_parking: intensity_df=\n%s", intensity_df.to_string())
+        # Ahora, veo para este parking, qué distancia e intensidad hay
+        merged = pd.concat([df, DecoderLayer.apply_scale(series=df['distance'], scale=scale_func, name="distance_scale")], axis=1)
+        merged['new_intensity'] = merged['intensity'] * merged['distance_scale'] / (self.forwardstops + self.returnstops)
+        # Uno estos datos con los de intensidad cercana
+        merged = pd.merge(merged, intensity_df, how='left', left_index=True, right_index=True)
+        merged = merged.fillna(0)
+        merged['sum_intensity'] = merged[['sum_intensity', 'new_intensity']].max(axis=1)
+        merged['ratio_intensity'] = merged['new_intensity'] / merged['sum_intensity']
+        # La gente que deja de usar el parking será una proporción entre la intensidad
+        # de la nueva línea, y las intensidades de las líneas que ya existen y pasan cerca.
+        # - Si la relación intensidad-distancia es similar a la suma de las líneas que ya hay,
+        #   la ocupación bajará poco.
+        # - Si la relación intensidad-distancia es muy superior a la suma de las líneas que
+        #   ya hay, la ocupación bajará bastante más.
+        scale = reference.metadata['OffStreetParking'].metrics['occupationpercent'].scale
+        merged['occupation'] = merged['capacity'] * merged['hidden'] / scale
+        merged['budget_occupation'] = merged['occupation'] * (0.1 + (self.bias / 9) * 0.25)
+        merged['new_occupation'] = merged['occupation'] - merged['ratio_intensity'] * merged['budget_occupation']
+        merged['decrement'] = ((merged['new_occupation'] - merged['occupation']) * scale) / merged['capacity']
+        logging.debug("SimRoute merged_df:\n%s", merged.to_string())
+        return merged['decrement']
 
     def save_simulation_entity(self, conn: Connection, reference: Reference, entitytype: str):
         """generate simulated RouteSchedule or RouteIntensity entity"""
