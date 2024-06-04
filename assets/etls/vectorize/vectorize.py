@@ -710,7 +710,7 @@ class Reference:
     metadata: typing.Mapping[str, Metadata]
 
     # Location of all the zones
-    zones_df: pd.DataFrame
+    zones_df: typing.Optional[pd.DataFrame] = None
 
     # Distance between each pair of entities in the
     # simulation. It has a multiindex
@@ -750,41 +750,40 @@ class Reference:
             items = (Metadata.create(params) for params in json.load(f))
             meta = {item.entityType: item for item in items}
             meta = {k: meta[k] for k in sorted(meta.keys())}
-        # zones next
-        with engine.connect() as con:
-            zones_df = pd.read_sql(text(f"""
-                SELECT
-                    entityid, zoneid, name, label,
-                    ST_AsGeoJSON(ST_ConvexHull(location)) AS location
-                FROM dtwin_zone_lastdata
-                """),
-                con=con
-            )
-            zones_df = geojson_to_shape(zones_df, 'location')
-        return Reference(
-            metadata=meta,
-            zones_df=zones_df
-        )
+        return Reference(metadata=meta)
 
     def match_zone(self, point: geometry.Point, default: str) -> str:
         """Find the zone to which a point belongs"""
+        assert(self.zones_df is not None)
         for _, row in self.zones_df.iterrows():
             if row.location and row.location.contains(point):
                 return row.entityid
         return default
 
-    @staticmethod
-    def last_simulation(engine: Engine, sceneref: str) -> datetime:
+    def last_simulation(self, engine: Engine, sceneref: str) -> datetime:
         """Retrieve the date of the latest simulation for the given sceneref"""
-        query = text(f"""
-        SELECT timeinstant
-        FROM dtwin_simulation_lastdata
-        WHERE entityid = :sceneref
-        ORDER BY timeinstant DESC
-        LIMIT 1
-        """)
-        df = pd.read_sql(query.bindparams(sceneref=sceneref), engine)
-        print(df)
+        with engine.connect() as con:
+            # Take the chance to load the zones_df, if not done already
+            if self.zones_df is None:
+                zones_df = pd.read_sql(text(f"""
+                    SELECT
+                        entityid, zoneid, name, label,
+                        ST_AsGeoJSON(ST_ConvexHull(location)) AS location
+                    FROM dtwin_zone_lastdata
+                    """),
+                    con=con
+                )
+                zones_df = geojson_to_shape(zones_df, 'location')
+                self.zones_df = zones_df
+            query = text(f"""
+            SELECT timeinstant
+            FROM dtwin_simulation_lastdata
+            WHERE entityid = :sceneref
+            ORDER BY timeinstant DESC
+            LIMIT 1
+            """)
+            df = pd.read_sql(query.bindparams(sceneref=sceneref), con)
+        #print(df)
         return df.iloc[0]['timeinstant']
 
     def calculate_distances(self, dims_df_map: typing.Mapping[str, pd.DataFrame]):
@@ -1718,7 +1717,7 @@ def main(reference: Reference, engine: Engine, broker: Broker, fallback: typing.
 
     # Get the latest identity we are working with
     identityref = os.getenv("ETL_VECTORIZE_IDENTITYREF", "N/A")
-    last_identity_date = Reference.last_simulation(engine=engine, sceneref=identityref)
+    last_identity_date = reference.last_simulation(engine=engine, sceneref=identityref)
     logging.info("Latest identity data %s: %s", identityref, last_identity_date)
 
     # Get the simulation properties
@@ -2341,6 +2340,7 @@ class SimRoute:
             right_on='sourceref'
         )
         # Y añadimos los forwardstops y returnstops
+        assert(reference.dims_df_map is not None)
         distance_df = pd.merge(
             distance_df,
             reference.dims_df_map['RouteIntensity'][['sourceref', 'forwardstops', 'returnstops']].fillna(1),
@@ -2474,6 +2474,8 @@ if __name__ == "__main__":
             engine = stack.enter_context(psql_engine())
             broker = stack.enter_context(orion_engine())
             reference = Reference.create(meta_path=pathlib.Path(args.meta), engine=engine)
+            changeType = os.getenv("ETL_VECTORIZE_CHANGETYPE", "")
+            logging.warn("ETL_VECTORIZE_CHANGETYPE=%s", changeType)
             logging.info("Metadata order:\n%s", ", ".join(reference.metadata.keys()))
             main(reference, engine, broker, args.fallback, args.dryrun)
         logging.info("ETL OK")
