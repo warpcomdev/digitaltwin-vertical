@@ -24,6 +24,7 @@ dict_class_cb_data = {'sourceref': 'Text', 'entityid': 'Text', 'name': 'TextUnre
                       'timeinstant': 'DateTime', 'recvtime': 'DateTime', 'zonelist': 'Text', 'zoneid': 'Number',
                       'label': 'TextUnrestricted'}
 
+
 @dataclass
 class Broker:
     """
@@ -34,28 +35,29 @@ class Broker:
 
     @staticmethod
     def create() -> 'Broker':
-        password = os.getenv('PASSWORD')
+        password = os.getenv('PASSWORD_LASTDATA')
         if not password:
             logging.warning("No broker password provided, running in dettached mode")
             return Broker(auth=None, cb=None)
         auth = tc.auth.authManager(
-            endpoint=os.getenv('ENDPOINT_KEYSTONE'),
-            service=os.getenv('SERVICE'),
-            subservice=os.getenv('SUBSERVICE'),
-            user=os.getenv('USER'),
+            endpoint=os.getenv('ENDPOINT_KEYSTONE_LASTDATA'),
+            service=os.getenv('SERVICE_LASTDATA'),
+            subservice=os.getenv('SUBSERVICE_LASTDATA'),
+            user=os.getenv('USER_LASTDATA'),
             password=password,
         )
         cb = tc.cb.cbManager(
-            endpoint=os.getenv('ENDPOINT_CB'),
-            sleep_send_batch=int(os.getenv('SLEEP_SEND_BATCH', '1')),
-            timeout=int(os.getenv('TIMEOUT', '10')),
-            post_retry_connect=float(os.getenv('POST_RETRY_CONNECT', '3')),
-            post_retry_backoff_factor=float(os.getenv('POST_RETRY_BACKOFF_FACTOR', '2')),
-            batch_size=int(os.getenv('BATCH_SIZE', '20')),
+            endpoint=os.getenv('ENDPOINT_CB_LASTDATA'),
+            sleep_send_batch=int(os.getenv('SLEEP_SEND_BATCH_LASTDATA', '1')),
+            timeout=int(os.getenv('TIMEOUT_LASTDATA', '10')),
+            post_retry_connect=float(os.getenv('POST_RETRY_CONNECT_LASTDATA', '3')),
+            post_retry_backoff_factor=float(os.getenv('POST_RETRY_BACKOFF_FACTOR_LASTDATA', '2')),
+            batch_size=int(os.getenv('BATCH_SIZE_LASTDATA', '20')),
         )
         return Broker(auth=auth, cb=cb)
 
-    def fetch(self, entitytype: str, entityid: typing.Optional[str]=None, q: typing.Optional[str]=None) -> typing.Sequence[typing.Any]:
+    def fetch(self, entitytype: str, entityid: typing.Optional[str] = None, q: typing.Optional[str] = None) -> \
+    typing.Sequence[typing.Any]:
         """Fetch general entity info"""
         if self.cb is None:
             return tuple()
@@ -85,6 +87,7 @@ class Broker:
             return
         self.cb.delete_entities(auth=self.auth, type=entitytype, q=q)
 
+
 def calculo_distritos(input_df: pd.DataFrame, key: str, latitud: str, longitud: str) -> pd.DataFrame:
     """
     Partiendo de un fichero shp (pyogrio_file) que delimita la geografía de los distritos de la ciudad, esta rutina
@@ -102,7 +105,7 @@ def calculo_distritos(input_df: pd.DataFrame, key: str, latitud: str, longitud: 
              del punto), y coddistrit, el distrito al que pertenece
     """
     load_dotenv(os.path.join(os.getcwd(), 'config.env'))  # Loads enviromments variables
-    shp_dir = os.getenv('SHP_DIR')
+    shp_dir = os.getenv('LASTDATA_SHP_DIR')
 
     if os.path.exists(os.path.join(shp_dir, PYOGRYO_FILE)):  # Verify if shp file already exists
 
@@ -136,10 +139,10 @@ def get_shp_data() -> str:
     """
 
     load_dotenv(os.path.join(os.getcwd(), 'config.env'))  # Cargamos as variables de 'entorno'
-    SHP_DIR = os.getenv('SHP_DIR')
+    SHP_DIR = os.getenv('LASTDATA_SHP_DIR')
 
     try:  # We create the directory in case it does not exists
-        os.mkdir('SHP_DIR')
+        os.mkdir(SHP_DIR)
     except FileExistsError:
         pass
 
@@ -147,8 +150,8 @@ def get_shp_data() -> str:
     try:  # Access to web data
         resp = requests.get(url)
 
-    except Exception as e:
-        print(f"Excepción en el acceso a los datos: {e.args}")
+    except Exception as Arguments:
+        logging.error("Excepción en el acceso a los datos shp", Arguments)
         return 'NOK'
 
     else:  # Access OK
@@ -189,7 +192,7 @@ def send_data_to_CB(df: pd.DataFrame):
         row_dict['type'] = df.iloc[i]['entitytype']
         row_dict['sceneref'] = {'type': 'Text', 'value': 'N/A'}
         for feature in columns_list:
-            feat_data = df.iloc[i][feature]   # Column data
+            feat_data = df.iloc[i][feature]  # Column data
             row_dict[feature] = {'type': dict_class_cb_data[feature], 'value': feat_data}
         list_data.append(row_dict)
 
@@ -197,12 +200,3 @@ def send_data_to_CB(df: pd.DataFrame):
     # -------------
     br = Broker.create()
     br.push(entities=list_data)
-
-
-if __name__ == '__main__':
-    #get_shp_data()
-    #df = pd.read_csv('e:/prueba.csv', sep= ';')
-    #send_data_to_CB(df)
-    load_dotenv(os.path.join(os.getcwd(), 'config.env'))  # Loads enviromments variables
-
-    pass

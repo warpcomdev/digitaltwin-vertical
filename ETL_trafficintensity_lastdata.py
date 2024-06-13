@@ -7,6 +7,7 @@ import os
 import requests
 from typing import Dict, List
 import geojson
+from dotenv import load_dotenv
 from shapely.geometry import shape
 from rutinas_auxiliares import send_data_to_CB, calculo_distritos
 
@@ -88,6 +89,8 @@ def ETL_trafficintensity_lastdata() -> pd.DataFrame:
 
 
 if __name__ == '__main__':
+
+    load_dotenv(os.path.join(os.getcwd(), 'config.env'))  # Loads enviromments variables
 
     logging.basicConfig(
     level=os.getenv('ETL_LOG_LEVEL', 'DEBUG'),

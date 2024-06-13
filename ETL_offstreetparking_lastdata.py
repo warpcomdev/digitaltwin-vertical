@@ -88,6 +88,8 @@ def etl_offstreetparking_lastdata() -> pd.DataFrame:
 
 if __name__ == '__main__':
 
+    load_dotenv(os.path.join(os.getcwd(), 'config.env'))  # Loads enviromments variables
+
     logging.basicConfig(
         level=os.getenv('ETL_LOG_LEVEL', 'DEBUG'),
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -95,7 +97,6 @@ if __name__ == '__main__':
 
     logging.info('Start of execution ETL_offstreetparking_lastdata')
 
-    load_dotenv(os.path.join(os.getcwd(), 'config.env'))  # Loads enviromments variables
     df = etl_offstreetparking_lastdata()
     if df.empty:
         logging.info('No data obtained from web source')

@@ -6,6 +6,7 @@ from statistics import mode
 from typing import Dict, List
 import pandas as pd
 import shapely
+from dotenv import load_dotenv
 
 from rutinas_auxiliares import send_data_to_CB, calculo_distritos
 from shapely.geometry import shape, MultiLineString
@@ -317,6 +318,8 @@ def etl_routeintensity_lastdata() -> pd.DataFrame:
 
 
 if __name__ == '__main__':
+
+    load_dotenv(os.path.join(os.getcwd(), 'config.env'))  # Loads enviromments variables
 
     logging.basicConfig(
         level=os.getenv('ETL_LOG_LEVEL', 'DEBUG'),
