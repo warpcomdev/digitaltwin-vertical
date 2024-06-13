@@ -206,8 +206,8 @@ if __name__ == '__main__':
     load_dotenv(os.path.join(os.getcwd(), 'config.env'))  # Cargamos as variables de 'entorno'
 
     API_KEY = os.getenv('API_KEY')  # Clave API para acceder a la web de información de transportes
-    BASE_DIR = os.getenv('BASE_DIR')
-    FILES_DIR = os.getenv('FILES_DIR')  # Carpeta donde se guardarán los resultados del programa
+    BASE_DIR = os.getenv('LASTDATA_BASE_DIR')
+    FILES_DIR = os.getenv('LASTDATA_FILES_DIR')  # Carpeta donde se guardarán los resultados del programa
 
     logging.basicConfig(level=logging.DEBUG)
     logging.info(f'{datetime.datetime.now()} Comienza la ejecución del programa')

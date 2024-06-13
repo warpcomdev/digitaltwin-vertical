@@ -7,9 +7,8 @@ from typing import Dict, List
 import pandas as pd
 import shapely
 
-from rutinas_auxiliares import send_data_to_CB, calculo_distritos
-from shapely.geometry import shape, MultiLineString
-import ast
+from assets.etls.lastdata.rutinas_auxiliares import send_data_to_CB, calculo_distritos
+from shapely.geometry import MultiLineString
 
 base_dir = os.getcwd()
 files_dir = os.path.join(base_dir, 'ficheros_datos')

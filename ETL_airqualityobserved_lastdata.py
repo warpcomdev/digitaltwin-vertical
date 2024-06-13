@@ -7,7 +7,7 @@ from typing import List
 import pandas as pd
 import requests
 
-from rutinas_auxiliares import send_data_to_CB, calculo_distritos
+from assets.etls.lastdata.rutinas_auxiliares import send_data_to_CB, calculo_distritos
 
 ENTITYTYPE = 'AirQualityObserved'
 FIWARE_PATH_SERVICE = '/digitaltwin'

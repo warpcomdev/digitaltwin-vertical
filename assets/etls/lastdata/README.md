@@ -1,1 +1,1 @@
-# ETL de carga de datos dimensionales (lastdata)
+# digitaltwin-vertical

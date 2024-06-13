@@ -5,16 +5,14 @@ import json
 import datetime
 import os
 import requests
-from typing import Dict, List
-import geojson
+from typing import List
 from dotenv import load_dotenv
-from shapely.geometry import shape
-from rutinas_auxiliares import send_data_to_CB, calculo_distritos
+from assets.etls.lastdata.rutinas_auxiliares import send_data_to_CB, calculo_distritos
 
 URL_VLCI_ESPIRAS = 'https://geoportal.valencia.es/apps/OpenData/Trafico/tra_espiras_p.json'
 ENTITYTYPE = 'TrafficIntensity'
 FIWARE_PATH_SERVICE = '/digitaltwin'
-NAMES_FILE = 'nombres_puntos_medida_tráfico.csv'
+NAMES_FILE = 'assets/etls/lastdata/nombres_puntos_medida_tráfico.csv'
 
 def set_point_name(df_data:pd.DataFrame): # Provisional procedure. Method to be defined
 

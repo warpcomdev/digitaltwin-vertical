@@ -5,10 +5,8 @@ import json
 import datetime
 import os
 import requests
-from typing import Dict, List
-import geojson
-from shapely.geometry import shape
-from rutinas_auxiliares import send_data_to_CB, calculo_distritos
+from typing import List
+from assets.etls.lastdata.rutinas_auxiliares import send_data_to_CB, calculo_distritos
 
 URL_VLCI_ESPIRAS = 'https://geoportal.valencia.es/apps/OpenData/Trafico/tra_espiras_p.json'
 ENTITYTYPE = 'TrafficIntensity'

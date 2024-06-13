@@ -3,7 +3,6 @@ import datetime
 import json
 import logging
 import os
-import sys
 from typing import Any
 
 import geopandas
@@ -13,7 +12,7 @@ import shapely
 from dotenv import load_dotenv
 from shapely.geometry import shape
 
-from rutinas_auxiliares import send_data_to_CB
+from assets.etls.lastdata.rutinas_auxiliares import send_data_to_CB
 
 geopandas.options.io_engine = "pyogrio"
 

@@ -8,7 +8,7 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-from rutinas_auxiliares import send_data_to_CB, calculo_distritos
+from assets.etls.lastdata.rutinas_auxiliares import send_data_to_CB, calculo_distritos
 
 URL_ESTADO_TRAFICO = ('http://valencia.opendatasoft.com/api/explore/v2.1/catalog/datasets/'
                       'estat-transit-temps-real-estado-trafico-tiempo-real/exports/json?'
