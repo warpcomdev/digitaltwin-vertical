@@ -6,6 +6,7 @@ import datetime
 import os
 import requests
 from typing import List
+from dotenv import load_dotenv
 from assets.etls.lastdata.rutinas_auxiliares import send_data_to_CB, calculo_distritos
 
 URL_VLCI_ESPIRAS = 'https://geoportal.valencia.es/apps/OpenData/Trafico/tra_espiras_p.json'
@@ -86,6 +87,8 @@ def ETL_trafficintensity_lastdata() -> pd.DataFrame:
 
 
 if __name__ == '__main__':
+
+    load_dotenv(os.path.join(os.getcwd(), 'config.env'))  # Loads enviromments variables
 
     logging.basicConfig(
     level=os.getenv('ETL_LOG_LEVEL', 'DEBUG'),
