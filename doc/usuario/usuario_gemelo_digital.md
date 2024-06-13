@@ -7,13 +7,13 @@ La vertical del gemelo digital está compuesta de las siguientes vistas principa
 
 Una vez se ha accedido al entorno, la primera interfaz que se muestra es la de selección de ámbitos (scope_tree), como se muestra en la siguiente imagen:
 
-![Scope_tree](usuario/scope_tree.png)
+![Scope_tree](scope_tree.png)
 
 Después de seleccionar uno de los ámbitos o scopes, es posible navegar entre aquellos paneles que están relacionados con el mismo scope. Para ello, se dispone de dos opciones: 
 
 - La primera es la navegación directa a través de las pestañas o "tabs":
 
-![Tabs](usuario/tabs.png)
+![Tabs](tabs.png)
 
 - La otra posibilidad es clicar en la sección "ir al panel" y desplegar las opciones correspondientes. 
 
