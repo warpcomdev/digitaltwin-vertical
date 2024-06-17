@@ -9,11 +9,11 @@ La vertical del gemelo digital está compuesta de las siguientes vistas principa
 
 ### Navegación entre paneles
 
-Una vez se ha accedido al entorno, la primera interfaz que se muestra es la de selección de ámbitos (scope_tree), como se corresponde con la siguiente imagen:
+Una vez se ha accedido al entorno, la primera interfaz que se muestra es la de selección de ámbitos o scopes (las 4 vistas), como se corresponde con la siguiente imagen:
 
 ![Scope_tree](scope_tree.png)
 
-Después de seleccionar uno de los ámbitos o scopes, es posible navegar entre aquellos paneles que están relacionados con el mismo scope. Para ello, se dispone de dos opciones: 
+Después de seleccionar uno de los ámbitos, es posible navegar entre aquellos paneles que están relacionados con el mismo scope. Para ello, se dispone de dos opciones: 
 
 - La primera es la navegación directa a través de las pestañas o "tabs":
 
@@ -44,7 +44,7 @@ Cada una de ellas refleja una serie de widgets que permiten visualizar rápidame
 ![vista_identidad_1](https://github.com/warpcomdev/digitaltwin-vertical/assets/127782936/8258514b-7383-4690-9368-1542bdf6125d)
 ![vista_identidad_2](https://github.com/warpcomdev/digitaltwin-vertical/assets/127782936/372e9a6b-0459-4d7f-8301-9854cba76e11)
 
-En cuanto a los selectores que permiten filtrar o visualizar periodos concretos, serían los siguientes:
+En cuanto a los selectores que permiten filtrar o visualizar periodos o rangos concretos, serían los siguientes:
 
 - Selector de temporada. Permite elegir entre las dos temporadas definidas actualmente: alta y baja.
 - Selector de distrito. Posibilita seleccionar uno o varios entre los 19 distritos de la ciudad de Valencia para que los widgets que soporten filtrado, se actualicen con los datos correspondiente.
