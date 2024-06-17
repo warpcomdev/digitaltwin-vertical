@@ -2,10 +2,10 @@
 
 La vertical del gemelo digital está compuesta de las siguientes vistas principales:
 
-- [Vista identidad](#vista_identidad): La vista identidad es aquel conjunto de indicadores que mejor caracterizan una ciudad dentro del ámbito de estudio y para el punto de vista de un gestor. Es una vista real, no simulada, pero nueva, diseñada y optimizada para ser la mejor representación de la ciudad, el escenario cero, de referencia. Es el punto de partida del gemelo, ya que determina los conjuntos y modelos de datos que se utilizarán para generar las vistas simuladas.
-- [Tablero de simulación](#tablero_de_simulación): El tablero de simulación permite la generación de nuevos escenarios, comprendidos dentros de los tipos de simulaciones establecidos actualmente: creación de un nuevo parking, creación de una nueva línea EMT, peatonalización de una calle y corte de una calle de larga duración.
-- [Vista simulada](#vista_simulada): Como en la vista de identidad, los widgets de cada una de las pestañas que lo compoenen permiten visualizar rápidamente el estado habitual de los servicios de la ciudad, pero con la diferencia de que estos paneles cuentan con un selector que permite elegir alguna de las simulaciones creadas anteriormente.
-- [Vista comparación](#vista_comparación): Esta vista consta únicamente de un panel que permite realizar comparaciones en tiempo real entre las simulaciones creadas con anterioridad, así como el escenario por defecto "la vista identidad".
+- [Vista identidad](#vista-identidad): La vista identidad es aquel conjunto de indicadores que mejor caracterizan una ciudad dentro del ámbito de estudio y para el punto de vista de un gestor. Es una vista real, no simulada, pero nueva, diseñada y optimizada para ser la mejor representación de la ciudad, el escenario cero, de referencia. Es el punto de partida del gemelo, ya que determina los conjuntos y modelos de datos que se utilizarán para generar las vistas simuladas.
+- [Tablero de simulación](#tablero-de-simulación): El tablero de simulación permite la generación de nuevos escenarios, comprendidos dentros de los tipos de simulaciones establecidos actualmente: creación de un nuevo parking, creación de una nueva línea EMT, peatonalización de una calle y corte de una calle de larga duración.
+- [Vista simulada](#vista-simulada): Como en la vista de identidad, los widgets de cada una de las pestañas que lo compoenen permiten visualizar rápidamente el estado habitual de los servicios de la ciudad, pero con la diferencia de que estos paneles cuentan con un selector que permite elegir alguna de las simulaciones creadas anteriormente.
+- [Vista comparación](#vista-comparación): Esta vista consta únicamente de un panel que permite realizar comparaciones en tiempo real entre las simulaciones creadas con anterioridad, así como el escenario por defecto "la vista identidad".
 
 ### Navegación entre paneles
 
