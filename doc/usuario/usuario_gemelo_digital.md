@@ -60,7 +60,7 @@ En las pestañas de parking, transporte público y tráfico, este mismo mapa sir
 ![selección_parking](https://github.com/warpcomdev/digitaltwin-vertical/assets/127782936/76cca4c3-6eaa-4564-af05-fda36692af06)
 
 
-Finalmente, para mejorar la experiencia del usuario, se  ha habilitado la selección y deselección de capas o servicios a trabés de la leyenda, mediante click.
+Finalmente, para mejorar la experiencia del usuario, se  ha habilitado la selección y deselección de capas o servicios a través de la leyenda, mediante click.
 
 ![mapa_con_leyenda](https://github.com/warpcomdev/digitaltwin-vertical/assets/127782936/8e4438a9-3b55-46a6-92e3-44fc5e496ac7)
 
