@@ -33,6 +33,7 @@ yesterday: {
 		-- widget timeseries de urbo, sin necesidad de tener muestras
 		-- diarias para todos los días.
 		-- -------------------------------------------------------------
+		DROP VIEW IF EXISTS :target_schema.{{ .viewName }};
 		CREATE OR REPLACE VIEW :target_schema.{{ .viewName }} AS
 		SELECT
 		{{- range .columns }}

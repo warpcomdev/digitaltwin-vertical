@@ -31,6 +31,7 @@ peak: {
 		-- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 		-- una métrica dada.
 		-- -------------------------------------------------------------
+		DROP VIEW IF EXISTS :target_schema.{{ .viewName }};
 		CREATE OR REPLACE VIEW :target_schema.{{ .viewName }} AS
 		SELECT
 		  {{- range .columns }}

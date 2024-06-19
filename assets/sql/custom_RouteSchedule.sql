@@ -5,6 +5,7 @@
 -- widget timeseries de urbo, sin necesidad de tener muestras
 -- diarias para todos los días.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_routeschedule_yesterday;
 CREATE OR REPLACE VIEW :target_schema.dtwin_routeschedule_yesterday AS
 SELECT
   timeinstant,
@@ -23,6 +24,7 @@ FROM :target_schema.dtwin_routeschedule_sim AS t;
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 -- una métrica dada.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_routeschedule_peak;
 CREATE OR REPLACE VIEW :target_schema.dtwin_routeschedule_peak AS
 SELECT
   numeradas.timeinstant,

@@ -261,7 +261,9 @@
                                 "custom_AirQualityObserved.sql"
                             ],
                             "weight": 10,
-                            "relations": []
+                            "relations": [
+                                "dtwin_airqualityobserved_daily"
+                            ]
                         }
                     }
                 }

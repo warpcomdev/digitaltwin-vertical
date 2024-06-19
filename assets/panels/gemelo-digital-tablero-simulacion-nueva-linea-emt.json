@@ -1,0 +1,1261 @@
+{
+  "commonConf": {
+    "fixedFilters": []
+  },
+  "controls": [
+    {
+      "conf": {
+        "description": "Actualizar datos",
+        "refreshTime": 300000
+      },
+      "pushes": {
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "refresher"
+    }
+  ],
+  "defaultScope": {
+    "envVars": {
+      "dsName": "gemelo_parking",
+      "dsNameCB": "alcobendas",
+      "maxZoom": 21,
+      "municipalityOperator": "=",
+      "municipalityValue": "NA",
+      "municipalityVar": "municipality",
+      "prefijo": "",
+      "subserviceRoot": "",
+      "zoom": 12
+    }
+  },
+  "description": "Tablero de simulación del Gemelo Digital - Pestaña nueva línea EMT",
+  "grid": {
+    "columns": 3,
+    "ratio": 0.175
+  },
+  "i18n": {
+    "cat": {
+      "comparativa-pib_conf_description": "Producto Interior Bruto de Valencia frente a España, para el último año modelado.",
+      "comparativa-pib_conf_title": "PIB frente a PIB país",
+      "congestion-del-trafico_conf_description": "Nivel medio de congestión del tráfico, en las vías de circulación de la ciudad de Valencia. Se actualiza con los selectores de distrito y de tipo de día.",
+      "congestion-del-trafico_conf_title": "Congestión del tráfico",
+      "distribucion-ocupacion-parking_conf_description": "Muestra cómo se distribuye la ocupación del parking en el tiempo en el sentido de demanda plana vs picos de demanda. Muestra qué porcentaje del día el parking está en máxima ocupación y cuánto en mínima. Se actualiza con los selectores de distrito y de tipo de día. ",
+      "distribucion-ocupacion-parking_conf_title": "Distribución de la ocupación de los parkings",
+      "estado-esperado_conf_tittle": "Estado esperado de los servicios de parking y tráfico",
+      "estado-esperado_description": "Mapa de Valencia con el estado habitual de los parkings y la fluidez habitual del tráfico. Se actualiza según los selectores de distrito y de tipo de día (laborable, sábados, domingos). Por defecto muestra el estado para el tipo de día laborable.",
+      "horas-pico-valle-parkings_conf_description": "Detalle de horas pico y horas valle para todos los parkings, con dos franjas diarias (mañana y tarde).",
+      "horas-pico-valle-parkings_conf_title": "Horas pico y valle de los parkings",
+      "ibi-medio_conf_description": "Impuesto Sobre Bienes Inmuebles medio de Valencia para el último año modelado.",
+      "ibi-medio_conf_title": "IBI medio",
+      "inflacion_conf_description": "Valor de la inflación para el último año modelado.",
+      "inflacion_conf_title": "Inflación",
+      "ocupacion-de-los-parkings_conf_description": "Nivel medio de ocupación de los parkings de Valencia. Se actualiza con los selectores de distrito y de tipo de día.",
+      "ocupacion-de-los-parkings_conf_title": "Ocupación de los parkings",
+      "ocupacion-parkings_conf_description": "Distribución de la ocupación de los parkings según las horas del día. Se actualiza con los selectores de distrito y de tipo de día.",
+      "ocupacion-parkings_conf_title": "Ocupación de los parkings por horas",
+      "presupuesto-anual_conf_description": "Presupuesto anual de Valencia para el último año modelado.",
+      "presupuesto-anual_conf_title": "Presupuesto anual",
+      "ranking-parking_conf_description": "Ranking de los parkings con doble ordenación según el valor medio de la ocupación diaria: de más a menos saturados y de menos a más saturados.",
+      "ranking-parking_conf_title": "Ranking de parkings por ocupación",
+      "tasa-desempleo_conf_description": "Porcentaje que representa el número total de desempleados con respecto a la población activa para Valencia para el último año modelado.",
+      "tasa-desempleo_conf_title": "Tasa de desempleo",
+      "titulados-superiores_conf_description": "Número de titulados de educación superior por cada 100.000 habitantes para Valencia para el último año modelado.",
+      "titulados-superiores_conf_title": "Titulados Superiores",
+      "uso-del-transporte-publico_conf_description": "Nivel uso del transporte público de Valencia, según el número de trayectos de las diferentes líneas de la EMT. Se actualiza con los selectores de distrito y de tipo de día.",
+      "uso-del-transporte-publico_conf_title": "Uso del transporte público",
+      "vista-identidad_conf_description": "La vista identidad es aquel conjunto de indicadores que mejor caracterizan una ciudad dentro del ámbito de estudio y para el punto de vista de un gestor. Es una vista real, no simulada, pero nueva, diseñada y optimizada para ser la mejor representación de la ciudad, el escenario cero, de referencia. Es el punto de partida del gemelo, ya que determina los conjuntos y modelos de datos que se utilizarán para generar las vistas simuladas. ",
+      "vista-identidad_conf_title": "Vista identidad VALENCIANO"
+    },
+    "en": {
+      "comparativa-pib_conf_description": "Producto Interior Bruto de Valencia frente a España, para el último año modelado.",
+      "comparativa-pib_conf_title": "PIB frente a PIB país",
+      "congestion-del-trafico_conf_description": "Nivel medio de congestión del tráfico, en las vías de circulación de la ciudad de Valencia. Se actualiza con los selectores de distrito y de tipo de día.",
+      "congestion-del-trafico_conf_title": "Congestión del tráfico",
+      "distribucion-ocupacion-parking_conf_description": "Muestra cómo se distribuye la ocupación del parking en el tiempo en el sentido de demanda plana vs picos de demanda. Muestra qué porcentaje del día el parking está en máxima ocupación y cuánto en mínima. Se actualiza con los selectores de distrito y de tipo de día. ",
+      "distribucion-ocupacion-parking_conf_title": "Distribución de la ocupación de los parkings",
+      "estado-esperado_conf_tittle": "Estado esperado de los servicios de parking y tráfico",
+      "estado-esperado_description": "Mapa de Valencia con el estado habitual de los parkings y la fluidez habitual del tráfico. Se actualiza según los selectores de distrito y de tipo de día (laborable, sábados, domingos). Por defecto muestra el estado para el tipo de día laborable.",
+      "horas-pico-valle-parkings_conf_description": "Detalle de horas pico y horas valle para todos los parkings, con dos franjas diarias (mañana y tarde).",
+      "horas-pico-valle-parkings_conf_title": "Horas pico y valle de los parkings",
+      "ibi-medio_conf_description": "Impuesto Sobre Bienes Inmuebles medio de Valencia para el último año modelado.",
+      "ibi-medio_conf_title": "IBI medio",
+      "inflacion_conf_description": "Valor de la inflación para el último año modelado.",
+      "inflacion_conf_title": "Inflación",
+      "ocupacion-de-los-parkings_conf_description": "Nivel medio de ocupación de los parkings de Valencia. Se actualiza con los selectores de distrito y de tipo de día.",
+      "ocupacion-de-los-parkings_conf_title": "Ocupación de los parkings",
+      "ocupacion-parkings_conf_description": "Distribución de la ocupación de los parkings según las horas del día. Se actualiza con los selectores de distrito y de tipo de día.",
+      "ocupacion-parkings_conf_title": "Ocupación de los parkings por horas",
+      "presupuesto-anual_conf_description": "Presupuesto anual de Valencia para el último año modelado.",
+      "presupuesto-anual_conf_title": "Presupuesto anual",
+      "ranking-parking_conf_description": "Ranking de los parkings con doble ordenación según el valor medio de la ocupación diaria: de más a menos saturados y de menos a más saturados.",
+      "ranking-parking_conf_title": "Ranking de parkings por ocupación",
+      "tasa-desempleo_conf_description": "Porcentaje que representa el número total de desempleados con respecto a la población activa para Valencia para el último año modelado.",
+      "tasa-desempleo_conf_title": "Tasa de desempleo",
+      "titulados-superiores_conf_description": "Número de titulados de educación superior por cada 100.000 habitantes para Valencia para el último año modelado.",
+      "titulados-superiores_conf_title": "Titulados Superiores",
+      "uso-del-transporte-publico_conf_description": "Nivel uso del transporte público de Valencia, según el número de trayectos de las diferentes líneas de la EMT. Se actualiza con los selectores de distrito y de tipo de día.",
+      "uso-del-transporte-publico_conf_title": "Uso del transporte público",
+      "vista-identidad_conf_description": "La vista identidad es aquel conjunto de indicadores que mejor caracterizan una ciudad dentro del ámbito de estudio y para el punto de vista de un gestor. Es una vista real, no simulada, pero nueva, diseñada y optimizada para ser la mejor representación de la ciudad, el escenario cero, de referencia. Es el punto de partida del gemelo, ya que determina los conjuntos y modelos de datos que se utilizarán para generar las vistas simuladas. ",
+      "vista-identidad_conf_title": "Vista identidad"
+    },
+    "es": {
+      "comparativa-pib_conf_description": "Producto Interior Bruto de Valencia frente a España, para el último año modelado.",
+      "comparativa-pib_conf_title": "PIB frente a PIB país",
+      "congestion-del-trafico_conf_description": "Nivel medio de congestión del tráfico, en las vías de circulación de la ciudad de Valencia. Se actualiza con los selectores de distrito y de tipo de día.",
+      "congestion-del-trafico_conf_title": "Congestión del tráfico",
+      "distribucion-ocupacion-parking_conf_description": "Muestra cómo se distribuye la ocupación del parking en el tiempo en el sentido de demanda plana vs picos de demanda. Muestra qué porcentaje del día el parking está en máxima ocupación y cuánto en mínima. Se actualiza con los selectores de distrito y de tipo de día. ",
+      "distribucion-ocupacion-parking_conf_title": "Distribución de la ocupación de los parkings",
+      "estado-esperado_conf_tittle": "Estado esperado de los servicios de parking y tráfico",
+      "estado-esperado_description": "Mapa de Valencia con el estado habitual de los parkings y la fluidez habitual del tráfico. Se actualiza según los selectores de distrito y de tipo de día (laborable, sábados, domingos). Por defecto muestra el estado para el tipo de día laborable.",
+      "horas-pico-valle-parkings_conf_description": "Detalle de horas pico y horas valle para todos los parkings, con dos franjas diarias (mañana y tarde).",
+      "horas-pico-valle-parkings_conf_title": "Horas pico y valle de los parkings",
+      "ibi-medio_conf_description": "Impuesto Sobre Bienes Inmuebles medio de Valencia para el último año modelado.",
+      "ibi-medio_conf_title": "IBI medio",
+      "inflacion_conf_description": "Valor de la inflación para el último año modelado.",
+      "inflacion_conf_title": "Inflación",
+      "ocupacion-de-los-parkings_conf_description": "Nivel medio de ocupación de los parkings de Valencia. Se actualiza con los selectores de distrito y de tipo de día.",
+      "ocupacion-de-los-parkings_conf_title": "Ocupación de los parkings",
+      "ocupacion-parkings_conf_description": "Distribución de la ocupación de los parkings según las horas del día. Se actualiza con los selectores de distrito y de tipo de día.",
+      "ocupacion-parkings_conf_title": "Ocupación de los parkings por horas",
+      "presupuesto-anual_conf_description": "Presupuesto anual de Valencia para el último año modelado.",
+      "presupuesto-anual_conf_title": "Presupuesto anual",
+      "ranking-parking_conf_description": "Ranking de los parkings con doble ordenación según el valor medio de la ocupación diaria: de más a menos saturados y de menos a más saturados.",
+      "ranking-parking_conf_title": "Ranking de parkings por ocupación",
+      "tasa-desempleo_conf_description": "Porcentaje que representa el número total de desempleados con respecto a la población activa para Valencia para el último año modelado.",
+      "tasa-desempleo_conf_title": "Tasa de desempleo",
+      "titulados-superiores_conf_description": "Número de titulados de educación superior por cada 100.000 habitantes para Valencia para el último año modelado.",
+      "titulados-superiores_conf_title": "Titulados Superiores",
+      "uso-del-transporte-publico_conf_description": "Nivel uso del transporte público de Valencia, según el número de trayectos de las diferentes líneas de la EMT. Se actualiza con los selectores de distrito y de tipo de día.",
+      "uso-del-transporte-publico_conf_title": "Uso del transporte público",
+      "vista-identidad_conf_description": "La vista identidad es aquel conjunto de indicadores que mejor caracterizan una ciudad dentro del ámbito de estudio y para el punto de vista de un gestor. Es una vista real, no simulada, pero nueva, diseñada y optimizada para ser la mejor representación de la ciudad, el escenario cero, de referencia. Es el punto de partida del gemelo, ya que determina los conjuntos y modelos de datos que se utilizarán para generar las vistas simuladas. ",
+      "vista-identidad_conf_title": "Vista identidad"
+    }
+  },
+  "name": "Tablero de simulación: Nueva línea EMT",
+  "parsedTitle": "Tablero de simulación: Nueva línea EMT",
+  "service": "alcobendas",
+  "slug": "gemelo-digital-tablero-simulacion-nueva-linea-emt",
+  "widgets": [
+    {
+      "conf": {
+        "dimensions": {
+          "columns": 3,
+          "rows": 1
+        },
+        "links": {
+          "cortedecalledelargaduracion": {
+            "pushes": {
+              "ON_FILTER_ENTITYID": "ON_FILTER_ENTITYID",
+              "ON_FILTER_ENTITYTYPE": "ON_FILTER_ENTITYTYPE",
+              "ON_FILTER_POI": "ON_FILTER_POI"
+            },
+            "target": "gemelo-digital-tablero-simulacion-corte-de-calle-de-larga-duracion"
+          },
+          "nuevalineaemt": {
+            "pushes": {
+              "ON_FILTER_ENTITYID": "ON_FILTER_ENTITYID",
+              "ON_FILTER_ENTITYTYPE": "ON_FILTER_ENTITYTYPE",
+              "ON_FILTER_POI": "ON_FILTER_POI"
+            },
+            "target": "gemelo-digital-tablero-simulacion-nueva-linea-emt"
+          },
+          "nuevoparking": {
+            "pushes": {
+              "ON_FILTER_ENTITYID": "ON_FILTER_ENTITYID",
+              "ON_FILTER_ENTITYTYPE": "ON_FILTER_ENTITYTYPE",
+              "ON_FILTER_POI": "ON_FILTER_POI"
+            },
+            "target": "gemelo-digital-tablero-simulacion-nuevo-parking"
+          },
+          "peatonalizaciondecalle": {
+            "pushes": {
+              "ON_FILTER_ENTITYID": "ON_FILTER_ENTITYID",
+              "ON_FILTER_ENTITYTYPE": "ON_FILTER_ENTITYTYPE",
+              "ON_FILTER_POI": "ON_FILTER_POI"
+            },
+            "target": "gemelo-digital-tablero-simulacion-peatonalizacion-de-calle"
+          }
+        },
+        "tabs": [
+          {
+            "target": "nuevoparking",
+            "title": "Nuevo parking"
+          },
+          {
+            "active": true,
+            "target": "nuevalineaemt",
+            "title": "Nueva línea EMT"
+          },
+          {
+            "target": "peatonalizaciondecalle",
+            "title": "Peatonalización de calle"
+          },
+          {
+            "target": "cortedecalledelargaduracion",
+            "title": "Corte de calle de larga duración"
+          }
+        ],
+        "title": "Tabs"
+      },
+      "pulls": {
+        "ON_FILTER": [
+          "ON_FILTER_ENTITYID",
+          "ON_FILTER_ENTITYTYPE"
+        ],
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "tabs"
+    },
+    {
+      "conf": {
+        "columns": [
+          {
+            "customStyle": [
+              {
+                "font-weight": "bold"
+              }
+            ],
+            "formMode": {
+              "isKey": true,
+              "readOnlyOnEdit": true,
+              "validation": {
+                "required": true
+              }
+            },
+            "name": "ID",
+            "prop": "id"
+          },
+          {
+            "dsType": "Text",
+            "formMode": {
+              "type": "text",
+              "validation": {
+                "required": true
+              },
+              "visibleOnEdit": true
+            },
+            "name": "Nombre",
+            "prop": "name",
+            "rowType": "string"
+          },
+          {
+            "dsType": "geo:json",
+            "name": "location",
+            "prop": "location",
+            "rowType": "json"
+          }
+        ],
+        "description": "En este formulario se registran las paradas de la nueva línea EMT a simular. Para ello, previamente se ha debido pulsar en el mapa para indicar la posición de la parada. A continuación, se deberán rellenar como mínimo los campos marcados como obligatorios. Se irán añadiendo las paradas en la tabla de la derecha en orden secuencial a su creación. El recorrido de la nueva línea tendrá, por tanto, la resultante de unir las paradas según orden de creación.",
+        "dimensions": {
+          "columns": 1,
+          "rows": 6
+        },
+        "fixedFields": [
+          {
+            "prop": "type",
+            "value": "Stop"
+          },
+          {
+            "dsType": "DateTime",
+            "prop": "TimeInstant",
+            "value": "now"
+          },
+          {
+            "dsType": "Text",
+            "prop": "refSimulation",
+            "value": "none"
+          }
+        ],
+        "fixedFilters": [
+          {
+            "operator": "=",
+            "value": "selección_inicial",
+            "var": "id"
+          }
+        ],
+        "mode": {
+          "create": true,
+          "delete": true,
+          "edit": true
+        },
+        "noDataMsg": "Clique en el mapa para registrar una nueva parada.",
+        "title": "Nuevas paradas",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "connectionProperties": {
+          "entityType": "Stop",
+          "subservice": "/gemelodigital"
+        },
+        "name": "@{dsName}",
+        "type": "contextbroker"
+      },
+      "description": "Detalle de la entidad",
+      "pulls": {
+        "ON_RELOAD": "ON_RELOAD",
+        "SET_CONTENT": [
+          {
+            "fromEvent": "GEOJSON_STOPS",
+            "mapping": {
+              "location": "geojson.geometry"
+            }
+          }
+        ],
+        "SOURCE": [
+          {
+            "fromEvent": "ON_ROW_STOPS",
+            "mapping": {
+              "id": "id"
+            }
+          }
+        ]
+      },
+      "pushes": {
+        "ON_RELOAD": "ON_RELOAD_STOPS"
+      },
+      "type": "detail"
+    },
+    {
+      "conf": {
+        "baseLayer": {
+          "title": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+          "type": "tile-xyz",
+          "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
+        },
+        "defaultFitZoomLevel": 19,
+        "description": "Este mapa permite seleccionar la posición de las paradas para generar una nueva ruta simulada. Simplemente pulsando sobre él quedará definida la ubicación de la parada y se representará con un marcador de color verde. La posición será automáticamente introducida en el formulario de la izquierda // Por defecto, se representan las líneas reales de la EMT existentes en Valencia (a modo de referencia). Haciendo click sobre alguna de ellas, se abre una ventana con su nombre y el número de viajeros habituales.",
+        "dimensions": {
+          "columns": 1,
+          "rows": 6
+        },
+        "initExtent": {
+          "coords": [
+            -0.3770340053731405,
+            39.467847699336524,
+            -0.3755905111361342,
+            39.47379529255379
+          ],
+          "minZoom": 19,
+          "type": "layers"
+        },
+        "layers": [
+          {
+            "fixedFilters": [
+              {
+                "operator": "=",
+                "value": "N/A",
+                "var": "sceneref"
+              }
+            ],
+            "ignoreWidgetFixedFilters": true,
+            "interactivity": {
+              "click": {
+                "popup": {
+                  "rows": [
+                    {
+                      "output": "SIMPLE_ROW",
+                      "properties": [
+                        {
+                          "label": "Viajeros",
+                          "nbf": ",.0f",
+                          "value": "intensity"
+                        }
+                      ]
+                    }
+                  ],
+                  "title": {
+                    "output": "SIMPLE_ROW",
+                    "properties": [
+                      {
+                        "label": "i18n_gemelo-digital-vista-identidad_widgets_1_conf_layers_2_interactivity_click_popup_title_properties_0_label",
+                        "value": "name"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "params": {
+              "sourceId": "emt-lines",
+              "timeVar": "timeinstant",
+              "variables": [
+                "entityid",
+                "name",
+                "intensity"
+              ]
+            },
+            "styleAssign": [
+              {
+                "condition": true,
+                "style": "line_emt"
+              }
+            ],
+            "styles": [
+              {
+                "name": "line_emt",
+                "stroke": {
+                  "color": "#7b79a6",
+                  "width": 2
+                },
+                "type": "polyline"
+              }
+            ],
+            "timeVar": "timeinstant",
+            "title": "emt-legs",
+            "type": "wbe-geojson",
+            "zIndex": 1
+          },
+          {
+            "fixedFilters": [
+              {
+                "operator": "=",
+                "value": "none",
+                "var": "refSimulation"
+              }
+            ],
+            "params": {
+              "centerOnPullSource": false,
+              "geoJsonKey": "geojson",
+              "pullName": "GEOJSON_LAYER_STOPS"
+            },
+            "styleAssign": [
+              {
+                "condition": "[arrayFirst]",
+                "style": "start"
+              },
+              {
+                "condition": "[arrayLast]",
+                "style": "end"
+              },
+              {
+                "condition": "true",
+                "style": "intermediate"
+              }
+            ],
+            "styles": [
+              {
+                "anchor": [
+                  0.5,
+                  1
+                ],
+                "anchorXUnits": "fraction",
+                "anchorYUnits": "fraction",
+                "color": "green",
+                "name": "start",
+                "scale": 1,
+                "src": "/assets/img/icons/materialdesign/route-planner/location_on.svg",
+                "type": "icon"
+              },
+              {
+                "color": "#f20d05",
+                "name": "end",
+                "template": "start",
+                "text": {
+                  "fill": {
+                    "color": "#f20d05"
+                  }
+                }
+              },
+              {
+                "fill": {
+                  "color": "rgba(55, 200, 150, 0)"
+                },
+                "name": "intermediate",
+                "radius": 5,
+                "stroke": {
+                  "color": "rgba(0, 0, 0, 1)",
+                  "width": 2
+                },
+                "template": "start",
+                "text": {
+                  "fill": {
+                    "color": "#22292e"
+                  },
+                  "offsetY": 20
+                },
+                "type": "circle"
+              }
+            ],
+            "title": "places",
+            "type": "event-geojson"
+          },
+          {
+            "fixedFilters": [
+              {
+                "operator": "=",
+                "value": "none",
+                "var": "refSimulation"
+              }
+            ],
+            "params": {
+              "centerOnPullSource": false,
+              "geoJsonKey": "location",
+              "pullName": "ON_ROW_STOPS"
+            },
+            "styleAssign": [
+              {
+                "condition": "[arrayFirst]",
+                "style": "start"
+              }
+            ],
+            "styles": [
+              {
+                "anchor": [
+                  0.5,
+                  1
+                ],
+                "anchorXUnits": "fraction",
+                "anchorYUnits": "fraction",
+                "color": "grey",
+                "name": "start",
+                "scale": 1,
+                "src": "/assets/img/icons/materialdesign/route-planner/location_on.svg",
+                "type": "icon"
+              }
+            ],
+            "title": "created-stops",
+            "type": "event-geojson"
+          },
+          {
+            "fixedFilters": [
+              {
+                "operator": "=",
+                "value": "none",
+                "var": "refSimulation"
+              }
+            ],
+            "interactivity": {
+              "click": {
+                "popup": {
+                  "rows": [
+                    {
+                      "output": "SIMPLE_ROW",
+                      "properties": [
+                        {
+                          "label": "Nombre",
+                          "value": "name"
+                        }
+                      ]
+                    }
+                  ],
+                  "title": {
+                    "output": "LINK_ROW",
+                    "properties": [
+                      {
+                        "label": "ID",
+                        "params": {
+                          "ON_FILTER_ENTITYID": {
+                            "isFeatureVar": true,
+                            "prop": "id",
+                            "value": "id"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "pageLimit": 500,
+            "params": {
+              "sourceId": "cb-layer",
+              "variables": [
+                "id",
+                "type",
+                "name",
+                "location"
+              ]
+            },
+            "styleAssign": [
+              {
+                "condition": true,
+                "style": "installed"
+              }
+            ],
+            "styles": [
+              {
+                "fill": {
+                  "color": "secondary"
+                },
+                "name": "installed",
+                "radius": 7,
+                "scale": 0.35,
+                "src": "/assets/img/verticals/buses/bus-stop.png",
+                "stroke": {
+                  "color": "#fff",
+                  "width": 3
+                },
+                "text": {
+                  "fill": {
+                    "color": "primary"
+                  },
+                  "minZoom": 15,
+                  "offsetY": 26,
+                  "placement": "point",
+                  "stroke": {
+                    "color": "rgba(255, 255, 255, 1)",
+                    "width": 3
+                  },
+                  "text": "expr:[name]",
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                },
+                "type": "icon"
+              }
+            ],
+            "title": "assets",
+            "type": "wbe-geojson"
+          }
+        ],
+        "maximizable": true,
+        "title": "Seleccione paradas en el mapa",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "description": "Mapa de localización",
+        "sources": {
+          "cb-layer": {
+            "connectionProperties": {
+              "entityType": "Stop",
+              "geomVar": "location",
+              "subservice": "/gemelodigital"
+            },
+            "name": "@{dsName}",
+            "type": "contextbroker"
+          },
+          "emt-lines": {
+            "connectionProperties": {
+              "geomVar": "location",
+              "table": "@{prefijo}dtwin_routeintensity_sim"
+            },
+            "name": "gemelo_parking",
+            "type": "postgresql"
+          }
+        },
+        "type": "multiple"
+      },
+      "description": "Eventos",
+      "pulls": {
+        "GEOJSON_LAYER_STOPS": "GEOJSON_STOPS",
+        "ON_BBOX": "ON_BBOX_FROM_ROUTE_PLANNER",
+        "ON_RELOAD": [
+          "ON_RELOAD",
+          "ON_RELOAD_STOPS"
+        ],
+        "ON_ROW_STOPS": "ON_ROW_STOPS"
+      },
+      "pushes": {
+        "LOCATION": "GEOJSON_STOPS"
+      },
+      "type": "basic-map-ol"
+    },
+    {
+      "conf": {
+        "columns": [
+          {
+            "columnType": "string",
+            "editable": false,
+            "formMode": {
+              "isKey": true
+            },
+            "hidden": true,
+            "name": "ID",
+            "operator": "=",
+            "prop": "id",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": false,
+            "width": 200
+          },
+          {
+            "columnType": "string",
+            "editable": false,
+            "formMode": {
+              "isKey": true
+            },
+            "name": "Nombre",
+            "operator": "=",
+            "prop": "name",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": false,
+            "width": 200
+          },
+          {
+            "columnType": "date",
+            "dsType": "date",
+            "editable": true,
+            "hidden": true,
+            "name": "TimeInstant",
+            "order": true,
+            "orderType": "asc",
+            "prop": "TimeInstant",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": false,
+            "width": 200
+          },
+          {
+            "columnType": "json",
+            "dsType": "json",
+            "editable": true,
+            "hidden": true,
+            "name": "stops",
+            "order": false,
+            "orderType": "desc",
+            "prop": "location",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": false,
+            "width": 200
+          }
+        ],
+        "description": "Este widget muestra una lista de las paradas que se han ido añadiendo en el formulario de la izquierda conforme al procedimiento que se describe en aquel. ",
+        "dimensions": {
+          "columns": 1,
+          "rows": 6
+        },
+        "exportable": [
+          "csv",
+          "xlsx"
+        ],
+        "filterByColumn": "id",
+        "fixedFilters": [
+          {
+            "operator": "=",
+            "value": "none",
+            "var": "refSimulation"
+          }
+        ],
+        "horizontalScroll": true,
+        "mode": {
+          "create": false,
+          "delete": true,
+          "edit": true
+        },
+        "pageLimit": 10,
+        "title": "Paradas de la nueva línea",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "connectionProperties": {
+          "entityType": "Stop",
+          "subservice": "/gemelodigital"
+        },
+        "name": "@{dsName}",
+        "type": "contextbroker"
+      },
+      "pulls": {
+        "ON_RELOAD": [
+          "ON_RELOAD",
+          "ON_RELOAD_STOPS"
+        ]
+      },
+      "type": "table"
+    },
+    {
+      "conf": {
+        "columns": [
+          {
+            "customStyle": [
+              {
+                "font-weight": "bold"
+              }
+            ],
+            "formMode": {
+              "isKey": true,
+              "prefix": "EMT_",
+              "type": "text",
+              "validation": {
+                "maxLength": 30,
+                "minLength": 5,
+                "pattern": "^[a-zA-Z0-9_-]+$",
+                "required": true
+              },
+              "visibleOnEdit": true
+            },
+            "name": "Simulación",
+            "prop": "id",
+            "rowType": "string",
+            "textTransform": {
+              "op": "prefix",
+              "prefix": "EMT_"
+            }
+          },
+          {
+            "dsType": "Text",
+            "formMode": {
+              "type": "text",
+              "validation": {
+                "required": true
+              },
+              "visibleOnEdit": true
+            },
+            "name": "Nombre",
+            "prop": "name",
+            "rowType": "string"
+          },
+          {
+            "dsType": "Text",
+            "formMode": {
+              "type": "text",
+              "validation": {
+                "required": true
+              },
+              "visibleOnEdit": true
+            },
+            "name": "Descripción",
+            "prop": "description",
+            "rowType": "string"
+          },
+          {
+            "dsType": "Number",
+            "formMode": {
+              "type": "text",
+              "validation": {
+                "pattern": "[0-9]{1,6}",
+                "required": "true"
+              },
+              "visibleOnEdit": true
+            },
+            "name": "Número de trayectos diarios",
+            "prop": "trips",
+            "rowType": "Number"
+          },
+          {
+            "dsType": "Number",
+            "formMode": {
+              "type": "text",
+              "validation": {
+                "pattern": "[0-9]{1,6}",
+                "required": "true"
+              },
+              "visibleOnEdit": true
+            },
+            "name": "Viajeros diarios previstos",
+            "prop": "intensity",
+            "rowType": "Number"
+          },
+          {
+            "dsType": "Number",
+            "formMode": {
+              "type": "text",
+              "validation": {
+                "pattern": "[1-9]"
+              },
+              "visibleOnEdit": true
+            },
+            "name": "Impacto",
+            "prop": "bias",
+            "rowType": "Number"
+          }
+        ],
+        "description": "En este formulario se registran las características de la nueva línea a simular. Para ello, previamente se ha debido pulsar en el mapa para indicar las posiciones de las paradas que la conformarán. A continuación, se deberán rellenar como mínimo los campos marcados como obligatorios. Algunos campos requieren que su contenido respete ciertas reglas: en primer lugar, el texto para la definición del id de la nueva simulación debe tener un formato alfanumérico y solo se permiten guiones y guiones bajos (se excluyen caracteres como -ñ-). Su extensión no debe superar los 30 caracteres. Ejemplo: EMT_17_Circular. / Para los campos de número de trayectos y viajeros previstos, los valores deben ser entre 1 y 999999. / Y por último, el valor del campo impacto debe estar comprendido entre 1 y 9.",
+        "dimensions": {
+          "columns": 3,
+          "rows": 8
+        },
+        "fixedFields": [
+          {
+            "prop": "type",
+            "value": "SimulationRoute"
+          },
+          {
+            "dsType": "DateTime",
+            "prop": "TimeInstant",
+            "value": "now"
+          },
+          {
+            "dsType": "Text",
+            "prop": "status",
+            "value": "new"
+          }
+        ],
+        "mode": {
+          "create": true,
+          "delete": true,
+          "edit": true
+        },
+        "noDataMsg": "No es posible generar una nueva simulación en este momento.",
+        "title": "Nueva simulación",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "connectionProperties": {
+          "entityType": "SimulationRoute",
+          "subservice": "/gemelodigital"
+        },
+        "name": "@{dsName}",
+        "type": "contextbroker"
+      },
+      "description": "Detalle de la entidad",
+      "type": "detail"
+    },
+    {
+      "conf": {
+        "contentTag": "img",
+        "description": "",
+        "dimensions": {
+          "columns": 3,
+          "rows": 2
+        },
+        "endpoint": "https://lab.urbo2.es/assets/tenantThemes/digital_twin/icons/Histórico-simulaciones.png",
+        "iframe": true,
+        "keepAspectRatio": true,
+        "responsive": false,
+        "title": "uso-del-transporte-publico_conf_title",
+        "widgetUi": {
+          "noFooter": true,
+          "noHeader": true
+        }
+      },
+      "datasource": {
+        "connectionProperties": {
+          "geomVar": "location",
+          "table": "@{prefijo}smartbuildings_building_lastdata"
+        },
+        "type": "postgresql"
+      },
+      "description": "uso-del-transporte-publico_conf_description",
+      "pulls": {
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "iframe"
+    },
+    {
+      "conf": {
+        "columns": [
+          {
+            "columnType": "string",
+            "editable": false,
+            "formMode": {
+              "isKey": true
+            },
+            "name": "ID",
+            "operator": "=",
+            "prop": "id",
+            "searcher": true,
+            "sortable": true,
+            "width": 200
+          },
+          {
+            "columnType": "string",
+            "editable": false,
+            "name": "Nombre",
+            "operator": "=",
+            "prop": "name",
+            "searcher": true,
+            "sortable": true,
+            "width": 200
+          },
+          {
+            "columnType": "date",
+            "dsType": "DateTime",
+            "editable": true,
+            "format": "%d/%m/%Y %H:%M:%S",
+            "name": "Fecha de creación",
+            "operator": "ilike",
+            "prop": "TimeInstant",
+            "resizeable": false,
+            "searcher": true,
+            "sortable": false,
+            "width": 200
+          },
+          {
+            "editable": true,
+            "name": "Descripción",
+            "operator": "ilike",
+            "prop": "description",
+            "resizeable": false,
+            "searcher": true,
+            "sortable": false,
+            "width": 200
+          },
+          {
+            "columnType": "number",
+            "editable": true,
+            "format": ".0f",
+            "name": "Trayectos diarios",
+            "operator": "ilike",
+            "prop": "trips",
+            "resizeable": false,
+            "searcher": true,
+            "sortable": false,
+            "width": 180
+          },
+          {
+            "columnType": "number",
+            "editable": true,
+            "format": ".0f",
+            "name": "Viajeros diarios",
+            "operator": "ilike",
+            "prop": "intensity",
+            "resizeable": false,
+            "searcher": true,
+            "sortable": false,
+            "width": 180
+          },
+          {
+            "columnType": "json",
+            "editable": true,
+            "hidden": true,
+            "name": "Coordenadas",
+            "operator": "ilike",
+            "prop": "location",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": false,
+            "width": 200
+          },
+          {
+            "columnType": "number",
+            "editable": true,
+            "format": ".0f",
+            "name": "Impacto",
+            "operator": "ilike",
+            "prop": "bias",
+            "resizeable": false,
+            "searcher": true,
+            "sortable": false,
+            "width": 120
+          },
+          {
+            "columnType": "string",
+            "editable": true,
+            "format": ".0f",
+            "name": "Estado",
+            "operator": "ilike",
+            "prop": "status",
+            "resizeable": false,
+            "searcher": true,
+            "sortable": false,
+            "width": 120
+          }
+        ],
+        "description": "Esta tabla muestra la lista de las simulaciones que han sido realizadas. Permite borrar simulaciones que no se desean mantener. En la columna -Estado- puede verse el estado de ejecución de la simulación (desde -new- hasta -done-). Sólo podrán visualizarse los datos de la simulación configurada una vez que haya terminado su ejecución y esté en -done-. Pulsando sobre la tabla se verán los detalles de configuración de la simulación seleccionada en los widgets de abajo.",
+        "dimensions": {
+          "columns": 3,
+          "rows": 4
+        },
+        "exportable": [
+          "csv",
+          "xlsx"
+        ],
+        "filterByColumn": "id",
+        "fixedFilters": [
+          {
+            "operator": "!=",
+            "value": "VirtualSimulation",
+            "var": "name"
+          }
+        ],
+        "horizontalScroll": "true",
+        "mode": {
+          "create": false,
+          "delete": true,
+          "edit": false
+        },
+        "pageLimit": 6,
+        "title": "Listado de simulaciones realizadas",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "connectionProperties": {
+          "entityType": "SimulationRoute",
+          "subservice": "/gemelodigital"
+        },
+        "name": "@{dsName}",
+        "type": "contextbroker"
+      },
+      "pulls": {
+        "ON_RELOAD": [
+          "ON_RELOAD",
+          "ON_RELOAD_DETAIL"
+        ]
+      },
+      "pushes": {
+        "ON_FILTER": "ON_FILTER_SIMULATION_TABLE",
+        "ON_ROW": "ON_ROW_SIMULATION_TABLE"
+      },
+      "type": "table"
+    },
+    {
+      "conf": {
+        "columns": [
+          {
+            "name": "Simulación",
+            "prop": "id",
+            "rowType": "string"
+          },
+          {
+            "dsType": "Text",
+            "name": "Nombre",
+            "prop": "name",
+            "rowType": "string"
+          },
+          {
+            "dsType": "Text",
+            "name": "Descripción",
+            "prop": "description",
+            "rowType": "string"
+          },
+          {
+            "dsType": "Number",
+            "name": "Número de trayectos diarios",
+            "prop": "trips",
+            "rowType": "Number"
+          },
+          {
+            "dsType": "Number",
+            "name": "Viajeros diarios previstos",
+            "prop": "intensity",
+            "rowType": "Number"
+          },
+          {
+            "dsType": "Number",
+            "name": "Impacto",
+            "prop": "bias",
+            "rowType": "Number"
+          }
+        ],
+        "description": "Detalle de la simulación seleccionada en la tabla superior. Sólo para visualizar datos.",
+        "dimensions": {
+          "columns": 1,
+          "rows": 6
+        },
+        "fixedFilters": [
+          {
+            "operator": "=",
+            "value": "selección_inicial",
+            "var": "id"
+          }
+        ],
+        "mode": {
+          "create": false,
+          "delete": false,
+          "edit": false
+        },
+        "noDataMsg": "Seleccione una simulación en la tabla superior para ver el detalle",
+        "title": "Detalle de la simulación",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "connectionProperties": {
+          "entityType": "SimulationRoute",
+          "subservice": "/gemelodigital"
+        },
+        "name": "@{dsName}",
+        "type": "contextbroker"
+      },
+      "description": "Detalle de la entidad",
+      "pulls": {
+        "ON_FILTER": "ON_FILTER_SIMULATION_TABLE",
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "detail"
+    },
+    {
+      "conf": {
+        "baseLayer": {
+          "maxZoom": 21,
+          "type": "tile-xyz",
+          "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
+        },
+        "description": "Representación en el mapa de las líneas simuladas. Por defecto muestra todos las líneas simuladas que están listadas en la tabla superior. Si se selecciona una línea de entre las simulaciones, el mapa mostrará solamente esa línea.",
+        "dimensions": {
+          "columns": 2,
+          "rows": 6
+        },
+        "initExtent": {
+          "layers": [
+            "simulation-marker"
+          ],
+          "type": "layers"
+        },
+        "layers": [
+          {
+            "centerOnPullFilter": true,
+            "interactivity": {
+              "click": {
+                "popup": {
+                  "rows": [],
+                  "title": {
+                    "output": "SIMPLE_ROW",
+                    "properties": [
+                      {
+                        "label": "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_1_interactivity_click_popup_title_properties_0_label",
+                        "value": "id"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "params": {
+              "sourceId": "simulation-location",
+              "timeVar": "TimeInstant",
+              "variables": [
+                "id"
+              ]
+            },
+            "styleAssign": [
+              {
+                "condition": true,
+                "style": "line1"
+              }
+            ],
+            "styles": [
+              {
+                "name": "line1",
+                "stroke": {
+                  "color": "#0066FF",
+                  "width": 2
+                },
+                "type": "polyline"
+              }
+            ],
+            "timeVar": "timeinstant",
+            "title": "route-legs",
+            "type": "wbe-geojson"
+          }
+        ],
+        "maxZoom": 18,
+        "maximizable": true,
+        "title": "Ruta simulada",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "sources": {
+          "simulation-location": {
+            "connectionProperties": {
+              "entityType": "SimulationRoute",
+              "geomVar": "location",
+              "subservice": "/gemelodigital"
+            },
+            "name": "@{dsName}",
+            "type": "contextbroker"
+          }
+        },
+        "type": "multiple"
+      },
+      "pulls": {
+        "ON_FILTER": "ON_FILTER_SIMULATION_TABLE",
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "basic-map-ol"
+    }
+  ]
+}
