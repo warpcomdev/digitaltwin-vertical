@@ -53,7 +53,7 @@ SELECT
   zone,
   congestion,
   entityid,
-  date_trunc('day'::text, now()) - '1 day'::interval  + make_interval(hours => t.hour, mins => t.minute) AS generatedinstant
+  timezone('CEST'::text, date_trunc('day'::text, timezone('CEST'::text, now())) - '1 day'::interval) + make_interval(hours => t.hour, mins => t.minute) AS generatedinstant
 FROM :target_schema.dtwin_trafficcongestion_sim AS t;
 -- CREATE VIEW dtwin_trafficcongestion_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de

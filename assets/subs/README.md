@@ -32,6 +32,7 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo AirQualityObserv
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, name, zone, location, alterationType
 - **Condición**: TimeInstant, sourceRef
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
+  - **Y se cumpla una expresion compuesta por q, mq, georel, geometry y coords**: `{"q": "sceneRef==N/A"}`
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: AirQualityObserved
@@ -86,6 +87,7 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo OffStreetParking
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, name, zone, capacity, location, alterationType
 - **Condición**: TimeInstant, sourceRef
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
+  - **Y se cumpla una expresion compuesta por q, mq, georel, geometry y coords**: `{"q": "sceneRef==N/A"}`
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: OffStreetParking
@@ -122,6 +124,7 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteIntensity
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, name, zoneList, forwardStops, returnStops, location, alterationType
 - **Condición**: TimeInstant, sourceRef
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
+  - **Y se cumpla una expresion compuesta por q, mq, georel, geometry y coords**: `{"q": "sceneRef==N/A"}`
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: RouteIntensity
@@ -158,6 +161,7 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo RouteSchedule
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, name, zoneList, forwardStops, returnStops, location, alterationType
 - **Condición**: TimeInstant, sourceRef
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
+  - **Y se cumpla una expresion compuesta por q, mq, georel, geometry y coords**: `{"q": "sceneRef==N/A"}`
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: RouteSchedule
@@ -266,6 +270,7 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficCongestio
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, name, zone, location, alterationType
 - **Condición**: TimeInstant, sourceRef
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
+  - **Y se cumpla una expresion compuesta por q, mq, georel, geometry y coords**: `{"q": "sceneRef==N/A"}`
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: TrafficCongestion
@@ -302,6 +307,7 @@ Subscripción del flujo lastdata (tipo FLOW_LASTDATA) en modelo TrafficIntensity
 - **Atributos a notificar**: TimeInstant, sourceRef, sceneRef, name, zone, location, alterationType
 - **Condición**: TimeInstant, sourceRef
   - Tipo de alteration en entidad que desencadena la notificación: entityUpdate, entityCreate
+  - **Y se cumpla una expresion compuesta por q, mq, georel, geometry y coords**: `{"q": "sceneRef==N/A"}`
 - **Entidades**:
   - ID: `.*` (con checkbox de patrón de búsqueda marcado)
   - Type: TrafficIntensity

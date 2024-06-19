@@ -172,6 +172,7 @@ import (
 					"entityUpdate",
 					"entityCreate",
 				]
+				expression: q: "sceneRef==N/A"
 			}
 			replaceId: ["sourceRef"]
 		}
