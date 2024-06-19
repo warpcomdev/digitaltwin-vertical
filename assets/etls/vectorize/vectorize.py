@@ -267,6 +267,7 @@ class Metric:
     """
     Describes properties of a metric
     """
+    ngsiType: str
     scale: int
     integer: bool
 
@@ -278,6 +279,7 @@ class Metadata:
     dimensions: typing.List[str]
     metrics: typing.Mapping[str, Metric]
     fixedProps: typing.Dict[str, Metric]
+    non_metrics: typing.Dict[str, str]
     calcs: typing.Dict[str, str]
     hasHour: bool
     hasMinute: bool
@@ -2497,7 +2499,7 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--fallback")
     args = parser.parse_args()
 
-    for config in args.config:
+    for config in args.config or tuple():
         logging.debug("loading config file %s", config)
         loadConfig(pathlib.Path(config[0]))
     logging.info("Configuration:\n%s", json.dumps(dumpConfig(), indent=2))
