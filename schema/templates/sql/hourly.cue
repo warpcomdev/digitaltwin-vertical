@@ -24,6 +24,7 @@ hourly: {
 		-- Vista que agrega todos los resultados de una tabla de gemelo,
 		-- por hora. Ignora el minuto.
 		-- -------------------------------------------------------------
+		DROP VIEW IF EXISTS :target_schema.{{ .viewName }};
 		CREATE OR REPLACE VIEW :target_schema.{{ .viewName }} AS
 		SELECT
 		{{- range .columns }}

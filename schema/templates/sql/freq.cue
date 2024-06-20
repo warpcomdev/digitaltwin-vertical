@@ -27,6 +27,7 @@ freq: {
 		-- Vista que calcula la frecuencia con la que una métrica
 		-- está dentro de un umbral.
 		-- -------------------------------------------------------------
+		DROP VIEW IF EXISTS :target_schema.{{ .viewName }};
 		CREATE OR REPLACE VIEW :target_schema.{{ .viewName }} AS
 		SELECT
 		  t.entityid,

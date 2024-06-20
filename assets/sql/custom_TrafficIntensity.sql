@@ -2,6 +2,7 @@
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por día. Ignora la hora y minuto.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_trafficintensity_daily;
 CREATE OR REPLACE VIEW :target_schema.dtwin_trafficintensity_daily AS
 SELECT
   t.timeinstant,
@@ -12,8 +13,10 @@ SELECT
   t.name,
   t.zone,
   SUM(intensity) AS intensity,
+  z.name AS zone_name,
   t.entityid
 FROM :target_schema.dtwin_trafficintensity_sim AS t
+LEFT JOIN :target_schema.dtwin_zone_lastdata z ON t.zone = z.entityid
 GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.zone, t.entityid;
 -- CREATE VIEW dtwin_trafficintensity_yesterday
 -- Vista que reemplaza el timeinstant de la tabla "lastdata"
@@ -22,6 +25,7 @@ GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.
 -- widget timeseries de urbo, sin necesidad de tener muestras
 -- diarias para todos los días.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_trafficintensity_yesterday;
 CREATE OR REPLACE VIEW :target_schema.dtwin_trafficintensity_yesterday AS
 SELECT
   timeinstant,
@@ -33,12 +37,13 @@ SELECT
   zone,
   intensity,
   entityid,
-  date_trunc('day'::text, now()) - '1 day'::interval + make_interval(hours => t.hour) AS generatedinstant
+  timezone('CEST'::text, date_trunc('day'::text, timezone('CEST'::text, now())) - '1 day'::interval) + make_interval(hours => t.hour) AS generatedinstant
 FROM :target_schema.dtwin_trafficintensity_sim AS t;
 -- CREATE VIEW dtwin_trafficintensity_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 -- una métrica dada.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_trafficintensity_peak;
 CREATE OR REPLACE VIEW :target_schema.dtwin_trafficintensity_peak AS
 SELECT
   numeradas.timeinstant,

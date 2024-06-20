@@ -9,21 +9,35 @@
     "fixedProps": {},
     "metrics": {
       "NO2": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       },
       "PM25": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       },
       "PM10": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       },
       "O3": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       }
+    },
+    "non_metrics": {
+      "TimeInstant": "DateTime",
+      "sourceRef": "TextUnrestricted",
+      "sceneRef": "TextUnrestricted",
+      "trend": "TextUnrestricted",
+      "dayType": "TextUnrestricted",
+      "name": "TextUnrestricted",
+      "location": "geo:json",
+      "zone": "TextUnrestricted"
     },
     "calcs": {},
     "hasHour": false,
@@ -44,15 +58,30 @@
     ],
     "fixedProps": {
       "capacity": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       }
     },
     "metrics": {
       "occupationPercent": {
+        "ngsiType": "Number",
         "scale": 100,
         "integer": false
       }
+    },
+    "non_metrics": {
+      "TimeInstant": "DateTime",
+      "sourceRef": "TextUnrestricted",
+      "sceneRef": "TextUnrestricted",
+      "trend": "TextUnrestricted",
+      "dayType": "TextUnrestricted",
+      "hour": "Number",
+      "name": "TextUnrestricted",
+      "location": "geo:json",
+      "zone": "TextUnrestricted",
+      "capacity": "Number",
+      "occupation": "Number"
     },
     "calcs": {
       "occupation": "capacity * occupationPercent / 100.0"
@@ -74,27 +103,44 @@
     ],
     "fixedProps": {
       "forwardStops": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": true
       },
       "returnStops": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": true
       }
     },
     "metrics": {
       "forwardTrips": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       },
       "returnTrips": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       },
       "intensity": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       }
+    },
+    "non_metrics": {
+      "TimeInstant": "DateTime",
+      "sourceRef": "TextUnrestricted",
+      "sceneRef": "TextUnrestricted",
+      "trend": "TextUnrestricted",
+      "dayType": "TextUnrestricted",
+      "name": "TextUnrestricted",
+      "location": "geo:json",
+      "zoneList": "Json",
+      "forwardStops": "Number",
+      "returnStops": "Number"
     },
     "calcs": {},
     "hasHour": false,
@@ -115,23 +161,40 @@
     ],
     "fixedProps": {
       "forwardStops": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": true
       },
       "returnStops": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": true
       }
     },
     "metrics": {
       "forwardTrips": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       },
       "returnTrips": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       }
+    },
+    "non_metrics": {
+      "TimeInstant": "DateTime",
+      "sourceRef": "TextUnrestricted",
+      "sceneRef": "TextUnrestricted",
+      "trend": "TextUnrestricted",
+      "dayType": "TextUnrestricted",
+      "hour": "Number",
+      "name": "TextUnrestricted",
+      "location": "geo:json",
+      "zoneList": "Json",
+      "forwardStops": "Number",
+      "returnStops": "Number"
     },
     "calcs": {},
     "hasHour": true,
@@ -154,9 +217,22 @@
     "fixedProps": {},
     "metrics": {
       "congestion": {
+        "ngsiType": "Number",
         "scale": 1,
         "integer": false
       }
+    },
+    "non_metrics": {
+      "TimeInstant": "DateTime",
+      "sourceRef": "TextUnrestricted",
+      "sceneRef": "TextUnrestricted",
+      "trend": "TextUnrestricted",
+      "dayType": "TextUnrestricted",
+      "hour": "Number",
+      "minute": "Number",
+      "name": "TextUnrestricted",
+      "location": "geo:json",
+      "zone": "TextUnrestricted"
     },
     "calcs": {},
     "hasHour": true,
@@ -178,9 +254,21 @@
     "fixedProps": {},
     "metrics": {
       "intensity": {
+        "ngsiType": "Number",
         "scale": 0,
         "integer": false
       }
+    },
+    "non_metrics": {
+      "TimeInstant": "DateTime",
+      "sourceRef": "TextUnrestricted",
+      "sceneRef": "TextUnrestricted",
+      "trend": "TextUnrestricted",
+      "dayType": "TextUnrestricted",
+      "hour": "Number",
+      "name": "TextUnrestricted",
+      "location": "geo:json",
+      "zone": "TextUnrestricted"
     },
     "calcs": {},
     "hasHour": true,

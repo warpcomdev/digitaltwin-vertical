@@ -1,0 +1,1285 @@
+{
+  "commonConf": {
+    "fixedFilters": []
+  },
+  "controls": [
+    {
+      "conf": {
+        "defaultItem": "Baja",
+        "multiple": false,
+        "selectedField": "entityid",
+        "sourceFields": {
+          "desc": {
+            "prop": "entityid"
+          },
+          "label": {
+            "order": true,
+            "orderType": "asc",
+            "prop": "entityid"
+          },
+          "value": {
+            "prop": "entityid"
+          }
+        },
+        "title": "i18n_gemelo-digital-vista-identidad_selector_3_title"
+      },
+      "datasource": {
+        "connectionProperties": {
+          "table": "@{prefijo}dtwin_trend_lastdata"
+        },
+        "name": "gemelo_parking",
+        "type": "postgresql"
+      },
+      "pushes": {
+        "ON_FILTER": [
+          {
+            "mapping": {
+              "operator": "operator",
+              "value": "value"
+            },
+            "stages": [
+              "mapping",
+              "static"
+            ],
+            "static": {
+              "var": "trend"
+            },
+            "toEvent": "ON_FILTER_TREND"
+          }
+        ]
+      },
+      "type": "selector"
+    },
+    {
+      "conf": {
+        "defaultItem": "ALL",
+        "multiple": true,
+        "selectedField": "entityid",
+        "sourceFields": {
+          "desc": {
+            "prop": "entityid"
+          },
+          "label": {
+            "order": true,
+            "orderType": "asc",
+            "prop": "label"
+          },
+          "value": {
+            "prop": "entityid"
+          }
+        },
+        "title": "i18n_gemelo-digital-vista-identidad_selector_1_title"
+      },
+      "datasource": {
+        "connectionProperties": {
+          "table": "@{prefijo}dtwin_zone_lastdata"
+        },
+        "name": "gemelo_parking",
+        "type": "postgresql"
+      },
+      "pushes": {
+        "ON_FILTER": [
+          {
+            "mapping": {
+              "operator": "operator",
+              "value": "value"
+            },
+            "stages": [
+              "mapping",
+              "static"
+            ],
+            "static": {
+              "var": "zone"
+            },
+            "toEvent": "ON_FILTER_DISTRICT"
+          }
+        ]
+      },
+      "type": "selector"
+    },
+    {
+      "conf": {
+        "defaultItem": "Laborable",
+        "multiple": false,
+        "order": "asc",
+        "selectedField": "entityid",
+        "sourceFields": {
+          "desc": {
+            "prop": "entityid"
+          },
+          "label": {
+            "order": true,
+            "orderType": "asc",
+            "prop": "entityid"
+          },
+          "value": {
+            "prop": "entityid"
+          }
+        },
+        "title": "i18n_gemelo-digital-vista-identidad_selector_2_title"
+      },
+      "datasource": {
+        "connectionProperties": {
+          "table": "@{prefijo}dtwin_daytype_lastdata"
+        },
+        "name": "gemelo_parking",
+        "type": "postgresql"
+      },
+      "pushes": {
+        "ON_FILTER": [
+          {
+            "mapping": {
+              "operator": "operator",
+              "value": "value"
+            },
+            "stages": [
+              "mapping",
+              "static"
+            ],
+            "static": {
+              "var": "daytype"
+            },
+            "toEvent": "ON_FILTER_DAYTYPE"
+          }
+        ]
+      },
+      "type": "selector"
+    },
+    {
+      "conf": {
+        "description": "i18n_gemelo-digital-vista-identidad_selector_3_description",
+        "refreshTime": 300000
+      },
+      "pushes": {
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "refresher"
+    }
+  ],
+  "defaultScope": {
+    "envVars": {
+      "dsName": "gemelo_parking",
+      "dsNameCB": "alcobendas",
+      "maxZoom": 21,
+      "municipalityOperator": "=",
+      "municipalityValue": "NA",
+      "municipalityVar": "municipality",
+      "prefijo": "",
+      "subserviceRoot": "",
+      "zoom": 12
+    }
+  },
+  "description": "i18n_gemelo-digital-vista-identidad-traffic_description",
+  "grid": {
+    "columns": 4,
+    "ratio": 0.2
+  },
+  "i18n": {
+    "en": {
+      "comparativa-pib_conf_description": "Gross Domestic Product of Valencia compared to Spain, for the last modeled year.",
+      "comparativa-pib_conf_title": "GDP vs. Country GDP",
+      "congestion-del-trafico_conf_description": "Average traffic congestion level on the roads of Valencia. It updates with the district, season and day type selectors.",
+      "congestion-del-trafico_conf_title": "Traffic Congestion",
+      "distribucion-ocupacion-parking_conf_description": "Shows how parking occupancy is distributed over time in terms of flat demand vs. demand peaks. It shows what percentage of the day the parking is at maximum occupancy and how much at minimum. It updates with the district, season and day type selectors.",
+      "distribucion-ocupacion-parking_conf_title": "Parking Occupancy Distribution",
+      "estado-esperado_conf_tittle": "Expected State of Parking and Traffic Services",
+      "estado-esperado_description": "Map of Valencia showing the usual state of parking and traffic flow. It updates according to the district, season and day type selectors (working days, Saturdays, Sundays). By default, it shows the state for working days.",
+      "horas-pico-valle-parkings_conf_description": "Detail of peak and off-peak hours for all parkings, with two daily time slots (morning and afternoon).",
+      "horas-pico-valle-parkings_conf_title": "Peak and Off-Peak Hours of Parking",
+      "i18n_gemelo-digital-vista-identidad-traffic_controls_0_conf_title": "Select a District",
+      "i18n_gemelo-digital-vista-identidad-traffic_controls_1_conf_title": "Select a Day Type",
+      "i18n_gemelo-digital-vista-identidad-traffic_controls_2_conf_description": "Update Data",
+      "i18n_gemelo-digital-vista-identidad-traffic_description": "Digital Twin Demo Panel - Traffic Tab",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_0_title": "General State",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_1_title": "Parking",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_2_title": "Public Transport",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_3_title": "Traffic",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_4_title": "Urban Planning",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_title": "Tabs",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_description": "Map of Valencia with the expected state of the main services: parking occupancy level, traffic congestion level, and public transport usage. It updates according to the district, season and day type selectors (working days, Saturdays, Sundays). By default, it shows the state for working days.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_0_interactivity_click_popup_rows_1_properties_0_label": "Capacity",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_0_interactivity_click_popup_rows_2_properties_0_label": "Average Occupancy",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_0_interactivity_click_popup_rows_3_properties_0_label": "Occupancy",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_1_interactivity_click_popup_rows_0_properties_0_label": "Congestion",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_1_interactivity_click_popup_title_properties_0_label": "Section",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_2_interactivity_click_popup_title_properties_0_label": "Line",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_legends_1_data_0_label": "EMT Lines",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_legends_1_name": "EMT",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_title": "Expected State of Services",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_3_conf_defaultThreshold_label": "Fluid",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_3_conf_description": "Average level of traffic congestion on the roads of Valencia. Displays information for a single section if selected on the map and updates according to the district, season and day type selectors.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_3_conf_thresholds_0_label": "Dense",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_3_conf_thresholds_1_label": "Congested",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_3_conf_title": "Traffic State",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_4_conf_description": "Distribution of traffic congestion by the hours of the day. It updates according to district, season and day type selectors.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_4_conf_title": "Traffic Congestion by Hour",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_5_conf_description": "Ranking of the road segments with double sorting according to their congestion (daily average value): from most to least congested and from least to most. It updates according to district, season and day type selectors.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_5_conf_title": "Congestion Ranking by Sections",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_columns_0_name": "District",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_columns_1_name": "ADT",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_description": "Table with the Average Daily Traffic (ADT) of the 19 districts of Valencia. For each district, the ADT for the default day type (workday) is shown. The measurement point selected is the one with the highest ADT. The ADT is obtained by summing the total number of vehicles that pass through that point over the course of a year and dividing the sum by 365 days. It updates with the district, season and day type selectors.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_title": "ADT by District",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_0_name": "Road",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_1_name": "Morning Peak",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_2_name": "Morning Off-Peak",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_3_name": "Afternoon Peak",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_4_name": "Afternoon Off-Peak",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_description": "Detail of peak hours (higher likelihood of congestion) and off-peak hours (lower likelihood of congestion) for all sections, with two daily time slots (morning and afternoon). It updates with the district, season and day type selectors.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_title": "Traffic Peak and Off-Peak Hours",
+      "ibi-medio_conf_description": "Average Property Tax in Valencia for the last modeled year.",
+      "ibi-medio_conf_title": "Average Property Tax",
+      "inflacion_conf_description": "Inflation rate for the last modeled year.",
+      "inflacion_conf_title": "Inflation",
+      "ocupacion-de-los-parkings_conf_description": "Average occupancy level of Valencia's parking. It updates with the district, season and day type selectors.",
+      "ocupacion-de-los-parkings_conf_title": "Parking Occupancy",
+      "ocupacion-parkings_conf_description": "Distribution of parking occupancy according to the hours of the day. It updates with the district, season and day type selectors.",
+      "ocupacion-parkings_conf_title": "Parking Occupancy by Hour",
+      "presupuesto-anual_conf_description": "Annual budget of Valencia for the last modeled year.",
+      "presupuesto-anual_conf_title": "Annual Budget",
+      "ranking-parking_conf_description": "Ranking of parkings with double sorting according to the average daily occupancy value: from most to least saturated and from least to most saturated.",
+      "ranking-parking_conf_title": "Parking Occupancy Ranking",
+      "tasa-desempleo_conf_description": "Percentage representing the total number of unemployed relative to the active population in Valencia for the last modeled year.",
+      "tasa-desempleo_conf_title": "Unemployment Rate",
+      "titulados-superiores_conf_description": "Number of higher education graduates per 100,000 inhabitants in Valencia for the last modeled year.",
+      "titulados-superiores_conf_title": "Higher Education Graduates",
+      "uso-del-transporte-publico_conf_description": "Usage level of Valencia's public transport, according to the number of trips of the different EMT lines. It updates with the district, season and day type selectors.",
+      "uso-del-transporte-publico_conf_title": "Public Transport Usage",
+      "vista-identidad_conf_description": "The Identity View is a set of indicators that best characterize a city within the study scope and from a manager's perspective. It is a real, non-simulated view, but new, designed, and optimized to be the best representation of the city, the zero scenario, the reference. It is the starting point of the twin, as it determines the sets and models of data that will be used to generate the simulated views.",
+      "vista-identidad_conf_title_traffic": "Identity view: Traffic"
+    },
+    "es": {
+      "comparativa-pib_conf_description": "Producto Interior Bruto de Valencia frente a España, para el último año modelado.",
+      "comparativa-pib_conf_title": "PIB frente a PIB país",
+      "congestion-del-trafico_conf_description": "Nivel medio de congestión del tráfico, en las vías de circulación de la ciudad de Valencia. Se actualiza con los selectores de distrito, tipo de día y temporada.",
+      "congestion-del-trafico_conf_title": "Congestión del tráfico",
+      "distribucion-ocupacion-parking_conf_description": "Muestra cómo se distribuye la ocupación del parking en el tiempo en el sentido de demanda plana vs picos de demanda. Muestra qué porcentaje del día el parking está en máxima ocupación y cuánto en mínima. Se actualiza con los selectores de distrito, tipo de día y temporada. ",
+      "distribucion-ocupacion-parking_conf_title": "Distribución de la ocupación de los parkings",
+      "estado-esperado_conf_tittle": "Estado esperado de los servicios de parking y tráfico",
+      "estado-esperado_description": "Mapa de Valencia con el estado habitual de los parkings y la fluidez habitual del tráfico. Se actualiza según los selectores de distrito, tipo de día (laborable, sábados, domingos) y temporada. Por defecto muestra el estado para el tipo de día laborable.",
+      "horas-pico-valle-parkings_conf_description": "Detalle de horas pico y horas valle para todos los parkings, con dos franjas diarias (mañana y tarde).",
+      "horas-pico-valle-parkings_conf_title": "Horas pico y valle de los parkings",
+      "i18n_gemelo-digital-vista-identidad-traffic_controls_0_conf_title": "Seleccione un distrito",
+      "i18n_gemelo-digital-vista-identidad-traffic_controls_1_conf_title": "Seleccione un tipo de día",
+      "i18n_gemelo-digital-vista-identidad-traffic_controls_2_conf_description": "Actualizar datos",
+      "i18n_gemelo-digital-vista-identidad-traffic_description": "Panel de demo del Gemelo Digital - Pestaña tráfico",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_0_title": "Estado general",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_1_title": "Parking",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_2_title": "Transporte público",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_3_title": "Tráfico",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_4_title": "Urbanismo",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_title": "Tabs",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_description": "Mapa de Valencia con el estado esperado de los principales servicios: nivel de ocupación de los parkings, nivel de congestión del tráfico y utilización del transporte público. Se actualiza según los selectores de distrito, tipo de día (laborable, sábados, domingos) y temporada. Por defecto muestra el estado para el tipo de día laborable.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_0_interactivity_click_popup_rows_1_properties_0_label": "Capacidad",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_0_interactivity_click_popup_rows_2_properties_0_label": "Ocupación media",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_0_interactivity_click_popup_rows_3_properties_0_label": "Ocupación",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_1_interactivity_click_popup_rows_0_properties_0_label": "Congestión",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_1_interactivity_click_popup_title_properties_0_label": "Tramo",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_layers_2_interactivity_click_popup_title_properties_0_label": "Línea",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_legends_1_data_0_label": "Líneas EMT",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_legends_1_name": "EMT",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_1_conf_title": "Estado esperado de los servicios",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_3_conf_defaultThreshold_label": "Fluido",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_3_conf_description": "Nivel medio de congestión del tráfico en las vías de circulación de la ciudad de Valencia. Muestra información de un único tramo si ha sido seleccionado en el mapa y se actualiza según los selectores de distrito, tipo de día y temporada.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_3_conf_thresholds_0_label": "Denso",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_3_conf_thresholds_1_label": "Congestionado",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_3_conf_title": "Estado del tráfico",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_4_conf_description": "Distribución de la congestión del tráfico según las horas del día. Se actualiza según los selectores de distrito, tipo de día y temporada.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_4_conf_title": "Congestión del tráfico por horas",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_5_conf_description": "Ranking de los tramos con doble ordenación según su congestión (valor medio diario): de más a menos congestionados y de menos a más. Se actualiza según los selectores de distrito, tipo de día y temporada.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_5_conf_title": "Ranking de tramos por congestión",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_columns_0_name": "Distrito",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_columns_1_name": "IMD",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_description": "Tabla con la intensidad media diaria (IMD) de los 19 distritos de Valencia. Para cada distrito, se muestra la IMD para el tipo de día por defecto (laborable).  Se escoge el punto de medida con la IMD más alta. La IMD se obtiene sumando el total de vehículos que transitan por ese punto a lo largo de un año y dividiendo la suma entre los 365 días. Se actualiza con el selector de tipo de día.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_title": "IMD por distrito",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_0_name": "Carretera",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_1_name": "Pico mañana",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_2_name": "Valle mañana",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_3_name": "Pico tarde",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_4_name": "Valle tarde",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_description": "Detalle de horas pico (mayor probabilidad de congestión) y horas valle (menor probabilidad de congestión) para todos los tramos, con dos franjas diarias (mañana y tarde). Se actualiza con los selectores de distrito, tipo de día y temporada.",
+      "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_title": "Horas pico y valle de tráfico",
+      "ibi-medio_conf_description": "Impuesto Sobre Bienes Inmuebles medio de Valencia para el último año modelado.",
+      "ibi-medio_conf_title": "IBI medio",
+      "inflacion_conf_description": "Valor de la inflación para el último año modelado.",
+      "inflacion_conf_title": "Inflación",
+      "ocupacion-de-los-parkings_conf_description": "Nivel medio de ocupación de los parkings de Valencia. Se actualiza con los selectores de distrito, tipo de día y temporada.",
+      "ocupacion-de-los-parkings_conf_title": "Ocupación de los parkings",
+      "ocupacion-parkings_conf_description": "Distribución de la ocupación de los parkings según las horas del día. Se actualiza con los selectores de distrito, tipo de día y temporada.",
+      "ocupacion-parkings_conf_title": "Ocupación de los parkings por horas",
+      "presupuesto-anual_conf_description": "Presupuesto anual de Valencia para el último año modelado.",
+      "presupuesto-anual_conf_title": "Presupuesto anual",
+      "ranking-parking_conf_description": "Ranking de los parkings con doble ordenación según el valor medio de la ocupación diaria: de más a menos saturados y de menos a más saturados.",
+      "ranking-parking_conf_title": "Ranking de parkings por ocupación",
+      "tasa-desempleo_conf_description": "Porcentaje que representa el número total de desempleados con respecto a la población activa para Valencia para el último año modelado.",
+      "tasa-desempleo_conf_title": "Tasa de desempleo",
+      "titulados-superiores_conf_description": "Número de titulados de educación superior por cada 100.000 habitantes para Valencia para el último año modelado.",
+      "titulados-superiores_conf_title": "Titulados Superiores",
+      "uso-del-transporte-publico_conf_description": "Nivel uso del transporte público de Valencia, según el número de trayectos de las diferentes líneas de la EMT. Se actualiza con los selectores de distrito, tipo de día y temporada.",
+      "uso-del-transporte-publico_conf_title": "Uso del transporte público",
+      "vista-identidad_conf_description": "La vista identidad es aquel conjunto de indicadores que mejor caracterizan una ciudad dentro del ámbito de estudio y para el punto de vista de un gestor. Es una vista real, no simulada, pero nueva, diseñada y optimizada para ser la mejor representación de la ciudad, el escenario cero, de referencia. Es el punto de partida del gemelo, ya que determina los conjuntos y modelos de datos que se utilizarán para generar las vistas simuladas. ",
+      "vista-identidad_conf_title_traffic": "Vista identidad: Tráfico"
+    }
+  },
+  "name": "vista-identidad_conf_title_traffic",
+  "parsedTitle": "vista-identidad_conf_title_traffic",
+  "service": "alcobendas",
+  "slug": "gemelo-digital-vista-identidad-traffic",
+  "widgets": [
+    {
+      "conf": {
+        "dimensions": {
+          "columns": 4,
+          "rows": 1
+        },
+        "links": {
+          "city": {
+            "pushes": {
+              "ON_FILTER_ENTITYID": "ON_FILTER_ENTITYID",
+              "ON_FILTER_ENTITYTYPE": "ON_FILTER_ENTITYTYPE",
+              "ON_FILTER_POI": "ON_FILTER_POI"
+            },
+            "target": "gemelo-digital-vista-identidad-city"
+          },
+          "general": {
+            "pushes": {
+              "ON_FILTER_ENTITYID": "ON_FILTER_ENTITYID",
+              "ON_FILTER_ENTITYTYPE": "ON_FILTER_ENTITYTYPE",
+              "ON_FILTER_POI": "ON_FILTER_POI"
+            },
+            "target": "gemelo-digital-vista-identidad"
+          },
+          "parking": {
+            "pushes": {
+              "ON_FILTER_ENTITYID": "ON_FILTER_ENTITYID",
+              "ON_FILTER_ENTITYTYPE": "ON_FILTER_ENTITYTYPE",
+              "ON_FILTER_POI": "ON_FILTER_POI"
+            },
+            "target": "gemelo-digital-vista-identidad-parking"
+          },
+          "publictransport": {
+            "pushes": {
+              "ON_FILTER_ENTITYID": "ON_FILTER_ENTITYID",
+              "ON_FILTER_ENTITYTYPE": "ON_FILTER_ENTITYTYPE",
+              "ON_FILTER_POI": "ON_FILTER_POI"
+            },
+            "target": "gemelo-digital-vista-identidad-publictransport"
+          },
+          "traffic": {
+            "pushes": {
+              "ON_FILTER_ENTITYID": "ON_FILTER_ENTITYID",
+              "ON_FILTER_ENTITYTYPE": "ON_FILTER_ENTITYTYPE",
+              "ON_FILTER_POI": "ON_FILTER_POI"
+            },
+            "target": "gemelo-digital-vista-identidad-traffic"
+          }
+        },
+        "tabs": [
+          {
+            "target": "general",
+            "title": "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_0_title"
+          },
+          {
+            "target": "parking",
+            "title": "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_1_title"
+          },
+          {
+            "target": "publictransport",
+            "title": "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_2_title"
+          },
+          {
+            "active": true,
+            "target": "traffic",
+            "title": "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_3_title"
+          },
+          {
+            "target": "city",
+            "title": "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_tabs_4_title"
+          }
+        ],
+        "title": "i18n_gemelo-digital-vista-identidad-traffic_widgets_0_conf_title"
+      },
+      "pulls": {
+        "ON_FILTER": [
+          "ON_FILTER_ENTITYID",
+          "ON_FILTER_ENTITYTYPE"
+        ],
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "tabs"
+    },
+    {
+      "conf": {
+        "baseLayer": {
+          "maxZoom": 21,
+          "type": "tile-xyz",
+          "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
+        },
+        "description": "i18n_gemelo-digital-vista-identidad_widget_2_description",
+        "dimensions": {
+          "columns": 4,
+          "rows": 6
+        },
+        "fixedFilters": [
+          {
+            "operator": "=",
+            "value": "N/A",
+            "var": "sceneref"
+          }
+        ],
+        "initExtent": {
+          "layers": [
+            "parking-offstreet-marker",
+            "route-legs",
+            "emt_legs"
+          ],
+          "type": "layers"
+        },
+        "layers": [
+          {
+            "fixedFilters": [
+              {
+                "operator": ">=",
+                "value": 7,
+                "var": "hour"
+              },
+              {
+                "operator": "<",
+                "value": 23,
+                "var": "hour"
+              }
+            ],
+            "interactivity": {
+              "click": {
+                "popup": {
+                  "rows": [
+                    {
+                      "output": "SIMPLE_ROW",
+                      "properties": [
+                        {
+                          "label": "parking-tiempo-real-nombre",
+                          "value": "name"
+                        }
+                      ]
+                    },
+                    {
+                      "output": "SIMPLE_ROW",
+                      "properties": [
+                        {
+                          "label": "i18n_gemelo-digital-vista-identidad_widgets_1_conf_layers_0_interactivity_click_popup_rows_1_properties_0_label",
+                          "value": "capacity"
+                        }
+                      ]
+                    },
+                    {
+                      "output": "SIMPLE_ROW",
+                      "properties": [
+                        {
+                          "label": "i18n_gemelo-digital-vista-identidad_widgets_1_conf_layers_0_interactivity_click_popup_rows_2_properties_0_label",
+                          "nbf": ",.2f",
+                          "value": "occupation"
+                        }
+                      ]
+                    },
+                    {
+                      "output": "SIMPLE_ROW",
+                      "properties": [
+                        {
+                          "label": "i18n_gemelo-digital-vista-identidad_widgets_1_conf_layers_0_interactivity_click_popup_rows_3_properties_0_label",
+                          "nbf": ",.2f",
+                          "units": "%",
+                          "value": "occupationpercent"
+                        }
+                      ]
+                    }
+                  ],
+                  "title": {
+                    "output": "SIMPLE_ROW",
+                    "properties": [
+                      {
+                        "label": "parking-tiempo-real-total-parking-ID",
+                        "params": {
+                          "ON_FILTER_ENTITYID": {
+                            "isFeatureVar": true,
+                            "prop": "entityid",
+                            "value": "entityid"
+                          }
+                        },
+                        "target": "parkingdetalleid",
+                        "value": "entityid"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "params": {
+              "sourceId": "offstreetparking-location",
+              "variables": [
+                "entityid",
+                "name",
+                {
+                  "agg": "avg",
+                  "var": "occupationpercent"
+                },
+                {
+                  "agg": "avg",
+                  "var": "occupation"
+                },
+                {
+                  "agg": "max",
+                  "var": "capacity"
+                }
+              ]
+            },
+            "styleAssign": [
+              {
+                "condition": "[occupationpercent] <= 50",
+                "style": "offstreetparking-green"
+              },
+              {
+                "condition": "[occupationpercent] > 50 && [occupationpercent] <= 75",
+                "style": "offstreetparking-orange"
+              },
+              {
+                "condition": true,
+                "style": "offstreetparking-red"
+              }
+            ],
+            "styles": [
+              {
+                "anchor": [
+                  0.5,
+                  0.5
+                ],
+                "anchorXUnits": "fraction",
+                "anchorYUnits": "fraction",
+                "name": "offstreetparking_loc",
+                "scale": 0.35,
+                "src": "/assets/img/verticals/parking/parkingaccess_blue_64.png",
+                "type": "icon"
+              },
+              {
+                "name": "offstreetparking-green",
+                "src": "/assets/tenantThemes/digital_twin/icons/parking-verde-letra oscura.png",
+                "template": "offstreetparking_loc"
+              },
+              {
+                "name": "offstreetparking-orange",
+                "src": "/assets/tenantThemes/digital_twin/icons/parking-amarillo-letra oscura.png",
+                "template": "offstreetparking_loc"
+              },
+              {
+                "name": "offstreetparking-red",
+                "src": "/assets/tenantThemes/digital_twin/icons/parking-rojo-letra oscura.png",
+                "template": "offstreetparking_loc"
+              }
+            ],
+            "title": "parking-offstreet-marker",
+            "type": "wbe-geojson",
+            "zIndex": 3
+          },
+          {
+            "centerOnPullFilter": true,
+            "ignoreWidgetFixedFilters": true,
+            "interactivity": {
+              "click": {
+                "popup": {
+                  "rows": [
+                    {
+                      "output": "SIMPLE_ROW",
+                      "properties": [
+                        {
+                          "label": "i18n_gemelo-digital-vista-identidad_widgets_1_conf_layers_1_interactivity_click_popup_rows_0_properties_0_label",
+                          "nbf": ",.2%",
+                          "value": "congestion"
+                        }
+                      ]
+                    }
+                  ],
+                  "title": {
+                    "output": "SIMPLE_ROW",
+                    "properties": [
+                      {
+                        "label": "i18n_gemelo-digital-vista-identidad_widgets_1_conf_layers_1_interactivity_click_popup_title_properties_0_label",
+                        "value": "name"
+                      }
+                    ]
+                  }
+                },
+                "pushFilterBy": "entityid",
+                "pushes": {
+                  "ON_FILTER": "ON_FILTER_MAP"
+                }
+              }
+            },
+            "params": {
+              "sourceId": "offstreetparking-lines",
+              "timeVar": "timeinstant",
+              "variables": [
+                "entityid",
+                "name",
+                {
+                  "agg": "max",
+                  "var": "congestion"
+                }
+              ]
+            },
+            "styleAssign": [
+              {
+                "condition": "[congestion] < 0.25",
+                "style": "line1"
+              },
+              {
+                "condition": "[congestion] >= 0.25 && [congestion] < 0.50",
+                "style": "line2"
+              },
+              {
+                "condition": "[congestion] >= 0.50",
+                "style": "line3"
+              }
+            ],
+            "styles": [
+              {
+                "name": "line1",
+                "stroke": {
+                  "color": "#5CFF0A",
+                  "width": 2
+                },
+                "type": "polyline"
+              },
+              {
+                "name": "line2",
+                "stroke": {
+                  "color": "#CCCC00",
+                  "width": 3
+                },
+                "type": "polyline"
+              },
+              {
+                "name": "line3",
+                "stroke": {
+                  "color": "#FF6B6B",
+                  "width": 4
+                },
+                "type": "polyline"
+              }
+            ],
+            "timeVar": "timeinstant",
+            "title": "route-legs",
+            "type": "wbe-geojson",
+            "zIndex": 2
+          },
+          {
+            "centerOnPullFilter": true,
+            "ignoreWidgetFixedFilters": true,
+            "interactivity": {
+              "click": {
+                "popup": {
+                  "rows": [
+                    {
+                      "output": "SIMPLE_ROW",
+                      "properties": [
+                        {
+                          "label": "Viajeros",
+                          "nbf": ",.0f",
+                          "value": "intensity"
+                        }
+                      ]
+                    }
+                  ],
+                  "title": {
+                    "output": "SIMPLE_ROW",
+                    "properties": [
+                      {
+                        "label": "i18n_gemelo-digital-vista-identidad_widgets_1_conf_layers_2_interactivity_click_popup_title_properties_0_label",
+                        "value": "name"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "params": {
+              "sourceId": "emt-lines",
+              "timeVar": "timeinstant",
+              "variables": [
+                "entityid",
+                "name",
+                "intensity"
+              ]
+            },
+            "styleAssign": [
+              {
+                "condition": true,
+                "style": "line_emt"
+              }
+            ],
+            "styles": [
+              {
+                "name": "line_emt",
+                "stroke": {
+                  "color": "#0066FF",
+                  "width": 2
+                },
+                "type": "polyline"
+              }
+            ],
+            "timeVar": "timeinstant",
+            "title": "emt-legs",
+            "type": "wbe-geojson",
+            "zIndex": 1
+          }
+        ],
+        "legendCollapsed": true,
+        "legends": [
+          {
+            "applyToLayers": [
+              "parking-offstreet-marker"
+            ],
+            "data": [
+              {
+                "key": "expr:[entityid]",
+                "label": "Aparcamientos",
+                "value": "https://lab.urbo2.es/assets/tenantThemes/digital_twin/icons/parking-neutro-letra blanca.png"
+              }
+            ],
+            "filterBy": "entityid",
+            "method": "manual",
+            "name": "Aparcamientos",
+            "type": "list",
+            "value": "symbol"
+          },
+          {
+            "applyToLayers": [
+              "route-legs"
+            ],
+            "data": [
+              {
+                "key": "expr:[entityid]",
+                "label": "Tramos de tráfico",
+                "value": "https://lab.urbo2.es/assets/tenantThemes/digital_twin/icons/progress.png"
+              }
+            ],
+            "filterBy": "entityid",
+            "method": "manual",
+            "name": "Tráfico",
+            "type": "list",
+            "value": "symbol"
+          },
+          {
+            "applyToLayers": [
+              "emt-legs"
+            ],
+            "data": [
+              {
+                "key": "expr:[entityid]",
+                "label": "i18n_gemelo-digital-vista-identidad_widgets_1_conf_legends_1_data_0_label",
+                "value": "https://lab.urbo2.es/assets/tenantThemes/digital_twin/blue-bar-emt-legend.svg"
+              }
+            ],
+            "filterBy": "entityid",
+            "method": "manual",
+            "name": "i18n_gemelo-digital-vista-identidad_widgets_1_conf_legends_1_name",
+            "type": "list",
+            "value": "symbol"
+          },
+          {
+            "data": [
+              {
+                "value": "#5CFF0A"
+              },
+              {
+                "value": "#CCCC00"
+              },
+              {
+                "value": "#FF6B6B"
+              }
+            ],
+            "method": "manual",
+            "name": "i18n_gemelo-digital-vista-identidad_widget_2_legend_1",
+            "type": "dynamicramp"
+          }
+        ],
+        "maxZoom": 18,
+        "maximizable": true,
+        "title": "i18n_gemelo-digital-vista-identidad_widget_2_title",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "description": "estado-esperado_description",
+        "sources": {
+          "emt-lines": {
+            "connectionProperties": {
+              "geomVar": "location",
+              "table": "@{prefijo}dtwin_routeintensity_sim"
+            },
+            "name": "gemelo_parking",
+            "type": "postgresql"
+          },
+          "offstreetparking-lines": {
+            "connectionProperties": {
+              "geomVar": "location",
+              "table": "@{prefijo}dtwin_trafficcongestion_sim"
+            },
+            "name": "gemelo_parking",
+            "type": "postgresql"
+          },
+          "offstreetparking-location": {
+            "connectionProperties": {
+              "geomVar": "location",
+              "table": "@{prefijo}dtwin_offstreetparking_sim"
+            },
+            "name": "gemelo_parking",
+            "type": "postgresql"
+          }
+        },
+        "type": "multiple"
+      },
+      "pulls": {
+        "ON_FILTER": [
+          "ON_FILTER_DISTRICT",
+          "ON_FILTER_DAYTYPE",
+          "ON_FILTER_TREND"
+        ],
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "pushes": {
+        "ON_FILTER": "ON_FILTER_ENTITYID"
+      },
+      "type": "basic-map-ol"
+    },
+    {
+      "conf": {
+        "contentTag": "img",
+        "description": "",
+        "dimensions": {
+          "columns": 1,
+          "rows": 4
+        },
+        "endpoint": "https://lab.urbo2.es/assets/tenantThemes/digital_twin/traffic.svg",
+        "iframe": true,
+        "keepAspectRatio": true,
+        "responsive": false,
+        "title": "",
+        "widgetUi": {
+          "noFooter": true,
+          "noHeader": true
+        }
+      },
+      "description": "congestion-del-trafico_conf_description",
+      "pulls": {
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "iframe"
+    },
+    {
+      "conf": {
+        "defaultThreshold": {
+          "color": "#FF48E2",
+          "label": "i18n_gemelo-digital-vista-identidad_widgets_4_conf_defaultThreshold_label"
+        },
+        "description": "i18n_gemelo-digital-vista-identidad_widgets_4_conf_description",
+        "dimensions": {
+          "columns": 1,
+          "rows": 4
+        },
+        "fixedFilters": [
+          {
+            "operator": "=",
+            "value": "N/A",
+            "var": "sceneref"
+          }
+        ],
+        "format": ",.2%",
+        "max": 1,
+        "thresholds": [
+          {
+            "color": "#CCCC00",
+            "label": "i18n_gemelo-digital-vista-identidad_widgets_4_conf_thresholds_0_label",
+            "value": 0.5
+          },
+          {
+            "color": "#FF6B6B",
+            "label": "i18n_gemelo-digital-vista-identidad_widgets_4_conf_thresholds_1_label",
+            "value": 0.75
+          }
+        ],
+        "timeVar": "timeinstant",
+        "title": "i18n_gemelo-digital-vista-identidad_widgets_4_conf_title",
+        "variable": {
+          "agg": "max",
+          "label": "",
+          "prop": "avg_congestion",
+          "units": ""
+        },
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "connectionProperties": {
+          "table": "@{prefijo}dtwin_trafficcongestion_daily"
+        },
+        "name": "gemelo_parking",
+        "type": "postgresql"
+      },
+      "pulls": {
+        "ON_FILTER": [
+          "ON_FILTER_DAYTYPE",
+          "ON_FILTER_DISTRICT",
+          "ON_FILTER_TREND",
+          "ON_FILTER_MAP"
+        ],
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "gauge"
+    },
+    {
+      "conf": {
+        "axis": {
+          "x": {
+            "format": "%H:%M",
+            "type": "timeseries"
+          },
+          "y": {
+            "format": ",.0%",
+            "min": 0
+          }
+        },
+        "description": "i18n_gemelo-digital-vista-identidad-traffic_widgets_4_conf_description",
+        "dimensions": {
+          "columns": 2,
+          "rows": 4
+        },
+        "exportable": [
+          "csv",
+          "xlsx"
+        ],
+        "finish": {
+          "quantity": 1,
+          "type": "subtract",
+          "unit": "hours"
+        },
+        "fixedFilters": [
+          {
+            "operator": "=",
+            "value": "N/A",
+            "var": "sceneref"
+          }
+        ],
+        "lines": [
+          {
+            "agg": "max",
+            "axis": "y",
+            "color": "#FF48E2",
+            "format": ",.2%",
+            "label": "",
+            "prop": "congestion",
+            "type": "area-spline",
+            "unit": "",
+            "var": "congestion"
+          }
+        ],
+        "raw": true,
+        "showLabelInTooltip": true,
+        "showUnitInTooltip": true,
+        "start": {
+          "quantity": 2,
+          "type": "subtract",
+          "unit": "days"
+        },
+        "timeVar": "generatedinstant",
+        "title": "i18n_gemelo-digital-vista-identidad-traffic_widgets_4_conf_title",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "connectionProperties": {
+          "table": "@{prefijo}dtwin_trafficcongestion_yesterday"
+        },
+        "name": "gemelo_parking",
+        "type": "postgresql"
+      },
+      "pulls": {
+        "ON_FILTER": [
+          "ON_FILTER_DAYTYPE",
+          "ON_FILTER_DISTRICT",
+          "ON_FILTER_TREND",
+          "ON_FILTER_MAP"
+        ],
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "timeseries"
+    },
+    {
+      "conf": {
+        "countVar": "avg_congestion",
+        "countVarAgg": "max",
+        "defaultThreshold": {
+          "color": "#FF48E2",
+          "label": ""
+        },
+        "description": "i18n_gemelo-digital-vista-identidad-traffic_widgets_5_conf_description",
+        "dimensions": {
+          "columns": 2,
+          "rows": 4
+        },
+        "fixedFilters": [
+          {
+            "operator": "=",
+            "value": "N/A",
+            "var": "sceneref"
+          },
+          {
+            "operator": "!=",
+            "value": null,
+            "var": "name"
+          }
+        ],
+        "format": ",.2%",
+        "groupVar": "name",
+        "orderType": "desc",
+        "timeVar": "timeinstant",
+        "title": "i18n_gemelo-digital-vista-identidad-traffic_widgets_5_conf_title",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "customDesignConf": [
+        {
+          "fields": {
+            "value": "conf.orderType"
+          },
+          "label": "Orden:",
+          "onHeader": true,
+          "onlyAdmin": false,
+          "type": "list",
+          "values": [
+            {
+              "default": true,
+              "label": "Mayor a menor",
+              "value": "desc"
+            },
+            {
+              "default": false,
+              "label": "Menor a mayor",
+              "value": "asc"
+            }
+          ]
+        }
+      ],
+      "datasource": {
+        "connectionProperties": {
+          "table": "@{prefijo}dtwin_trafficcongestion_daily"
+        },
+        "name": "gemelo_parking",
+        "type": "postgresql"
+      },
+      "pulls": {
+        "ON_FILTER": [
+          "ON_FILTER_DAYTYPE",
+          "ON_FILTER_DISTRICT",
+          "ON_FILTER_TREND",
+          "ON_FILTER_MAP"
+        ],
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "horizontal-bar"
+    },
+    {
+      "conf": {
+        "columns": [
+          {
+            "name": "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_columns_0_name",
+            "operator": "ilike",
+            "prop": "zone_name",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": true,
+            "style": {
+              "font-size": "12px"
+            },
+            "width": 120
+          },
+          {
+            "agg": "avg",
+            "columnType": "number",
+            "format": ",.0f",
+            "name": "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_columns_1_name",
+            "operator": "ilike",
+            "prop": "intensity",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": true,
+            "style": {
+              "font-size": "12px"
+            },
+            "width": 80
+          }
+        ],
+        "description": "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_description",
+        "dimensions": {
+          "columns": 2,
+          "rows": 4
+        },
+        "exportable": [
+          "csv",
+          "xlsx"
+        ],
+        "fixedFilters": [
+          {
+            "operator": "=",
+            "value": "N/A",
+            "var": "sceneref"
+          }
+        ],
+        "horizontalScroll": false,
+        "pageLimit": 5,
+        "timeVar": "timeinstant",
+        "title": "i18n_gemelo-digital-vista-identidad-traffic_widgets_6_conf_title",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "connectionProperties": {
+          "geomVar": "location",
+          "table": "@{prefijo}dtwin_trafficintensity_daily"
+        },
+        "name": "gemelo_parking",
+        "type": "postgresql"
+      },
+      "pulls": {
+        "ON_FILTER": [
+          "ON_FILTER_DAYTYPE",
+          "ON_FILTER_DISTRICT",
+          "ON_FILTER_TREND"
+        ],
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "table"
+    },
+    {
+      "conf": {
+        "columns": [
+          {
+            "hidden": true,
+            "name": "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_0_name",
+            "operator": "ilike",
+            "prop": "entityid",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": true,
+            "style": {
+              "font-size": "12px"
+            },
+            "width": 80
+          },
+          {
+            "name": "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_0_name",
+            "operator": "ilike",
+            "prop": "name",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": true,
+            "style": {
+              "font-size": "12px"
+            },
+            "width": 80
+          },
+          {
+            "name": "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_1_name",
+            "operator": "ilike",
+            "prop": "morning_max",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": true,
+            "style": {
+              "font-size": "12px"
+            },
+            "width": 80
+          },
+          {
+            "name": "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_2_name",
+            "operator": "ilike",
+            "prop": "morning_min",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": true,
+            "style": {
+              "font-size": "12px"
+            },
+            "width": 80
+          },
+          {
+            "name": "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_3_name",
+            "operator": "ilike",
+            "prop": "evening_max",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": true,
+            "style": {
+              "font-size": "12px"
+            },
+            "width": 80
+          },
+          {
+            "name": "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_columns_4_name",
+            "operator": "ilike",
+            "prop": "evening_min",
+            "resizeable": true,
+            "searcher": true,
+            "sortable": true,
+            "style": {
+              "font-size": "12px"
+            },
+            "width": 80
+          }
+        ],
+        "description": "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_description",
+        "dimensions": {
+          "columns": 4,
+          "rows": 4
+        },
+        "exportable": [
+          "csv",
+          "xlsx"
+        ],
+        "fixedFilters": [
+          {
+            "operator": "=",
+            "value": "N/A",
+            "var": "sceneref"
+          }
+        ],
+        "horizontalScroll": false,
+        "pageLimit": 5,
+        "timeVar": "timeinstant",
+        "title": "i18n_gemelo-digital-vista-identidad-traffic_widgets_7_conf_title",
+        "widgetUi": {
+          "hideFooterTs": true
+        }
+      },
+      "datasource": {
+        "connectionProperties": {
+          "table": "@{prefijo}dtwin_trafficcongestion_peak"
+        },
+        "name": "gemelo_parking",
+        "type": "postgresql"
+      },
+      "pulls": {
+        "ON_FILTER": [
+          "ON_FILTER_DAYTYPE",
+          "ON_FILTER_DISTRICT",
+          "ON_FILTER_TREND",
+          "ON_FILTER_MAP"
+        ],
+        "ON_RELOAD": "ON_RELOAD"
+      },
+      "type": "table"
+    }
+  ]
+}
