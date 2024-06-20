@@ -27,8 +27,16 @@ import (
 
 	model: [string]: {
 		types.#ModelAttribute
+		// Etiqueta para identificar a los atributos que son métricas.
+		// Estos atributos se almacenan en la tabla histórica y son objetivo
+		// de las simulaciones.
 		#metric: bool | *false
+		// - 0 si el atributo es un valor absoluto.
+		// - 1 si es un tanto por 1.
+		// - 100 si es un tanto por ciento.
 		#scale:  int | *0
+		// Para atributos calculados, expresión SQL que deriva el valor
+		// a partir de otras columnas de la tabla.
 		#calc:   string | *""
 	}
 
