@@ -62,7 +62,7 @@ Esta regularización se hace mediante un resampling de las series temporales a i
 
 El primer criterio de clasificación es el **tipo de día**. Cada uno de los datasets que se utiliza en el proyecto es una serie temporal univariable. Si se representan para cada dataset regularizado varios días consecutivos en un mismo punto de medida, se observarán grupos de días que se parecen entre sí.
 
-![tipos de día](doc/notebook/daytype.png)
+![tipos de día](./notebook/daytype.png)
 
 El objetivo de la clasificación es identificar estos patrones. Formalmente,
 
