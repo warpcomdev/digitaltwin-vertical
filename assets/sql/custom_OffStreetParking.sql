@@ -2,6 +2,7 @@
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por día. Ignora la hora y minuto.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_offstreetparking_daily;
 CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_daily AS
 SELECT
   t.timeinstant,
@@ -24,6 +25,7 @@ GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.
 -- widget timeseries de urbo, sin necesidad de tener muestras
 -- diarias para todos los días.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_offstreetparking_yesterday;
 CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_yesterday AS
 SELECT
   timeinstant,
@@ -37,12 +39,13 @@ SELECT
   occupation,
   occupationPercent,
   entityid,
-  date_trunc('day'::text, now()) - '1 day'::interval + make_interval(hours => t.hour) AS generatedinstant
+  timezone('CEST'::text, date_trunc('day'::text, timezone('CEST'::text, now())) - '1 day'::interval) + make_interval(hours => t.hour) AS generatedinstant
 FROM :target_schema.dtwin_offstreetparking_sim AS t;
 -- CREATE VIEW dtwin_offstreetparking_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 -- una métrica dada.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_offstreetparking_peak;
 CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_peak AS
 SELECT
   numeradas.timeinstant,
@@ -100,6 +103,7 @@ GROUP BY  numeradas.timeinstant, numeradas.sourceref, numeradas.sceneref, numera
 -- Vista que calcula la frecuencia con la que una métrica
 -- está dentro de un umbral.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_offstreetparking_freq;
 CREATE OR REPLACE VIEW :target_schema.dtwin_offstreetparking_freq AS
 SELECT
   t.entityid,

@@ -24,6 +24,7 @@ vector: {
 		-- Vista que extrae las métricas necesarias para calcular
 		-- el vector de estados que representa a la ciudad.
 		-- -------------------------------------------------------------
+		DROP VIEW IF EXISTS :target_schema.{{ .viewName }};
 		CREATE OR REPLACE VIEW :target_schema.{{ .viewName }} AS
 		SELECT
 		  {{- range .metrics }}

@@ -51,4 +51,24 @@ AirQualityObserved: templates.#Twin & {
 			#metric: true
 		}
 	}
+
+	#sql: daily: {
+		columns: [
+			"timeinstant",
+			"sourceref",
+			"sceneref",
+			"trend",
+			"daytype",
+			"name",
+			"zone",
+		]
+		aggregations: {
+			no2:  "average(no2)"
+			pm25: "average(pm25)"
+			pm10: "average(pm10)"
+			o3:   "average(o3)"
+		}
+		where:    "hour >= 7 and hour < 23"
+		withZone: true
+	}
 }

@@ -2,4 +2,5 @@
   - [Entidades de referencia](entities/README.md)
   - Artefactos de despliegue:
     - [Subscripciones](subs/README.md)
+    - [Paneles de vertical](panels/README.md)
     - [Ficheros SQL](sql/README.md)

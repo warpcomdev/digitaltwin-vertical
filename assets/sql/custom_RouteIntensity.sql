@@ -2,6 +2,7 @@
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por día. Ignora la hora y minuto.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_routeintensity_daily;
 CREATE OR REPLACE VIEW :target_schema.dtwin_routeintensity_daily AS
 SELECT
   t.timeinstant,
