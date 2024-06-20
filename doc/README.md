@@ -10,6 +10,10 @@ El concepto de "gemelo digital" se utiliza en múltiples contextos (industria, I
 
 - Un **modelo matemático** que predice cambios en dicha caracterización, a largo plazo, como consecuencia de modificaciones urbanísticas, regulatorias, etc. Este modelo utiliza un conjunto de supuestos (**escenarios**) para calcular variaciones en la caracterización de la ciudad (**simulación**).
 
+## Manual de usuario
+
+El uso de la vertical se describe en el [Manual de Usuario](./usuario/README.md)
+
 ## Datasets
 
 Tanto el análisis estadístico como el aprendizaje predictivo que se realizan en este proyecto se basan en el procesamiento de **datasets** con información histórica de las métricas o servicios soportados. Cada dataset consiste en un **conjunto de series temporales históricas, monovariables y georeferenciadas**, asociadas cada una a un punto de medida. Cada elemento de cada dataset proporciona:
@@ -91,9 +95,3 @@ Estos grupos se usan como criterio para discriminar por estacionalidad. Típicam
 - Resto del año
 
 Aunque en cada ciudad puede variar, por ejemplo: en una ciudad con estaciones de esquí importantes, Diciembre, Enero y Febrero pueden formar otro grupo de estacionalidad.
-
-## Identidad
-
-## Codificación
-
-## Simulación
