@@ -105,7 +105,10 @@
               "alterationTypes": [
                 "entityUpdate",
                 "entityCreate"
-              ]
+              ],
+              "expression": {
+                "q": "sceneRef==N/A"
+              }
             }
           },
           "notification": {
@@ -158,7 +161,9 @@
               "custom_AirQualityObserved.sql"
             ],
             "weight": 10,
-            "relations": []
+            "relations": [
+              "dtwin_airqualityobserved_daily"
+            ]
           }
         }
       }

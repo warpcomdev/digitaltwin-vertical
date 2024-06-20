@@ -2,6 +2,7 @@
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por día. Ignora la hora y minuto.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_trafficcongestion_daily;
 CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_daily AS
 SELECT
   t.timeinstant,
@@ -20,6 +21,7 @@ GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.
 -- Vista que agrega todos los resultados de una tabla de gemelo,
 -- por hora. Ignora el minuto.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_trafficcongestion_hourly;
 CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_hourly AS
 SELECT
   t.timeinstant,
@@ -42,6 +44,7 @@ GROUP BY  t.timeinstant, t.sourceref, t.sceneref, t.trend, t.daytype, t.name, t.
 -- widget timeseries de urbo, sin necesidad de tener muestras
 -- diarias para todos los días.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_trafficcongestion_yesterday;
 CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_yesterday AS
 SELECT
   timeinstant,
@@ -53,12 +56,13 @@ SELECT
   zone,
   congestion,
   entityid,
-  date_trunc('day'::text, now()) - '1 day'::interval  + make_interval(hours => t.hour, mins => t.minute) AS generatedinstant
+  timezone('CEST'::text, date_trunc('day'::text, timezone('CEST'::text, now())) - '1 day'::interval) + make_interval(hours => t.hour, mins => t.minute) AS generatedinstant
 FROM :target_schema.dtwin_trafficcongestion_sim AS t;
 -- CREATE VIEW dtwin_trafficcongestion_peak
 -- Vista que pivota la hora y / o minuto de máximo y mínimo valor de
 -- una métrica dada.
 -- -------------------------------------------------------------
+DROP VIEW IF EXISTS :target_schema.dtwin_trafficcongestion_peak;
 CREATE OR REPLACE VIEW :target_schema.dtwin_trafficcongestion_peak AS
 SELECT
   numeradas.timeinstant,

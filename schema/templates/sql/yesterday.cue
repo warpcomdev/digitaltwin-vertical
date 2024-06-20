@@ -18,7 +18,7 @@ yesterday: {
 		viewName:   string | *"\(namespace)_\(strings.ToLower(entityType))_yesterday"
 		interval:   string | *""
 		if hasMinute {
-			interval: " + make_interval(hours => t.hour, mins => t.minute)"
+			interval: "+ make_interval(hours => t.hour, mins => t.minute)"
 		}
 		if !hasMinute && hasHour {
 			interval: "+ make_interval(hours => t.hour)"
@@ -33,6 +33,7 @@ yesterday: {
 		-- widget timeseries de urbo, sin necesidad de tener muestras
 		-- diarias para todos los días.
 		-- -------------------------------------------------------------
+		DROP VIEW IF EXISTS :target_schema.{{ .viewName }};
 		CREATE OR REPLACE VIEW :target_schema.{{ .viewName }} AS
 		SELECT
 		{{- range .columns }}
@@ -42,7 +43,7 @@ yesterday: {
 		  {{ $agg }} AS {{ $colname }},
 		{{- end }}
 		  entityid,
-		  date_trunc('day'::text, now()) - '1 day'::interval {{ .interval }} AS generatedinstant
+		  timezone('CEST'::text, date_trunc('day'::text, timezone('CEST'::text, now())) - '1 day'::interval) {{ .interval }} AS generatedinstant
 		FROM :target_schema.{{ .tableName }} AS t;
 		"""
 
