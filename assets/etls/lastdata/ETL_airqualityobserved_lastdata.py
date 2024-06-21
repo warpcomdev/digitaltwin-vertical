@@ -6,6 +6,7 @@ from typing import List
 
 import pandas as pd
 import requests
+from dotenv import load_dotenv
 
 from assets.etls.lastdata.rutinas_auxiliares import send_data_to_CB, calculo_distritos
 
@@ -124,6 +125,8 @@ def etl_airqualityobserved_lastdata() -> pd.DataFrame:
 
 
 if __name__ == '__main__':
+
+    load_dotenv(os.path.join(os.getcwd(), 'config.env'))  # Loads enviromments variables
 
     logging.basicConfig(
         level=os.getenv('ETL_LOG_LEVEL', 'DEBUG'),
