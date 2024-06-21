@@ -1,0 +1,3 @@
+entityID,entityType,TimeInstant<DateTime>
+Alta,Trend,2024-01-01 00:00:00+00:00
+Baja,Trend,2024-01-01 00:00:00+00:00
