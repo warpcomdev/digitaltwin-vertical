@@ -1,0 +1,101 @@
+{
+    "airqualityobserved": {
+        "source_db": {
+            "dbname": "sc_vlci",
+            "user": "vlci_digitaltwin",
+            "password": "3SmrKDSc2trPw9Cy",
+            "host": "81.45.14.58",
+            "port": "55432"
+        },
+        "destination_db": {
+            "user": "postgres",
+            "password": "3SmrKDSc2trPw9Cy",
+            "host": "localhost",
+            "port": 55432,
+            "database": "digitaltwin",
+            "schema": "parking"
+        }
+    },
+    "extraccion_airqualityobserved": {
+        "source_db": {
+            "dbname": "sc_vlci",
+            "user": "vlci_digitaltwin",
+            "password": "3SmrKDSc2trPw9Cy",
+            "host": "81.45.14.58",
+            "port": "55432"
+        },
+        "destination_db": {
+            "user": "postgres",
+            "password": "3SmrKDSc2trPw9Cy",
+            "host": "localhost",
+            "port": 55432,
+            "database": "digitaltwin",
+            "schema": "parking"
+        }
+    },
+    "frecuencia_paso_data_loader": {
+        "source_db": {
+            "dbname": "sc_vlci", 
+            "user": "vlci_digitaltwin", 
+            "password": "3SmrKDSc2trPw9Cy", 
+            "host": "81.45.14.58", 
+            "port": "55432"
+        },
+        "destination_db": {
+            "user": "postgres",
+            "password": "3SmrKDSc2trPw9Cy",
+            "host": "localhost",
+            "port": 55432,
+            "database": "digitaltwin",
+            "schema": "parking"
+        }
+    },
+    "offstreetparking": {
+        "source_db": {
+            "dbname": "sth_sc_vlci",
+            "user": "valencia_pro_leer",
+            "password": "4YmUganZrVBCkC",
+            "host": "81.45.14.56",
+            "port": "57017",
+            "collection_name_traffic": "sth_/trafico_trafficflowobserved",
+            "collection_name_parking": "sth_/trafico_offstreetparking"
+        },
+        "destination_db": {
+            "user": "postgres",
+            "password": "3SmrKDSc2trPw9Cy",
+            "host": "localhost",
+            "port": 55432,
+            "database": "digitaltwin",
+            "schema": "parking"
+        },
+        "entity_patterns": [
+            "703", "710", "114", "1125", "211", "214", "1002", "1328", 
+            "408", "1433", "403", "416", "233", "929", "505", "1419", 
+            "506", "1327", "116", "1326", "917", "919", "1026", "1035", 
+            "521", "522", "422", "1310", "1104", "1124", "727", "728", 
+            "1163", "1003", "1004", "1408", "1409"
+        ]
+    },
+    "trafico_roads": {
+        "source_db": {
+            "dbname": "sth_sc_vlci",
+            "user": "valencia_pro_leer",
+            "password": "4YmUganZrVBCkC",
+            "host": "81.45.14.56",
+            "port": 57017,
+            "collection_name": "sth_/trafico_road"
+        },
+        "destination_db": {
+            "user": "postgres",
+            "password": "3SmrKDSc2trPw9Cy",
+            "host": "localhost",
+            "port": 55432,
+            "database": "digitaltwin",
+            "schema": "parking"
+        }
+    },
+    "estacionalidad": {
+        "Alta": [3],
+        "Baja": [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    }
+}
