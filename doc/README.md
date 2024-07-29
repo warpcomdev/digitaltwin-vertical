@@ -104,6 +104,8 @@ La aplicación que realiza las simulaciones está desarrollada siguiendo una est
 
 - El decoder sintetiza a partir del estado anterior, las métricas de cada uno de los servicios modelados por el gemelo (parking, tráfico, rutas, etc) en el escenario correspondiente
 
+![proceso de encode-decode](notebook/encoder-decoder.png)
+
 El proceso de simulación se efectúa en dos pasos:
 
 - El primer paso reemplaza el encoder por un simulador que genera los resultados para los nuevos servicios que forman parte de la simulación. Por ejemplo, cuando una simulación añade un parking, o una ruta de transporte, el simulador genera a partir del estado devuelto por el encoder, una estimación del comportamiento que tendrá el nuevo servicio en los distintos escenarios. Actualmente, esta estimación es en la mayoría de los casos una media de los comportamientos aprendidos de otros servicios equivalentes, ponderada por la distancia y el bias configurado en la simulación.
