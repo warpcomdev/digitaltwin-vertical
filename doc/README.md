@@ -95,3 +95,17 @@ Estos grupos se usan como criterio para discriminar por estacionalidad. Típicam
 - Resto del año
 
 Aunque en cada ciudad puede variar, por ejemplo: en una ciudad con estaciones de esquí importantes, Diciembre, Enero y Febrero pueden formar otro grupo de estacionalidad.
+
+## Simulación
+
+La aplicación que realiza las simulaciones está desarrollada siguiendo una estructura inspirada en un autoencoder, con dos bloques:
+
+- El encoder recibe la información de la vista identidad y genera un vector que representa el estado de la ciudad. El proceso de encoding se repite para cada uno de los escenarios de la simulación (Estacionalidad y tipo de día), por ejemplo: el vector de los días laborables en temporada baja, el vector de los sábados en temporada alta, etc.
+
+- El decoder sintetiza a partir del estado anterior, las métricas de cada uno de los servicios modelados por el gemelo (parking, tráfico, rutas, etc) en el escenario correspondiente
+
+El proceso de simulación se efectúa en dos pasos:
+
+- El primer paso reemplaza el encoder por un simulador que genera los resultados para los nuevos servicios que forman parte de la simulación. Por ejemplo, cuando una simulación añade un parking, o una ruta de transporte, el simulador genera a partir del estado devuelto por el encoder, una estimación del comportamiento que tendrá el nuevo servicio en los distintos escenarios. Actualmente, esta estimación es en la mayoría de los casos una media de los comportamientos aprendidos de otros servicios equivalentes, ponderada por la distancia y el bias configurado en la simulación.
+
+- El segundo paso consiste en actualizar el estado considerando los resultados de la simulación anterior, y opcionalmente (si la simulación elimina servicios, como tramos de carretera), actualizando el estado para reflejar la desaparición de las medidas correspondientes a los elementos eliminados en la simulación, lo que genera un nuevo estado estimado que se procesa mediante el encoder original. De esta forma se calcula el impacto de los cambios simulados, en el resto de servicios de la ciudad.
