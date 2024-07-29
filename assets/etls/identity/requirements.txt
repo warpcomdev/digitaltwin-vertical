@@ -1,0 +1,6 @@
+shapely
+matplotlib
+pymongo
+pandas
+psycopg2
+sqlalchemy
